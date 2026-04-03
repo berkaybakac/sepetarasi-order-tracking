@@ -8,7 +8,8 @@ export class StatsService {
 	constructor(private db: AppDatabase) {}
 
 	getToday(businessDate?: string): DayStats {
-		const date = businessDate ?? new Date().toISOString().slice(0, 10);
+		const tz = process.env.STORE_TIMEZONE || "Europe/Istanbul";
+		const date = businessDate ?? new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
 		// Count by status
 		const counts = this.db

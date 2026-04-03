@@ -8,9 +8,10 @@ import type { CreateOrderInput, UpdateStatusInput } from "@sepetarasi/shared";
 export class OrderService {
 	constructor(private db: AppDatabase) {}
 
-	/** Get today's business_date string (YYYY-MM-DD) */
+	/** Get today's business_date string (YYYY-MM-DD) in store timezone */
 	private getBusinessDate(): string {
-		return new Date().toISOString().slice(0, 10);
+		const tz = process.env.STORE_TIMEZONE || "Europe/Istanbul";
+		return new Date().toLocaleDateString("en-CA", { timeZone: tz });
 	}
 
 	/** Create a new order with items (atomic) */
