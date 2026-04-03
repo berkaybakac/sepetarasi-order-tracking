@@ -1,0 +1,146 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createTestDb } from "../src/db/test-utils.js";
+import { buildApp } from "../src/app.js";
+import { terminals } from "../src/db/schema.js";
+import type { FastifyInstance } from "fastify";
+import type { AppDatabase } from "../src/db/connection.js";
+
+let db: AppDatabase;
+let app: FastifyInstance;
+
+beforeEach(async () => {
+	db = createTestDb();
+	db.insert(terminals).values({ id: "t-1", name: "Kasa 1", type: "kasa", is_active: 1 }).run();
+	app = await buildApp({ db, disableWorker: true });
+});
+
+afterEach(async () => {
+	await app.close();
+});
+
+describe("POST /api/v1/orders", () => {
+	it("should create an order and return 201", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: {
+				terminal_id: "t-1",
+				items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			},
+		});
+
+		expect(res.statusCode).toBe(201);
+		const body = res.json();
+		expect(body.ok).toBe(true);
+		expect(body.data.display_no).toBe(1);
+		expect(body.data.status).toBe("PREPARING");
+		expect(body.data.items).toHaveLength(1);
+	});
+
+	it("should return 400 if no items provided", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: { items: [] },
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.json().ok).toBe(false);
+	});
+});
+
+describe("GET /api/v1/orders", () => {
+	it("should list today's orders", async () => {
+		// Create two orders
+		await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: { items: [{ name: "A", quantity: 1, unit_price: 1000 }] },
+		});
+		await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: { items: [{ name: "B", quantity: 1, unit_price: 2000 }] },
+		});
+
+		const res = await app.inject({ method: "GET", url: "/api/v1/orders" });
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.ok).toBe(true);
+		expect(body.data).toHaveLength(2);
+	});
+});
+
+describe("PATCH /api/v1/orders/:id/status", () => {
+	it("should transition to READY and return updated order", async () => {
+		const createRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
+		});
+		const orderId = createRes.json().data.id;
+
+		const res = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/orders/${orderId}/status`,
+			payload: { status: "READY" },
+		});
+
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.data.status).toBe("READY");
+		expect(body.data.ready_at).not.toBeNull();
+	});
+
+	it("should return 422 for invalid transition", async () => {
+		const createRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
+		});
+		const orderId = createRes.json().data.id;
+
+		const res = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/orders/${orderId}/status`,
+			payload: { status: "DELIVERED" },
+		});
+
+		expect(res.statusCode).toBe(422);
+		expect(res.json().error.code).toBe("INVALID_TRANSITION");
+	});
+
+	it("should return 404 for non-existent order", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/orders/non-existent/status",
+			payload: { status: "READY" },
+		});
+
+		expect(res.statusCode).toBe(404);
+	});
+});
+
+describe("GET /api/v1/stats/today", () => {
+	it("should return stats with correct counts", async () => {
+		await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: { items: [{ name: "A", quantity: 1, unit_price: 1000 }] },
+		});
+
+		const res = await app.inject({ method: "GET", url: "/api/v1/stats/today" });
+		const body = res.json();
+		expect(body.ok).toBe(true);
+		expect(body.data.totalOrders).toBe(1);
+		expect(body.data.byStatus.PREPARING).toBe(1);
+	});
+});
+
+describe("GET /health", () => {
+	it("should return ok", async () => {
+		const res = await app.inject({ method: "GET", url: "/health" });
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+	});
+});

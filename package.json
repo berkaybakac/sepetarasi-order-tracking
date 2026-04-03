@@ -1,0 +1,26 @@
+{
+  "name": "sepetarasi-order-tracking",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w packages/server",
+    "dev:web": "npm run dev -w packages/web",
+    "build": "npm run build -w packages/shared && npm run build -w packages/web && npm run build -w packages/server",
+    "start": "node packages/server/dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "db:generate": "npm run db:generate -w packages/server",
+    "db:migrate": "npm run db:migrate -w packages/server",
+    "db:seed": "npm run db:seed -w packages/server"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}
