@@ -13,6 +13,11 @@ const defaultSettings = [
 	{ key: "announcement_delay_ms", value: "2500" },
 	{ key: "business_name", value: "Sepetarasi" },
 	{ key: "display_no_reset_time", value: "06:00" },
+	{ key: "receipt_business_name", value: "Sepetarasi" },
+	{ key: "receipt_address", value: "" },
+	{ key: "receipt_phone", value: "" },
+	{ key: "receipt_tax_id", value: "" },
+	{ key: "receipt_tax_office", value: "" },
 ];
 
 for (const setting of defaultSettings) {

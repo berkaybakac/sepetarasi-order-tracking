@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { WS_CHANNELS } from "@sepetarasi/shared";
 import type { WsMessage } from "@sepetarasi/shared";
-import { setBaseUrl } from "./lib/api";
+import { setBaseUrl, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { ServerConfig } from "./components/ServerConfig";
@@ -85,19 +85,22 @@ export default function App() {
 	const [configured, setConfigured] = useState(false);
 
 	useEffect(() => {
-		// Try to load saved config from Electron
 		async function loadConfig() {
 			if (window.electronAPI) {
 				const config = await window.electronAPI.getConfig();
 				setBaseUrl(config.serverUrl);
+				setTerminalId(config.terminalId);
 			}
 			// Auto-test connection
 			try {
-				const res = await fetch(`${import.meta.env.VITE_SERVER_URL || "http://localhost:3000"}/health`);
+				const serverUrl = window.electronAPI
+					? (await window.electronAPI.getConfig()).serverUrl
+					: "http://localhost:3000";
+				const res = await fetch(`${serverUrl.replace(/\/$/, "")}/health`);
 				const data = await res.json();
 				if (data.ok) {
 					if (!window.electronAPI) {
-						setBaseUrl(import.meta.env.VITE_SERVER_URL || "http://localhost:3000");
+						setBaseUrl("http://localhost:3000");
 					}
 					setConfigured(true);
 				}

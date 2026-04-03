@@ -8,6 +8,9 @@ export interface Order {
 	display_no: number;
 	status: OrderStatus;
 	terminal_id: string | null;
+	customer_name: string | null;
+	order_type: string | null;
+	target_minutes: number | null;
 	notes: string | null;
 	created_at: string;
 	updated_at: string;
@@ -84,6 +87,9 @@ export interface ApiError {
 
 export interface CreateOrderInput {
 	terminal_id?: string;
+	customer_name?: string;
+	order_type?: string;
+	target_minutes?: number;
 	notes?: string;
 	items: CreateOrderItemInput[];
 }

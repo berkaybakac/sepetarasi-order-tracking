@@ -137,6 +137,43 @@ describe("GET /api/v1/stats/today", () => {
 	});
 });
 
+describe("POST /api/v1/orders with new fields", () => {
+	it("should accept customer_name, order_type, target_minutes", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: {
+				customer_name: "Ali",
+				order_type: "paket",
+				target_minutes: 15,
+				items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			},
+		});
+
+		expect(res.statusCode).toBe(201);
+		const order = res.json().data;
+		expect(order.customer_name).toBe("Ali");
+		expect(order.order_type).toBe("paket");
+		expect(order.target_minutes).toBe(15);
+	});
+});
+
+describe("GET /api/v1/settings", () => {
+	it("should return settings as key-value object", async () => {
+		// Seed some settings
+		const { appSettings } = await import("../src/db/schema.js");
+		db.insert(appSettings).values({ key: "business_name", value: "Test Cafe" }).run();
+		db.insert(appSettings).values({ key: "receipt_phone", value: "555-1234" }).run();
+
+		const res = await app.inject({ method: "GET", url: "/api/v1/settings" });
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.ok).toBe(true);
+		expect(body.data.business_name).toBe("Test Cafe");
+		expect(body.data.receipt_phone).toBe("555-1234");
+	});
+});
+
 describe("GET /health", () => {
 	it("should return ok", async () => {
 		const res = await app.inject({ method: "GET", url: "/health" });

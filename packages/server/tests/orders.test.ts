@@ -43,6 +43,29 @@ describe("Order creation", () => {
 		expect(order3.display_no).toBe(3);
 	});
 
+	it("should store customer_name, order_type, target_minutes", () => {
+		const order = orderService.create({
+			customer_name: "Ali",
+			order_type: "paket",
+			target_minutes: 15,
+			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+		});
+
+		expect(order.customer_name).toBe("Ali");
+		expect(order.order_type).toBe("paket");
+		expect(order.target_minutes).toBe(15);
+	});
+
+	it("should default new fields to null when not provided", () => {
+		const order = orderService.create({
+			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+		});
+
+		expect(order.customer_name).toBeNull();
+		expect(order.order_type).toBeNull();
+		expect(order.target_minutes).toBeNull();
+	});
+
 	it("should create an order_event for creation", () => {
 		const order = orderService.create({
 			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],

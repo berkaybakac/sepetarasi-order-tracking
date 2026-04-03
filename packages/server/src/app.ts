@@ -10,6 +10,7 @@ import { AnnouncementService } from "./services/announcement.service.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
 import { registerOrderRoutes } from "./routes/orders.js";
 import { registerStatsRoutes } from "./routes/stats.js";
+import { registerSettingsRoutes } from "./routes/settings.js";
 import { WS_CHANNELS } from "@sepetarasi/shared";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +60,7 @@ export async function buildApp(opts: AppOptions) {
 	// HTTP routes
 	registerOrderRoutes(app, opts.db, broadcaster);
 	registerStatsRoutes(app, opts.db);
+	registerSettingsRoutes(app, opts.db);
 
 	// Health check
 	app.get("/health", async () => ({ ok: true }));

@@ -1,6 +1,7 @@
 import type { Order, CreateOrderInput, UpdateStatusInput, DayStats, ApiResponse } from "@sepetarasi/shared";
 
 let baseUrl = "http://localhost:3000";
+let terminalId = "";
 
 export function setBaseUrl(url: string) {
 	baseUrl = url.replace(/\/$/, "");
@@ -8,6 +9,14 @@ export function setBaseUrl(url: string) {
 
 export function getBaseUrl() {
 	return baseUrl;
+}
+
+export function setTerminalId(id: string) {
+	terminalId = id;
+}
+
+export function getTerminalId() {
+	return terminalId;
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -38,7 +47,11 @@ export class ApiError extends Error {
 }
 
 export const api = {
-	createOrder: (input: CreateOrderInput) => request<Order>("POST", "/api/v1/orders", input),
+	createOrder: (input: CreateOrderInput) =>
+		request<Order>("POST", "/api/v1/orders", {
+			...input,
+			...(terminalId ? { terminal_id: terminalId } : {}),
+		}),
 
 	listOrders: (businessDate?: string) => {
 		const params = businessDate ? `?business_date=${businessDate}` : "";

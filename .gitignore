@@ -1,7 +1,13 @@
 node_modules/
 dist/
+dist-electron/
+release/
 *.db
 *.db-wal
 *.db-shm
+*.log
 .env
+.env.local
+.env.*.local
 .DS_Store
+data/
