@@ -4,6 +4,7 @@ import { buildApp } from "../src/app.js";
 import { terminals } from "../src/db/schema.js";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../src/db/connection.js";
+import { eq } from "drizzle-orm";
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -46,6 +47,28 @@ describe("POST /api/v1/orders", () => {
 
 		expect(res.statusCode).toBe(400);
 		expect(res.json().ok).toBe(false);
+	});
+
+	it("should auto-create missing terminal and still create order", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			payload: {
+				terminal_id: "KASA-1",
+				items: [{ name: "Pizza", quantity: 1, unit_price: 20000 }],
+			},
+		});
+
+		expect(res.statusCode).toBe(201);
+		expect(res.json().ok).toBe(true);
+		expect(res.json().data.terminal_id).toBe("KASA-1");
+
+		const insertedTerminal = db
+			.select()
+			.from(terminals)
+			.where(eq(terminals.id, "KASA-1"))
+			.get();
+		expect(insertedTerminal).toBeDefined();
 	});
 });
 
@@ -179,5 +202,32 @@ describe("GET /health", () => {
 		const res = await app.inject({ method: "GET", url: "/health" });
 		expect(res.statusCode).toBe(200);
 		expect(res.json().ok).toBe(true);
+	});
+
+	it("should include CORS headers on normal response", async () => {
+		const res = await app.inject({
+			method: "GET",
+			url: "/health",
+			headers: { origin: "http://localhost:5173" },
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+		expect(res.headers["access-control-allow-methods"]).toBe("GET,POST,PATCH,PUT,DELETE,OPTIONS");
+	});
+
+	it("should handle CORS preflight requests", async () => {
+		const res = await app.inject({
+			method: "OPTIONS",
+			url: "/health",
+			headers: {
+				origin: "http://localhost:5173",
+				"access-control-request-method": "GET",
+			},
+		});
+
+		expect(res.statusCode).toBe(204);
+		expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+		expect(res.headers["access-control-allow-headers"]).toBe("Content-Type, Authorization");
 	});
 });

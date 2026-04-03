@@ -23,6 +23,10 @@ export interface AppOptions {
 	announcementDelayMs?: number;
 	/** Worker poll interval in ms (default 1000) */
 	workerPollIntervalMs?: number;
+	/** Disable audio playback in announcement worker (useful for tests) */
+	disableAudio?: boolean;
+	/** Path to pre-recorded MP3 files named {display_no}.mp3 */
+	announcementsPath?: string;
 	/** Disable static file serving (useful for tests) */
 	disableStatic?: boolean;
 }
@@ -30,6 +34,22 @@ export interface AppOptions {
 export async function buildApp(opts: AppOptions) {
 	const app = Fastify({ logger: false });
 	const broadcaster = new Broadcaster();
+
+	// Allow Electron/web clients to call API across origins (LAN IP, localhost, file://)
+	app.addHook("onRequest", (request, reply, done) => {
+		const origin = request.headers.origin;
+		reply.header("Access-Control-Allow-Origin", origin ?? "*");
+		reply.header("Vary", "Origin");
+		reply.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+		reply.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+		if (request.method === "OPTIONS") {
+			reply.code(204).send();
+			return;
+		}
+
+		done();
+	});
 
 	// WebSocket
 	await app.register(fastifyWebsocket);
@@ -74,6 +94,8 @@ export async function buildApp(opts: AppOptions) {
 			broadcaster,
 			delayMs: opts.announcementDelayMs ?? 2500,
 			pollIntervalMs: opts.workerPollIntervalMs ?? 1000,
+			disableAudio: opts.disableAudio ?? false,
+			announcementsPath: opts.announcementsPath,
 		});
 
 		app.addHook("onReady", async () => {

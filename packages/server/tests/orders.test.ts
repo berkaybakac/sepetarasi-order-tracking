@@ -76,6 +76,20 @@ describe("Order creation", () => {
 		expect(events[0].from_status).toBeNull();
 		expect(events[0].to_status).toBe(OrderStatus.PREPARING);
 	});
+
+	it("should auto-create terminal when terminal_id does not exist", () => {
+		const order = orderService.create({
+			terminal_id: "KASA-1",
+			items: [{ name: "Pizza", quantity: 1, unit_price: 20000 }],
+		});
+
+		expect(order.terminal_id).toBe("KASA-1");
+
+		const terminal = db.select().from(terminals).where(eq(terminals.id, "KASA-1")).get();
+		expect(terminal).toBeDefined();
+		expect(terminal?.type).toBe("kasa");
+		expect(terminal?.is_active).toBe(1);
+	});
 });
 
 describe("Order listing", () => {

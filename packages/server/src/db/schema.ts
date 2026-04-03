@@ -73,19 +73,6 @@ export const orderEvents = sqliteTable(
 	(table) => [index("idx_order_events_order_id").on(table.order_id)],
 );
 
-// --- display_config ---
-
-export const displayConfig = sqliteTable("display_config", {
-	id: text("id").primaryKey(),
-	terminal_id: text("terminal_id").references(() => terminals.id),
-	show_preparing: integer("show_preparing").notNull().default(1),
-	show_ready: integer("show_ready").notNull().default(1),
-	columns: integer("columns").notNull().default(3),
-	font_size: text("font_size").notNull().default("large"),
-	theme: text("theme").notNull().default("dark"),
-	updated_at: text("updated_at").notNull().default("(datetime('now'))"),
-});
-
 // --- app_settings ---
 
 export const appSettings = sqliteTable("app_settings", {

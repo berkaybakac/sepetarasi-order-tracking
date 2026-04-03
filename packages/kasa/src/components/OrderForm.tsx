@@ -65,17 +65,17 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="bg-white rounded-xl p-4 shadow-sm">
+		<form onSubmit={handleSubmit} className="bg-white rounded-xl p-4 shadow-sm overflow-hidden">
 			<h2 className="text-xl font-bold mb-4">Yeni Sipariş</h2>
 
 			{items.map((item, index) => (
-				<div key={index} className="flex gap-2 mb-2 items-center">
+				<div key={index} className="flex gap-2 mb-2 items-center min-w-0">
 					<input
 						type="text"
 						placeholder="Ürün adı"
 						value={item.name}
 						onChange={(e) => updateItem(index, "name", e.target.value)}
-						className="flex-1 border rounded-lg px-3 py-2 text-lg"
+						className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-lg"
 						autoFocus={index === 0}
 					/>
 					<input
@@ -83,9 +83,9 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 						min="1"
 						value={item.quantity}
 						onChange={(e) => updateItem(index, "quantity", Number.parseInt(e.target.value) || 1)}
-						className="w-16 border rounded-lg px-3 py-2 text-lg text-center"
+						className="w-14 sm:w-16 shrink-0 border rounded-lg px-3 py-2 text-lg text-center"
 					/>
-					<div className="relative">
+					<div className="relative shrink-0">
 						<input
 							type="number"
 							min="0"
@@ -95,7 +95,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 							onChange={(e) =>
 								updateItem(index, "unit_price", Number.parseFloat(e.target.value) || 0)
 							}
-							className="w-28 border rounded-lg px-3 py-2 text-lg pr-8"
+							className="w-24 sm:w-28 border rounded-lg px-3 py-2 text-lg pr-8"
 						/>
 						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">TL</span>
 					</div>

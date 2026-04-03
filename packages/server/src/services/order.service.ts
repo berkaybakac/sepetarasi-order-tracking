@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { OrderStatus, isValidTransition } from "@sepetarasi/shared";
 import type { AppDatabase } from "../db/connection.js";
-import { orders, orderItems, orderEvents, announcementQueue } from "../db/schema.js";
+import { orders, orderItems, orderEvents, announcementQueue, terminals } from "../db/schema.js";
 import type { CreateOrderInput, UpdateStatusInput } from "@sepetarasi/shared";
 
 export class OrderService {
@@ -22,6 +22,20 @@ export class OrderService {
 
 		// Everything inside one transaction: display_no read + insert = no race condition
 		this.db.transaction((tx) => {
+			// Ensure terminal exists when terminal_id is provided by kasa client.
+			if (input.terminal_id) {
+				tx.insert(terminals)
+					.values({
+						id: input.terminal_id,
+						name: input.terminal_id,
+						type: "kasa",
+						is_active: 1,
+						created_at: now,
+					})
+					.onConflictDoNothing()
+					.run();
+			}
+
 			// Get next display_no inside transaction (SQLite EXCLUSIVE lock prevents races)
 			const result = tx
 				.select({ maxNo: sql<number>`COALESCE(MAX(${orders.display_no}), 0)` })

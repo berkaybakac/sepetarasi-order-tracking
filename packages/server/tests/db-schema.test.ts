@@ -8,7 +8,6 @@ import {
 	terminals,
 	appSettings,
 	announcementQueue,
-	displayConfig,
 } from "../src/db/schema.js";
 import type { AppDatabase } from "../src/db/connection.js";
 
@@ -19,7 +18,7 @@ beforeEach(() => {
 });
 
 describe("Migration", () => {
-	it("should create all 7 tables", () => {
+	it("should create all 6 tables", () => {
 		// If we can insert into each table, migration worked
 		const terminalId = "t-1";
 		db.insert(terminals)
@@ -49,10 +48,6 @@ describe("Migration", () => {
 			.values({ key: "test_key", value: "test_value" })
 			.run();
 
-		db.insert(displayConfig)
-			.values({ id: "dc-1", terminal_id: terminalId })
-			.run();
-
 		db.insert(announcementQueue)
 			.values({ id: "aq-1", order_id: orderId, display_no: 1, type: "ready", status: "pending" })
 			.run();
@@ -72,9 +67,6 @@ describe("Migration", () => {
 
 		const allSettings = db.select().from(appSettings).all();
 		expect(allSettings).toHaveLength(1);
-
-		const allDisplayConfigs = db.select().from(displayConfig).all();
-		expect(allDisplayConfigs).toHaveLength(1);
 
 		const allAnnouncements = db.select().from(announcementQueue).all();
 		expect(allAnnouncements).toHaveLength(1);

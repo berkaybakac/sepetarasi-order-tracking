@@ -9,6 +9,11 @@ APP_DIR="${1:-/opt/sepetarasi}"
 SERVICE_NAME="sepetarasi"
 NODE_VERSION="20"
 
+is_project_dir() {
+    local dir="$1"
+    [ -f "$dir/package.json" ] && [ -d "$dir/packages/server" ] && [ -d "$dir/packages/web" ]
+}
+
 echo "=== Sepetarasi Pi4 Deploy ==="
 echo "Hedef dizin: $APP_DIR"
 
@@ -23,7 +28,7 @@ fi
 
 # --- 2. Sistem bagimliliklari ---
 echo "[2/7] Sistem bagimliliklari kontrol ediliyor..."
-sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils
+sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils espeak-ng rsync
 
 # --- 3. Uygulama dizini ---
 echo "[3/7] Uygulama dizini hazirlaniyor..."
@@ -32,29 +37,44 @@ if [ ! -d "$APP_DIR" ]; then
     sudo chown "$USER:$USER" "$APP_DIR"
 fi
 
-# Eger git repo varsa pull, yoksa kopyala
+# Eger APP_DIR git repo ise pull yap.
+# Degilse:
+# - APP_DIR zaten proje ise mevcut dosyalarla devam et.
+# - Script repo/proje klasorunden calisiyorsa APP_DIR'e rsync et.
 if [ -d "$APP_DIR/.git" ]; then
     echo "  Git pull..."
     cd "$APP_DIR" && git pull
-elif [ -d ".git" ]; then
-    echo "  Repo kopyalaniyor..."
-    rsync -a --exclude node_modules --exclude dist --exclude '*.db' . "$APP_DIR/"
+elif is_project_dir "$APP_DIR"; then
+    echo "  APP_DIR git repo degil ama proje mevcut, mevcut dosyalarla devam ediliyor."
+elif is_project_dir "$(pwd)"; then
+    echo "  Proje dosyalari APP_DIR'e kopyalaniyor (rsync)..."
+    rsync -a --delete \
+        --exclude .git \
+        --exclude node_modules \
+        --exclude dist \
+        --exclude release \
+        --exclude '*.db' \
+        ./ "$APP_DIR/"
 else
-    echo "  HATA: Bu scripti repo dizininde calistirin veya $APP_DIR'de git repo olsun."
+    echo "  HATA: Ne $APP_DIR'de gecerli bir proje bulundu ne de script proje klasorunden calistirildi."
+    echo "  Cozum 1: Scripti proje klasorunde calistir."
+    echo "  Cozum 2: Once dosyalari $APP_DIR altina kopyala, sonra scripti tekrar calistir."
     exit 1
 fi
 
 cd "$APP_DIR"
 
 # --- 4. Bagimliliklari yukle ---
-echo "[4/7] npm install..."
-npm install --omit=dev
+echo "[4/7] Bagimliliklar yukleniyor..."
+if [ -f package-lock.json ]; then
+    npm ci
+else
+    npm install
+fi
 
 # --- 5. Build ---
 echo "[5/7] Build (shared + web + server)..."
-npm run build -w @sepetarasi/shared
-npm run build -w packages/web
-npm run build -w packages/server
+npm run build
 
 # --- 6. Migration + Seed ---
 echo "[6/7] Veritabani migration + seed..."

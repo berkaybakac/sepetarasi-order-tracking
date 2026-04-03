@@ -31,43 +31,59 @@ npm start
 # http://localhost:3000
 ```
 
-## Kasa .exe Build
+## Kasa — Gelistirme ve Test
+
+**macOS'ta Electron olarak acmak (gelistirme / gorsel test):**
+
+```bash
+cd packages/kasa && npm run dev
+# Electron macOS'ta acilir; server URL'sini Pi4 IP veya localhost gir
+```
+
+**macOS .app build:**
+
+```bash
+cd packages/kasa && npm run build
+# Cikti: packages/kasa/release/mac-arm64/
+```
+
+**Windows .exe build (Mac uzerinde cross-compile):**
 
 ```bash
 cd packages/kasa && npm run build:win
 # Cikti: packages/kasa/release/
 ```
 
-## Pi4 Deploy (rsync)
+> Dashboard ve musteri ekrani her iki platformda da tarayicidan eriselebilir:
+> `http://<sunucu-ip>:3000` ve `http://<sunucu-ip>:3000/display`
 
-Mac'te build edip Pi4'e gonderir. Her guncelleme icin tekrarlanir:
+## Deploy (Pi4)
+
+Iki yontem var:
+
+**A) Mac'ten uzaktan (tek komut)** — SSH ile build + gonder + restart:
 
 ```bash
-# 1. Mac'te build
-npm run build
+# Onkosul: ssh-copy-id admin@<IP>
 
-# 2. Pi4'e gonder (kasa haric, dist dahil)
-rsync -az --delete \
-  --exclude node_modules --exclude .git --exclude 'packages/kasa' \
-  --exclude '*.db' --exclude '*.db-wal' --exclude '*.db-shm' \
-  --exclude .env --exclude dist-electron --exclude release \
-  ./ admin@192.168.1.34:/opt/sepetarasi/
+# Yeni Pi4 (ilk kurulum)
+bash scripts/deploy.sh admin@192.168.1.34 --init
 
-# 3. Pi4'de migration + restart
-ssh admin@192.168.1.34 "cd /opt/sepetarasi && \
-  cp -r packages/server/src/db/migrations packages/server/dist/db/migrations && \
-  npm install --omit=dev && \
-  DB_PATH=/opt/sepetarasi/data/sepetarasi.db node packages/server/dist/db/migrate.js && \
-  sudo systemctl restart sepetarasi"
+# Guncelleme
+bash scripts/deploy.sh admin@192.168.1.34
 ```
 
-Dashboard: `http://192.168.1.34:3000`
-Musteri ekrani: `http://192.168.1.34:3000/display`
+**B) Pi4 uzerinde yerelde** — dosyalar zaten Pi4'te ise:
+
+```bash
+# Pi4'e SSH ile baglan, proje dizinine gir
+bash scripts/pi4-deploy.sh
+```
 
 ## API
 
 | Method | Endpoint | Aciklama |
-|--------|----------|----------|
+| ------ | -------- | -------- |
 | POST | `/api/v1/orders` | Siparis olustur |
 | GET | `/api/v1/orders` | Gunun siparisleri |
 | PATCH | `/api/v1/orders/:id/status` | Durum degistir |
@@ -76,10 +92,27 @@ Musteri ekrani: `http://192.168.1.34:3000/display`
 | WS | `/ws?channel=orders` | Canli guncellemeler |
 | WS | `/ws?channel=display` | Anons olaylari |
 
+## Sesli Anons Kurulumu (Pi4)
+
+Servis her "Hazır" siparişi için otomatik anons yapar. İki yöntem:
+
+**A) Pre-recorded ses dosyaları (önerilen):**
+
+`packages/server/assets/announcements/` dizinine `1.mp3`, `2.mp3`, ..., `400.mp3` dosyalarını koy.
+Çalma sırası: `mpg123` (Linux) / `afplay` (macOS)
+
+**B) TTS fallback (kurulum gerektirmez):**
+
+`espeak-ng` (Pi4'te otomatik kurulu) Türkçe seslendirme yapar.
+Ses dosyası bulunamazsa otomatik devreye girer.
+
+Ses çıkışı için Pi4'te: `sudo raspi-config nonint do_audio 1` (3.5mm jack)
+
 ## Ortam Degiskenleri
 
-```
+```env
 PORT=3000
 DB_PATH=./data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
+ANNOUNCEMENTS_PATH=./assets/announcements   # opsiyonel, default bu
 ```

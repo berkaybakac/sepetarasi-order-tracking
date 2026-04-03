@@ -65,11 +65,11 @@ function KasaApp() {
 			</header>
 
 			{/* Main */}
-			<main className="max-w-5xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-				<div className="lg:col-span-1">
+			<main className="max-w-[1320px] mx-auto p-4 grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-4 items-start">
+				<div>
 					<OrderForm />
 				</div>
-				<div className="lg:col-span-2">
+				<div className="min-w-0">
 					{loading ? (
 						<div className="text-center text-gray-400 py-12">Yükleniyor...</div>
 					) : (

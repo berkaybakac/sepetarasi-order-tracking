@@ -26,13 +26,26 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		body: body ? JSON.stringify(body) : undefined,
 	});
 
-	const json = await res.json();
+	const contentType = res.headers.get("content-type") || "";
+	const json = contentType.includes("application/json") ? await res.json() : null;
 
-	if (!json.ok) {
-		throw new ApiError(json.error.code, json.error.message, res.status);
+	if (!res.ok) {
+		const code = json?.error?.code ?? json?.code ?? `HTTP_${res.status}`;
+		const message = json?.error?.message ?? json?.message ?? `Request failed (${res.status})`;
+		throw new ApiError(code, message, res.status);
 	}
 
-	return json.data;
+	if (json?.ok === false) {
+		const code = json?.error?.code ?? `HTTP_${res.status}`;
+		const message = json?.error?.message ?? "Request failed";
+		throw new ApiError(code, message, res.status);
+	}
+
+	if (json?.ok === true) {
+		return json.data as T;
+	}
+
+	return json as T;
 }
 
 export class ApiError extends Error {

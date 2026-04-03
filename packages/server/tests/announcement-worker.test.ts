@@ -21,6 +21,7 @@ beforeEach(() => {
 		broadcaster,
 		delayMs: 10, // fast for tests
 		pollIntervalMs: 50,
+		disableAudio: true, // no sound during tests
 	});
 });
 
