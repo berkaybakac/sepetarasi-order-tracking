@@ -38,11 +38,31 @@ cd packages/kasa && npm run build:win
 # Cikti: packages/kasa/release/
 ```
 
-## Pi4 Deploy
+## Pi4 Deploy (rsync)
+
+Mac'te build edip Pi4'e gonderir. Her guncelleme icin tekrarlanir:
 
 ```bash
-bash scripts/pi4-deploy.sh
+# 1. Mac'te build
+npm run build
+
+# 2. Pi4'e gonder (kasa haric, dist dahil)
+rsync -az --delete \
+  --exclude node_modules --exclude .git --exclude 'packages/kasa' \
+  --exclude '*.db' --exclude '*.db-wal' --exclude '*.db-shm' \
+  --exclude .env --exclude dist-electron --exclude release \
+  ./ admin@192.168.1.34:/opt/sepetarasi/
+
+# 3. Pi4'de migration + restart
+ssh admin@192.168.1.34 "cd /opt/sepetarasi && \
+  cp -r packages/server/src/db/migrations packages/server/dist/db/migrations && \
+  npm install --omit=dev && \
+  DB_PATH=/opt/sepetarasi/data/sepetarasi.db node packages/server/dist/db/migrate.js && \
+  sudo systemctl restart sepetarasi"
 ```
+
+Dashboard: `http://192.168.1.34:3000`
+Musteri ekrani: `http://192.168.1.34:3000/display`
 
 ## API
 
@@ -61,4 +81,5 @@ bash scripts/pi4-deploy.sh
 ```
 PORT=3000
 DB_PATH=./data/sepetarasi.db
+STORE_TIMEZONE=Europe/Istanbul
 ```
