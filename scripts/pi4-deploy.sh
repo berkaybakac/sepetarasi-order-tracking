@@ -81,10 +81,14 @@ npm run build
 mkdir -p packages/server/dist/db/migrations
 cp -r packages/server/src/db/migrations/. packages/server/dist/db/migrations/
 
-# --- 6. Migration + Seed ---
-echo "[6/7] Veritabani migration + seed..."
+# --- 6. Migration (+ ilk kurulumda seed) ---
+echo "[6/7] Veritabani migration..."
+[ ! -f "$APP_DIR/data/sepetarasi.db" ] && SHOULD_SEED=true || SHOULD_SEED=false
 npm run db:migrate
-npm run db:seed
+if [ "$SHOULD_SEED" = true ]; then
+    echo "  Ilk kurulum: seed calistiriliyor..."
+    npm run db:seed
+fi
 
 # --- 7. systemd servisi ---
 echo "[7/7] systemd servisi kuruluyor..."
