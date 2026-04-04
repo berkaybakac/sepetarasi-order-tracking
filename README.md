@@ -10,6 +10,14 @@ npm run db:migrate
 npm run db:seed
 ```
 
+## Kalite Kontrolu
+
+```bash
+npm run ci               # lint + typecheck + test (commit oncesi calistir)
+npm run test:coverage    # kapsam raporu (esik packages/server/vitest.config.ts dosyasinda tanimli)
+npm run lint:fix         # otomatik bicimlendirme
+```
+
 ## Gelistirme
 
 ```bash
@@ -114,5 +122,6 @@ Ses çıkışı için Pi4'te: `sudo raspi-config nonint do_audio 1` (3.5mm jack)
 PORT=3000
 DB_PATH=./data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
-ANNOUNCEMENTS_PATH=./assets/announcements   # opsiyonel, default bu
+ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel, default bu
+DISABLE_AUDIO=false                                          # opsiyonel
 ```
