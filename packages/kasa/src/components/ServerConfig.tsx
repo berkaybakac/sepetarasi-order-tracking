@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getBaseUrl, setBaseUrl } from "../lib/api";
+import { getBaseUrl, setBaseUrl, setTerminalId as setApiTerminalId } from "../lib/api";
 
 interface KasaConfig {
 	serverUrl: string;
@@ -52,6 +52,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 			const data = await res.json();
 			if (data.ok) {
 				setBaseUrl(url);
+				setApiTerminalId(terminalId);
 				const config: KasaConfig = {
 					serverUrl: url,
 					terminalId,
