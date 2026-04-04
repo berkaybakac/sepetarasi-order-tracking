@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getBaseUrl, setBaseUrl, setTerminalId as setApiTerminalId } from "../lib/api";
+import { getBaseUrl, setTerminalId as setApiTerminalId, setBaseUrl } from "../lib/api";
 
 interface KasaConfig {
 	serverUrl: string;
