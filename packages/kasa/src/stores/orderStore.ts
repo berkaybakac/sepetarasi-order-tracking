@@ -1,5 +1,5 @@
-import { type OrderStatus, WS_EVENTS } from "@sepetarasi/shared";
-import type { DayStats, Order, OrderStatusChangedPayload, WsMessage } from "@sepetarasi/shared";
+import { type OrderStatus, applyOrderWsEvent } from "@sepetarasi/shared";
+import type { DayStats, Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
 import { api } from "../lib/api";
 
@@ -39,35 +39,9 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 	applyWsEvent: (msg: WsMessage) => {
 		const { orders } = get();
-
-		switch (msg.event) {
-			case WS_EVENTS.ORDER_CREATED: {
-				const order = msg.data as Order;
-				const next = new Map(orders);
-				next.set(order.id, order);
-				set({ orders: next });
-				break;
-			}
-			case WS_EVENTS.ORDER_STATUS_CHANGED: {
-				const payload = msg.data as OrderStatusChangedPayload;
-				const existing = orders.get(payload.id);
-				if (existing) {
-					const next = new Map(orders);
-					next.set(payload.id, {
-						...existing,
-						status: payload.status,
-						ready_at: payload.ready_at ?? existing.ready_at,
-						delivered_at: payload.delivered_at ?? existing.delivered_at,
-						cancelled_at: payload.cancelled_at ?? existing.cancelled_at,
-					});
-					set({ orders: next });
-				}
-				break;
-			}
-			case WS_EVENTS.STATS_UPDATED: {
-				set({ stats: msg.data as DayStats });
-				break;
-			}
+		const update = applyOrderWsEvent(orders, msg);
+		if (update) {
+			set(update);
 		}
 	},
 

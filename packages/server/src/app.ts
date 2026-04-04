@@ -77,6 +77,19 @@ export async function buildApp(opts: AppOptions) {
 		});
 	});
 
+	// Normalize Fastify schema validation errors to our API error format
+	app.setErrorHandler(
+		(error: { validation?: unknown; message: string; statusCode?: number }, _request, reply) => {
+			if (error.validation) {
+				return reply.status(400).send({
+					ok: false,
+					error: { code: "VALIDATION_ERROR", message: error.message },
+				});
+			}
+			reply.send(error);
+		},
+	);
+
 	// HTTP routes
 	registerOrderRoutes(app, opts.db, broadcaster);
 	registerStatsRoutes(app, opts.db);

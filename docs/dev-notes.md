@@ -20,3 +20,15 @@
 - `chore(deps): update lockfile and dependency versions`
 - `chore(quality): adjust CI scripts and thresholds`
 - `feat(...)/fix(...): functional code changes`
+
+## Feature Development Order
+
+When adding a new feature across packages, always start from shared:
+
+1. `packages/shared/src/` — types and constants first
+2. Server route + service
+3. web/kasa store
+4. UI
+
+**Why:** The compiler immediately flags every package that hasn't implemented
+the new type yet. Prevents "works on web, broken on kasa" bugs.
