@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createTestDb } from "../src/db/test-utils.js";
-import { buildApp } from "../src/app.js";
-import { terminals } from "../src/db/schema.js";
-import type { FastifyInstance } from "fastify";
-import type { AppDatabase } from "../src/db/connection.js";
 import { eq } from "drizzle-orm";
+import type { FastifyInstance } from "fastify";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildApp } from "../src/app.js";
+import type { AppDatabase } from "../src/db/connection.js";
+import { terminals } from "../src/db/schema.js";
+import { createTestDb } from "../src/db/test-utils.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -63,11 +63,7 @@ describe("POST /api/v1/orders", () => {
 		expect(res.json().ok).toBe(true);
 		expect(res.json().data.terminal_id).toBe("KASA-1");
 
-		const insertedTerminal = db
-			.select()
-			.from(terminals)
-			.where(eq(terminals.id, "KASA-1"))
-			.get();
+		const insertedTerminal = db.select().from(terminals).where(eq(terminals.id, "KASA-1")).get();
 		expect(insertedTerminal).toBeDefined();
 	});
 });

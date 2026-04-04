@@ -41,7 +41,10 @@ if [ "$INIT" = "--init" ]; then
 PORT=3000
 DB_PATH=$APP_DIR/data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
+ANNOUNCEMENTS_PATH=$APP_DIR/packages/server/assets/announcements
 ENVEOF"
+
+    ssh "$TARGET" "mkdir -p $APP_DIR/packages/server/assets/announcements"
 fi
 
 # --- 1. Mac'te build ---
@@ -92,14 +95,14 @@ if [ "$INIT" = "--init" ]; then
 
     echo "[init] systemd servisi kuruluyor..."
     ssh "$TARGET" "
-        sudo tee /etc/systemd/system/sepetarasi.service > /dev/null << 'SVCEOF'
+        sudo tee /etc/systemd/system/sepetarasi.service > /dev/null << SVCEOF
 [Unit]
 Description=Sepetarasi Order Tracking Server
 After=network.target
 
 [Service]
 Type=simple
-User=\$USER
+User=\$(id -un)
 WorkingDirectory=$APP_DIR
 EnvironmentFile=$APP_DIR/.env
 ExecStart=/usr/bin/node packages/server/dist/server.js

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback } from "react";
 import type { WsMessage } from "@sepetarasi/shared";
+import { useCallback, useEffect, useRef } from "react";
 
 interface UseWebSocketOptions {
 	channel: string;

@@ -8,23 +8,23 @@
  * the announcement must reach "played" state and the worker must not throw.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { EventEmitter } from "node:events";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { eq } from "drizzle-orm";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- child_process mock (hoisted before imports) ---
 vi.mock("node:child_process", () => ({ spawn: vi.fn() }));
 
 import { spawn } from "node:child_process";
+import type { AppDatabase } from "../src/db/connection.js";
+import { announcementQueue, orders } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { AnnouncementService } from "../src/services/announcement.service.js";
 import { AnnouncementWorker } from "../src/workers/announcement.worker.js";
 import { Broadcaster } from "../src/ws/broadcaster.js";
-import { orders, announcementQueue } from "../src/db/schema.js";
-import type { AppDatabase } from "../src/db/connection.js";
 
 const mockSpawn = vi.mocked(spawn);
 

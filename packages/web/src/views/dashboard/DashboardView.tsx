@@ -1,8 +1,8 @@
-import { useEffect, useCallback } from "react";
 import { OrderStatus, WS_CHANNELS } from "@sepetarasi/shared";
 import type { WsMessage } from "@sepetarasi/shared";
-import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
+import { useCallback, useEffect } from "react";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 
 function StatsPanel() {
 	const stats = useOrderStore((s) => s.stats);
@@ -16,13 +16,21 @@ function StatsPanel() {
 				label="Ort. Hazırlama"
 				value={stats.averagePrepMinutes != null ? `${stats.averagePrepMinutes} dk` : "-"}
 			/>
-			<StatCard label="Hazırlanan" value={stats.byStatus[OrderStatus.PREPARING]} color="text-yellow-600" />
+			<StatCard
+				label="Hazırlanan"
+				value={stats.byStatus[OrderStatus.PREPARING]}
+				color="text-yellow-600"
+			/>
 			<StatCard label="Hazır" value={stats.byStatus[OrderStatus.READY]} color="text-green-600" />
 		</div>
 	);
 }
 
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
+function StatCard({
+	label,
+	value,
+	color,
+}: { label: string; value: string | number; color?: string }) {
 	return (
 		<div className="bg-white rounded-xl p-4 shadow-sm">
 			<p className="text-sm text-gray-500">{label}</p>
@@ -38,7 +46,11 @@ function timeSince(dateStr: string): string {
 	return `${mins} dk`;
 }
 
-function OrderColumn({ title, status, colorClass }: { title: string; status: OrderStatus; colorClass: string }) {
+function OrderColumn({
+	title,
+	status,
+	colorClass,
+}: { title: string; status: OrderStatus; colorClass: string }) {
 	const orders = useOrdersByStatus(status);
 
 	return (
@@ -48,8 +60,17 @@ function OrderColumn({ title, status, colorClass }: { title: string; status: Ord
 			</h2>
 			<div className="space-y-2">
 				{orders.map((order) => (
-					<div key={order.id} className="bg-white rounded-lg p-3 shadow-sm border-l-4"
-						style={{ borderLeftColor: status === OrderStatus.PREPARING ? "#eab308" : status === OrderStatus.READY ? "#22c55e" : "#3b82f6" }}
+					<div
+						key={order.id}
+						className="bg-white rounded-lg p-3 shadow-sm border-l-4"
+						style={{
+							borderLeftColor:
+								status === OrderStatus.PREPARING
+									? "#eab308"
+									: status === OrderStatus.READY
+										? "#22c55e"
+										: "#3b82f6",
+						}}
 					>
 						<div className="flex justify-between items-center">
 							<span className="text-2xl font-bold">#{order.display_no}</span>
@@ -74,12 +95,17 @@ export function DashboardView() {
 	const connected = useOrderStore((s) => s.connected);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
-	const onConnect = useCallback(() => { setConnected(true); hydrate(); }, [setConnected, hydrate]);
+	const onConnect = useCallback(() => {
+		setConnected(true);
+		hydrate();
+	}, [setConnected, hydrate]);
 	const onDisconnect = useCallback(() => setConnected(false), [setConnected]);
 
 	useWebSocket({ channel: WS_CHANNELS.ORDERS, onMessage, onConnect, onDisconnect });
 
-	useEffect(() => { hydrate(); }, [hydrate]);
+	useEffect(() => {
+		hydrate();
+	}, [hydrate]);
 
 	return (
 		<div className="min-h-screen bg-gray-50">
@@ -93,9 +119,17 @@ export function DashboardView() {
 			<main className="p-4">
 				<StatsPanel />
 				<div className="flex gap-4 overflow-x-auto">
-					<OrderColumn title="Hazırlanıyor" status={OrderStatus.PREPARING} colorClass="text-yellow-600" />
+					<OrderColumn
+						title="Hazırlanıyor"
+						status={OrderStatus.PREPARING}
+						colorClass="text-yellow-600"
+					/>
 					<OrderColumn title="Hazır" status={OrderStatus.READY} colorClass="text-green-600" />
-					<OrderColumn title="Teslim Edildi" status={OrderStatus.DELIVERED} colorClass="text-blue-600" />
+					<OrderColumn
+						title="Teslim Edildi"
+						status={OrderStatus.DELIVERED}
+						colorClass="text-blue-600"
+					/>
 				</div>
 			</main>
 		</div>

@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createTestDb } from "../src/db/test-utils.js";
-import { OrderService, OrderNotFoundError, InvalidTransitionError } from "../src/services/order.service.js";
-import { StatsService } from "../src/services/stats.service.js";
-import { orders, orderEvents, announcementQueue, terminals } from "../src/db/schema.js";
-import { eq } from "drizzle-orm";
-import type { AppDatabase } from "../src/db/connection.js";
 import { OrderStatus } from "@sepetarasi/shared";
+import { eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { AppDatabase } from "../src/db/connection.js";
+import { announcementQueue, orderEvents, orders, terminals } from "../src/db/schema.js";
+import { createTestDb } from "../src/db/test-utils.js";
+import {
+	InvalidTransitionError,
+	OrderNotFoundError,
+	OrderService,
+} from "../src/services/order.service.js";
+import { StatsService } from "../src/services/stats.service.js";
 
 let db: AppDatabase;
 let orderService: OrderService;
@@ -30,7 +34,7 @@ describe("Order creation", () => {
 		expect(order1.display_no).toBe(1);
 		expect(order1.status).toBe(OrderStatus.PREPARING);
 		expect(order1.items).toHaveLength(1);
-		expect(order1.items![0].name).toBe("Doner");
+		expect(order1.items?.[0].name).toBe("Doner");
 
 		const order2 = orderService.create({
 			items: [{ name: "Ayran", quantity: 2, unit_price: 3000 }],

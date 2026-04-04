@@ -1,4 +1,10 @@
-import type { Order, CreateOrderInput, UpdateStatusInput, DayStats, ApiResponse } from "@sepetarasi/shared";
+import type {
+	ApiResponse,
+	CreateOrderInput,
+	DayStats,
+	Order,
+	UpdateStatusInput,
+} from "@sepetarasi/shared";
 
 let baseUrl = "http://localhost:3000";
 let terminalId = "";

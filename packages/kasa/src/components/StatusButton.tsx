@@ -1,13 +1,10 @@
-import { useState } from "react";
 import { OrderStatus, STATUS_TRANSITIONS } from "@sepetarasi/shared";
 import type { Order } from "@sepetarasi/shared";
+import { useState } from "react";
 import { api } from "../lib/api";
 import { useOrderStore } from "../stores/orderStore";
 
-const STATUS_CONFIG: Record<
-	OrderStatus,
-	{ label: string; color: string; hoverColor: string }
-> = {
+const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; hoverColor: string }> = {
 	[OrderStatus.PREPARING]: {
 		label: "Hazırlanıyor",
 		color: "bg-yellow-500",

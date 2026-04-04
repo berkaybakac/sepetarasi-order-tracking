@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { announcementQueue } from "../db/schema.js";
 
@@ -7,13 +7,15 @@ export class AnnouncementService {
 
 	/** Get next pending announcement (FIFO by enqueued_at) */
 	getNextPending() {
-		return this.db
-			.select()
-			.from(announcementQueue)
-			.where(eq(announcementQueue.status, "pending"))
-			.orderBy(announcementQueue.enqueued_at)
-			.limit(1)
-			.get() ?? null;
+		return (
+			this.db
+				.select()
+				.from(announcementQueue)
+				.where(eq(announcementQueue.status, "pending"))
+				.orderBy(announcementQueue.enqueued_at)
+				.limit(1)
+				.get() ?? null
+		);
 	}
 
 	/** Mark announcement as playing */

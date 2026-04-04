@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from "react";
-import { getBaseUrl } from "../lib/api";
 import type { WsMessage } from "@sepetarasi/shared";
+import { useCallback, useEffect, useRef } from "react";
+import { getBaseUrl } from "../lib/api";
 
 interface UseWebSocketOptions {
 	channel: string;
@@ -15,7 +15,7 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 	const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	const connect = useCallback(() => {
-		const wsUrl = getBaseUrl().replace(/^http/, "ws") + `/ws?channel=${channel}`;
+		const wsUrl = `${getBaseUrl().replace(/^http/, "ws")}/ws?channel=${channel}`;
 
 		try {
 			const ws = new WebSocket(wsUrl);

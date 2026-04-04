@@ -13,7 +13,6 @@ export default function App() {
 	switch (view) {
 		case "display":
 			return <CustomerDisplay />;
-		case "dashboard":
 		default:
 			return <DashboardView />;
 	}

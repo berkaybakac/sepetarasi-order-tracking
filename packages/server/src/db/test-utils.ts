@@ -1,6 +1,6 @@
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createMemoryDb } from "./connection.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

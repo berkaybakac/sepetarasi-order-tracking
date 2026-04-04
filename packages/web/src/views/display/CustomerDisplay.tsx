@@ -1,16 +1,17 @@
-import { useEffect, useCallback } from "react";
 import { OrderStatus, WS_CHANNELS } from "@sepetarasi/shared";
 import type { WsMessage } from "@sepetarasi/shared";
-import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
+import { useCallback, useEffect } from "react";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 
 function OrderNumber({ displayNo, highlight }: { displayNo: number; highlight?: boolean }) {
 	return (
 		<div
 			className={`rounded-xl px-6 py-4 text-center font-bold text-3xl transition-all duration-300
-				${highlight
-					? "bg-green-500 text-white scale-110 shadow-lg shadow-green-500/30"
-					: "bg-gray-800 text-white"
+				${
+					highlight
+						? "bg-green-500 text-white scale-110 shadow-lg shadow-green-500/30"
+						: "bg-gray-800 text-white"
 				}`}
 		>
 			#{displayNo}
@@ -27,12 +28,17 @@ export function CustomerDisplay() {
 	const readyOrders = useOrdersByStatus(OrderStatus.READY);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
-	const onConnect = useCallback(() => { setConnected(true); hydrate(); }, [setConnected, hydrate]);
+	const onConnect = useCallback(() => {
+		setConnected(true);
+		hydrate();
+	}, [setConnected, hydrate]);
 	const onDisconnect = useCallback(() => setConnected(false), [setConnected]);
 
 	useWebSocket({ channel: WS_CHANNELS.DISPLAY, onMessage, onConnect, onDisconnect });
 
-	useEffect(() => { hydrate(); }, [hydrate]);
+	useEffect(() => {
+		hydrate();
+	}, [hydrate]);
 
 	return (
 		<div className="min-h-screen bg-gray-950 text-white flex flex-col">
@@ -75,9 +81,7 @@ export function CustomerDisplay() {
 							/>
 						))}
 					</div>
-					{readyOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-lg mt-8">-</p>
-					)}
+					{readyOrders.length === 0 && <p className="text-gray-600 text-center text-lg mt-8">-</p>}
 				</div>
 			</div>
 		</div>

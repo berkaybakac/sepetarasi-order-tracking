@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
-import { createTestDb } from "../src/db/test-utils.js";
-import {
-	orders,
-	orderItems,
-	orderEvents,
-	terminals,
-	appSettings,
-	announcementQueue,
-} from "../src/db/schema.js";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { AppDatabase } from "../src/db/connection.js";
+import {
+	announcementQueue,
+	appSettings,
+	orderEvents,
+	orderItems,
+	orders,
+	terminals,
+} from "../src/db/schema.js";
+import { createTestDb } from "../src/db/test-utils.js";
 
 let db: AppDatabase;
 
@@ -44,9 +44,7 @@ describe("Migration", () => {
 			.values({ id: "oe-1", order_id: orderId, from_status: null, to_status: "PREPARING" })
 			.run();
 
-		db.insert(appSettings)
-			.values({ key: "test_key", value: "test_value" })
-			.run();
+		db.insert(appSettings).values({ key: "test_key", value: "test_value" }).run();
 
 		db.insert(announcementQueue)
 			.values({ id: "aq-1", order_id: orderId, display_no: 1, type: "ready", status: "pending" })
@@ -98,22 +96,16 @@ describe("UNIQUE constraints", () => {
 	});
 
 	it("should allow same display_no on different business_date", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
-		db.insert(orders)
-			.values({ id: "o-2", business_date: "2026-04-04", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-2", business_date: "2026-04-04", display_no: 1 }).run();
 
 		const allOrders = db.select().from(orders).all();
 		expect(allOrders).toHaveLength(2);
 	});
 
 	it("should enforce UNIQUE(order_id, type) on announcement_queue (idempotency)", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
 		db.insert(announcementQueue)
 			.values({ id: "aq-1", order_id: "o-1", display_no: 1, type: "ready", status: "pending" })
@@ -127,9 +119,7 @@ describe("UNIQUE constraints", () => {
 	});
 
 	it("should allow INSERT OR IGNORE for idempotent announcement enqueue", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
 		db.insert(announcementQueue)
 			.values({ id: "aq-1", order_id: "o-1", display_no: 1, type: "ready", status: "pending" })
@@ -149,9 +139,7 @@ describe("UNIQUE constraints", () => {
 
 describe("FK CASCADE delete", () => {
 	it("should cascade delete order_items when order is deleted", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
 		db.insert(orderItems)
 			.values({ id: "oi-1", order_id: "o-1", name: "Doner", quantity: 1, unit_price: 15000 })
@@ -169,9 +157,7 @@ describe("FK CASCADE delete", () => {
 	});
 
 	it("should cascade delete order_events when order is deleted", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
 		db.insert(orderEvents)
 			.values({ id: "oe-1", order_id: "o-1", from_status: null, to_status: "PREPARING" })
@@ -184,9 +170,7 @@ describe("FK CASCADE delete", () => {
 	});
 
 	it("should cascade delete announcement_queue when order is deleted", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
 		db.insert(announcementQueue)
 			.values({ id: "aq-1", order_id: "o-1", display_no: 1, type: "ready", status: "pending" })
@@ -201,9 +185,7 @@ describe("FK CASCADE delete", () => {
 
 describe("Default values", () => {
 	it("should default order status to PREPARING", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
 		const [order] = db.select().from(orders).where(eq(orders.id, "o-1")).all();
 		expect(order.status).toBe("PREPARING");
@@ -217,13 +199,9 @@ describe("Default values", () => {
 	});
 
 	it("should default announcement_queue status to pending", () => {
-		db.insert(orders)
-			.values({ id: "o-1", business_date: "2026-04-03", display_no: 1 })
-			.run();
+		db.insert(orders).values({ id: "o-1", business_date: "2026-04-03", display_no: 1 }).run();
 
-		db.insert(announcementQueue)
-			.values({ id: "aq-1", order_id: "o-1", display_no: 1 })
-			.run();
+		db.insert(announcementQueue).values({ id: "aq-1", order_id: "o-1", display_no: 1 }).run();
 
 		const [aq] = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).all();
 		expect(aq.status).toBe("pending");

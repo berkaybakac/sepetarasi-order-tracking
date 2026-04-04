@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { setBaseUrl, getBaseUrl } from "../lib/api";
+import { useEffect, useState } from "react";
+import { getBaseUrl, setBaseUrl } from "../lib/api";
 
 interface KasaConfig {
 	serverUrl: string;
@@ -77,8 +77,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				<h1 className="text-2xl font-bold mb-2">Sepetarası Kasa</h1>
 				<p className="text-gray-500 mb-6">Kasa ayarlarını yapılandırın</p>
 
-				<label className="block text-sm font-medium text-gray-700 mb-1">Sunucu Adresi</label>
+				<label htmlFor="server-url" className="block text-sm font-medium text-gray-700 mb-1">
+					Sunucu Adresi
+				</label>
 				<input
+					id="server-url"
 					type="text"
 					value={url}
 					onChange={(e) => setUrl(e.target.value)}
@@ -89,8 +92,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 
 				<div className="grid grid-cols-2 gap-3 mb-3">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Terminal ID</label>
+						<label htmlFor="terminal-id" className="block text-sm font-medium text-gray-700 mb-1">
+							Terminal ID
+						</label>
 						<input
+							id="terminal-id"
 							type="text"
 							value={terminalId}
 							onChange={(e) => setTerminalId(e.target.value)}
@@ -99,8 +105,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						/>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Terminal Adı</label>
+						<label htmlFor="terminal-name" className="block text-sm font-medium text-gray-700 mb-1">
+							Terminal Adı
+						</label>
 						<input
+							id="terminal-name"
 							type="text"
 							value={terminalName}
 							onChange={(e) => setTerminalName(e.target.value)}
@@ -110,8 +119,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					</div>
 				</div>
 
-				<label className="block text-sm font-medium text-gray-700 mb-1">Yazıcı Adı</label>
+				<label htmlFor="printer-name" className="block text-sm font-medium text-gray-700 mb-1">
+					Yazıcı Adı
+				</label>
 				<input
+					id="printer-name"
 					type="text"
 					value={printerName}
 					onChange={(e) => setPrinterName(e.target.value)}
@@ -120,7 +132,9 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				/>
 
 				<div className="bg-gray-50 rounded-lg px-3 py-2 mb-4 text-sm text-gray-500">
-					Kısayol: <kbd className="bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">Ctrl+Shift+O</kbd> — Pencereyi göster/gizle
+					Kısayol:{" "}
+					<kbd className="bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">Ctrl+Shift+O</kbd> —
+					Pencereyi göster/gizle
 				</div>
 
 				{error && <p className="text-red-500 text-sm mb-3">{error}</p>}

@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { AppDatabase } from "../src/db/connection.js";
+import { announcementQueue, orders } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { AnnouncementService } from "../src/services/announcement.service.js";
 import { AnnouncementWorker } from "../src/workers/announcement.worker.js";
 import { Broadcaster } from "../src/ws/broadcaster.js";
-import { orders, announcementQueue } from "../src/db/schema.js";
-import { eq } from "drizzle-orm";
-import type { AppDatabase } from "../src/db/connection.js";
 
 let db: AppDatabase;
 let announcementService: AnnouncementService;
@@ -83,7 +83,7 @@ describe("AnnouncementService", () => {
 
 		const next = announcementService.getNextPending();
 		expect(next).not.toBeNull();
-		expect(next!.id).toBe("aq-1"); // First in, first out
+		expect(next?.id).toBe("aq-1"); // First in, first out
 	});
 
 	it("should return null when no pending announcements", () => {
@@ -159,15 +159,27 @@ describe("AnnouncementWorker", () => {
 
 		// Process first
 		await worker.processOne();
-		const first = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
+		const first = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-1"))
+			.get()!;
 		expect(first.status).toBe("played");
 
-		const second = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-2")).get()!;
+		const second = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-2"))
+			.get()!;
 		expect(second.status).toBe("pending");
 
 		// Process second
 		await worker.processOne();
-		const secondAfter = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-2")).get()!;
+		const secondAfter = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-2"))
+			.get()!;
 		expect(secondAfter.status).toBe("played");
 	});
 

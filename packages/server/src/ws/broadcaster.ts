@@ -1,5 +1,5 @@
-import type { WebSocket } from "ws";
 import type { WsMessage } from "@sepetarasi/shared";
+import type { WebSocket } from "ws";
 
 export class Broadcaster {
 	private channels = new Map<string, Set<WebSocket>>();
@@ -8,7 +8,7 @@ export class Broadcaster {
 		if (!this.channels.has(channel)) {
 			this.channels.set(channel, new Set());
 		}
-		this.channels.get(channel)!.add(ws);
+		this.channels.get(channel)?.add(ws);
 
 		ws.on("close", () => {
 			this.channels.get(channel)?.delete(ws);

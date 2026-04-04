@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { eq, and, sql, desc } from "drizzle-orm";
 import { OrderStatus, isValidTransition } from "@sepetarasi/shared";
-import type { AppDatabase } from "../db/connection.js";
-import { orders, orderItems, orderEvents, announcementQueue, terminals } from "../db/schema.js";
 import type { CreateOrderInput, UpdateStatusInput } from "@sepetarasi/shared";
+import { and, desc, eq, sql } from "drizzle-orm";
+import type { AppDatabase } from "../db/connection.js";
+import { announcementQueue, orderEvents, orderItems, orders, terminals } from "../db/schema.js";
 
 export class OrderService {
 	constructor(private db: AppDatabase) {}
@@ -86,6 +86,7 @@ export class OrderService {
 				.run();
 		});
 
+		// biome-ignore lint/style/noNonNullAssertion: order was just inserted in the transaction above
 		return this.getById(orderId)!;
 	}
 
@@ -121,17 +122,9 @@ export class OrderService {
 		const order = this.db.select().from(orders).where(eq(orders.id, id)).get();
 		if (!order) return null;
 
-		const items = this.db
-			.select()
-			.from(orderItems)
-			.where(eq(orderItems.order_id, id))
-			.all();
+		const items = this.db.select().from(orderItems).where(eq(orderItems.order_id, id)).all();
 
-		const events = this.db
-			.select()
-			.from(orderEvents)
-			.where(eq(orderEvents.order_id, id))
-			.all();
+		const events = this.db.select().from(orderEvents).where(eq(orderEvents.order_id, id)).all();
 
 		return { ...order, items, events };
 	}
@@ -219,6 +212,7 @@ export class OrderService {
 			}
 		});
 
+		// biome-ignore lint/style/noNonNullAssertion: order was just inserted in the transaction above
 		return this.getById(orderId)!;
 	}
 }

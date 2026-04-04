@@ -28,7 +28,7 @@ fi
 
 # --- 2. Sistem bagimliliklari ---
 echo "[2/7] Sistem bagimliliklari kontrol ediliyor..."
-sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils espeak-ng rsync
+sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils espeak-ng mpg123 rsync
 
 # --- 3. Uygulama dizini ---
 echo "[3/7] Uygulama dizini hazirlaniyor..."

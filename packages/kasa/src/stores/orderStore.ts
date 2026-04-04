@@ -1,6 +1,6 @@
+import { type OrderStatus, WS_EVENTS } from "@sepetarasi/shared";
+import type { DayStats, Order, OrderStatusChangedPayload, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
-import { OrderStatus, WS_EVENTS } from "@sepetarasi/shared";
-import type { Order, DayStats, WsMessage, OrderStatusChangedPayload } from "@sepetarasi/shared";
 import { api } from "../lib/api";
 
 interface OrderState {

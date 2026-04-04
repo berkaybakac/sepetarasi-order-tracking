@@ -1,4 +1,4 @@
-import type { Order, DayStats } from "@sepetarasi/shared";
+import type { DayStats, Order } from "@sepetarasi/shared";
 
 const baseUrl = "";
 

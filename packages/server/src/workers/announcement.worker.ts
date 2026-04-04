@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { WS_EVENTS, WS_CHANNELS } from "@sepetarasi/shared";
+import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { AnnouncementService } from "../services/announcement.service.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
 
@@ -35,7 +35,9 @@ export class AnnouncementWorker {
 		this.delayMs = opts.delayMs ?? 2500;
 		this.pollIntervalMs = opts.pollIntervalMs ?? 1000;
 		this.disableAudio = opts.disableAudio ?? false;
-		this.announcementsPath = opts.announcementsPath ?? join(process.cwd(), "assets", "announcements");
+		this.announcementsPath =
+			opts.announcementsPath ??
+			join(process.cwd(), "packages", "server", "assets", "announcements");
 	}
 
 	start() {

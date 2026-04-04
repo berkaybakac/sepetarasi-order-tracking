@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createTestDb } from "../src/db/test-utils.js";
-import { buildApp } from "../src/app.js";
-import { terminals } from "../src/db/schema.js";
 import type { FastifyInstance } from "fastify";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
+import { terminals } from "../src/db/schema.js";
+import { createTestDb } from "../src/db/test-utils.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;

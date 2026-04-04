@@ -1,6 +1,6 @@
-import { app, BrowserWindow, ipcMain, globalShortcut } from "electron";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { BrowserWindow, app, globalShortcut, ipcMain } from "electron";
 
 interface KasaConfig {
 	serverUrl: string;

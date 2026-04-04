@@ -1,21 +1,26 @@
-import { useState } from "react";
 import type { CreateOrderItemInput } from "@sepetarasi/shared";
+import { useState } from "react";
 import { api } from "../lib/api";
 
 interface OrderFormProps {
 	onCreated?: () => void;
 }
 
+interface OrderFormItem extends CreateOrderItemInput {
+	_id: number;
+}
+
+let _nextId = 0;
+const newItem = (): OrderFormItem => ({ _id: _nextId++, name: "", quantity: 1, unit_price: 0 });
+
 export function OrderForm({ onCreated }: OrderFormProps) {
-	const [items, setItems] = useState<CreateOrderItemInput[]>([
-		{ name: "", quantity: 1, unit_price: 0 },
-	]);
+	const [items, setItems] = useState<OrderFormItem[]>([newItem()]);
 	const [notes, setNotes] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const addItem = () => {
-		setItems([...items, { name: "", quantity: 1, unit_price: 0 }]);
+		setItems([...items, newItem()]);
 	};
 
 	const removeItem = (index: number) => {
@@ -54,7 +59,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 			});
 
 			// Reset form
-			setItems([{ name: "", quantity: 1, unit_price: 0 }]);
+			setItems([newItem()]);
 			setNotes("");
 			onCreated?.();
 		} catch (err) {
@@ -69,14 +74,13 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 			<h2 className="text-xl font-bold mb-4">Yeni Sipariş</h2>
 
 			{items.map((item, index) => (
-				<div key={index} className="flex gap-2 mb-2 items-center min-w-0">
+				<div key={item._id} className="flex gap-2 mb-2 items-center min-w-0">
 					<input
 						type="text"
 						placeholder="Ürün adı"
 						value={item.name}
 						onChange={(e) => updateItem(index, "name", e.target.value)}
 						className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-lg"
-						autoFocus={index === 0}
 					/>
 					<input
 						type="number"

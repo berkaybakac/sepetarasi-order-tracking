@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { eq, and } from "drizzle-orm";
-import { createTestDb } from "../src/db/test-utils.js";
-import { OrderService } from "../src/services/order.service.js";
-import { AnnouncementService } from "../src/services/announcement.service.js";
-import { orders, announcementQueue, terminals } from "../src/db/schema.js";
-import type { AppDatabase } from "../src/db/connection.js";
 import { OrderStatus } from "@sepetarasi/shared";
+import { and, eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { AppDatabase } from "../src/db/connection.js";
+import { announcementQueue, orders, terminals } from "../src/db/schema.js";
+import { createTestDb } from "../src/db/test-utils.js";
+import { AnnouncementService } from "../src/services/announcement.service.js";
+import { OrderService } from "../src/services/order.service.js";
 
 let db: AppDatabase;
 let orderService: OrderService;
@@ -22,9 +22,7 @@ function getAnnouncement(orderId: string) {
 	return db
 		.select()
 		.from(announcementQueue)
-		.where(
-			and(eq(announcementQueue.order_id, orderId), eq(announcementQueue.type, "ready")),
-		)
+		.where(and(eq(announcementQueue.order_id, orderId), eq(announcementQueue.type, "ready")))
 		.get();
 }
 
@@ -38,7 +36,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 		const ann = getAnnouncement(order.id);
 		expect(ann).toBeDefined();
-		expect(ann!.status).toBe("pending");
+		expect(ann?.status).toBe("pending");
 
 		// READY -> PREPARING: should delete the pending announcement
 		orderService.changeStatus(order.id, { status: OrderStatus.PREPARING });
@@ -57,13 +55,13 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 		// Simulate worker picking it up: mark as playing
 		const ann = getAnnouncement(order.id)!;
 		announcementService.markPlaying(ann.id);
-		expect(getAnnouncement(order.id)!.status).toBe("playing");
+		expect(getAnnouncement(order.id)?.status).toBe("playing");
 
 		// READY -> PREPARING: should NOT delete playing announcement
 		orderService.changeStatus(order.id, { status: OrderStatus.PREPARING });
 		const after = getAnnouncement(order.id);
 		expect(after).toBeDefined();
-		expect(after!.status).toBe("playing");
+		expect(after?.status).toBe("playing");
 	});
 
 	it("should DELETE announcement when status is 'played' (already announced, cleanup)", () => {
@@ -78,7 +76,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 		const ann = getAnnouncement(order.id)!;
 		announcementService.markPlaying(ann.id);
 		announcementService.markPlayed(ann.id);
-		expect(getAnnouncement(order.id)!.status).toBe("played");
+		expect(getAnnouncement(order.id)?.status).toBe("played");
 
 		// READY -> PREPARING: should delete played announcement (cleanup)
 		orderService.changeStatus(order.id, { status: OrderStatus.PREPARING });
@@ -97,7 +95,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 		// Simulate worker failure
 		const ann = getAnnouncement(order.id)!;
 		announcementService.markFailed(ann.id, "TTS error");
-		expect(getAnnouncement(order.id)!.status).toBe("failed");
+		expect(getAnnouncement(order.id)?.status).toBe("failed");
 
 		// READY -> PREPARING: should delete failed announcement
 		orderService.changeStatus(order.id, { status: OrderStatus.PREPARING });
@@ -123,8 +121,8 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 		const newAnn = getAnnouncement(order.id);
 		expect(newAnn).toBeDefined();
-		expect(newAnn!.status).toBe("pending");
-		expect(newAnn!.id).not.toBe(firstId); // different record
+		expect(newAnn?.status).toBe("pending");
+		expect(newAnn?.id).not.toBe(firstId); // different record
 	});
 
 	it("should handle re-READY when playing announcement still exists (idempotent)", () => {
@@ -141,7 +139,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 
 		// Undo -> playing announcement NOT deleted (worker owns it)
 		orderService.changeStatus(order.id, { status: OrderStatus.PREPARING });
-		expect(getAnnouncement(order.id)!.status).toBe("playing");
+		expect(getAnnouncement(order.id)?.status).toBe("playing");
 
 		// Re-READY -> INSERT OR IGNORE, should not duplicate
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });

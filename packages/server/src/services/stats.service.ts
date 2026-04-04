@@ -1,6 +1,6 @@
-import { eq, sql, and } from "drizzle-orm";
 import { OrderStatus } from "@sepetarasi/shared";
 import type { DayStats } from "@sepetarasi/shared";
+import { and, eq, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { orders } from "../db/schema.js";
 
@@ -43,12 +43,7 @@ export class StatsService {
 				)`,
 			})
 			.from(orders)
-			.where(
-				and(
-					eq(orders.business_date, date),
-					sql`${orders.ready_at} IS NOT NULL`,
-				),
-			)
+			.where(and(eq(orders.business_date, date), sql`${orders.ready_at} IS NOT NULL`))
 			.get();
 
 		const averagePrepMinutes =

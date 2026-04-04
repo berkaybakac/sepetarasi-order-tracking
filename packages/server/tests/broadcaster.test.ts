@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { Broadcaster } from "../src/ws/broadcaster.js";
 import { WS_CHANNELS } from "@sepetarasi/shared";
+import { describe, expect, it, vi } from "vitest";
+import { Broadcaster } from "../src/ws/broadcaster.js";
 
 /** Minimal mock WebSocket */
 function createMockSocket(readyState = 1 /* OPEN */) {
@@ -15,7 +15,7 @@ function createMockSocket(readyState = 1 /* OPEN */) {
 		},
 		/** Simulate disconnect */
 		disconnect() {
-			listeners["close"]?.forEach((h) => h());
+			for (const h of listeners.close ?? []) h();
 		},
 	};
 }

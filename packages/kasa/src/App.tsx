@@ -1,12 +1,12 @@
-import { useEffect, useState, useCallback } from "react";
 import { WS_CHANNELS } from "@sepetarasi/shared";
 import type { WsMessage } from "@sepetarasi/shared";
-import { setBaseUrl, setTerminalId } from "./lib/api";
-import { useOrderStore } from "./stores/orderStore";
-import { useWebSocket } from "./hooks/useWebSocket";
-import { ServerConfig } from "./components/ServerConfig";
+import { useCallback, useEffect, useState } from "react";
 import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
+import { ServerConfig } from "./components/ServerConfig";
+import { useWebSocket } from "./hooks/useWebSocket";
+import { setBaseUrl, setTerminalId } from "./lib/api";
+import { useOrderStore } from "./stores/orderStore";
 
 function KasaApp() {
 	const hydrate = useOrderStore((s) => s.hydrate);
@@ -16,10 +16,7 @@ function KasaApp() {
 	const stats = useOrderStore((s) => s.stats);
 	const loading = useOrderStore((s) => s.loading);
 
-	const onMessage = useCallback(
-		(msg: WsMessage) => applyWsEvent(msg),
-		[applyWsEvent],
-	);
+	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
 
 	const onConnect = useCallback(() => {
 		setConnected(true);
@@ -51,9 +48,7 @@ function KasaApp() {
 						{stats && (
 							<span className="text-gray-500">
 								Bugün: {stats.totalOrders} sipariş
-								{stats.averagePrepMinutes != null && (
-									<> | Ort: {stats.averagePrepMinutes} dk</>
-								)}
+								{stats.averagePrepMinutes != null && <> | Ort: {stats.averagePrepMinutes} dk</>}
 							</span>
 						)}
 						<span

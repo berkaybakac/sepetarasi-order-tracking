@@ -1,17 +1,17 @@
 import { existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import Fastify from "fastify";
-import fastifyWebsocket from "@fastify/websocket";
 import fastifyStatic from "@fastify/static";
+import fastifyWebsocket from "@fastify/websocket";
+import { WS_CHANNELS } from "@sepetarasi/shared";
+import Fastify from "fastify";
 import type { AppDatabase } from "./db/connection.js";
-import { Broadcaster } from "./ws/broadcaster.js";
+import { registerOrderRoutes } from "./routes/orders.js";
+import { registerSettingsRoutes } from "./routes/settings.js";
+import { registerStatsRoutes } from "./routes/stats.js";
 import { AnnouncementService } from "./services/announcement.service.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
-import { registerOrderRoutes } from "./routes/orders.js";
-import { registerStatsRoutes } from "./routes/stats.js";
-import { registerSettingsRoutes } from "./routes/settings.js";
-import { WS_CHANNELS } from "@sepetarasi/shared";
+import { Broadcaster } from "./ws/broadcaster.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -99,11 +99,11 @@ export async function buildApp(opts: AppOptions) {
 		});
 
 		app.addHook("onReady", async () => {
-			worker!.start();
+			worker?.start();
 		});
 
 		app.addHook("onClose", async () => {
-			worker!.stop();
+			worker?.stop();
 		});
 	}
 
@@ -120,7 +120,9 @@ export async function buildApp(opts: AppOptions) {
 			// SPA fallback: serve index.html for non-API, non-WS routes
 			app.setNotFoundHandler((request, reply) => {
 				if (request.url.startsWith("/api/") || request.url.startsWith("/ws")) {
-					return reply.status(404).send({ ok: false, error: { code: "NOT_FOUND", message: "Route not found" } });
+					return reply
+						.status(404)
+						.send({ ok: false, error: { code: "NOT_FOUND", message: "Route not found" } });
 				}
 				return reply.sendFile("index.html");
 			});

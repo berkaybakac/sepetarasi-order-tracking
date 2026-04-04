@@ -26,9 +26,7 @@ export function OrderCard({ order }: OrderCardProps) {
 	const isTerminal = order.status === "DELIVERED" || order.status === "CANCELLED";
 
 	return (
-		<div
-			className={`border rounded-xl p-4 ${isTerminal ? "opacity-50" : "bg-white shadow-sm"}`}
-		>
+		<div className={`border rounded-xl p-4 ${isTerminal ? "opacity-50" : "bg-white shadow-sm"}`}>
 			<div className="flex items-center justify-between mb-3">
 				<div className="flex items-center gap-3">
 					<span className="text-3xl font-bold text-gray-800">#{order.display_no}</span>
@@ -52,9 +50,7 @@ export function OrderCard({ order }: OrderCardProps) {
 				</div>
 			)}
 
-			{order.notes && (
-				<p className="text-sm text-gray-500 italic mb-3">{order.notes}</p>
-			)}
+			{order.notes && <p className="text-sm text-gray-500 italic mb-3">{order.notes}</p>}
 
 			{!isTerminal && (
 				<div className="flex gap-2 flex-wrap">
