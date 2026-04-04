@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { appSettings, terminals } from "./schema.js";
 import { createDb } from "./connection.js";
+import { appSettings, terminals } from "./schema.js";
 
 const dbPath = process.env.DB_PATH || "./data/sepetarasi.db";
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -12,7 +12,6 @@ const db = createDb(dbPath);
 const defaultSettings = [
 	{ key: "announcement_delay_ms", value: "2500" },
 	{ key: "business_name", value: "Sepetarasi" },
-	{ key: "display_no_reset_time", value: "06:00" },
 	{ key: "receipt_business_name", value: "Sepetarasi" },
 	{ key: "receipt_address", value: "" },
 	{ key: "receipt_phone", value: "" },
