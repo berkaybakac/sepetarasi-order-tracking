@@ -1,8 +1,22 @@
 # Sepetarasi Order Tracking
 
-LAN tabanli restoran siparis takip sistemi. Kasa (Electron .exe), Dashboard ve Musteri Ekrani (web).
+LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Dashboard ve Müşteri Ekranı.
 
-## Kurulum
+---
+
+## Erişim
+
+Sunucu çalışırken tüm arayüzler `http://<PI4-IP>:3000` üzerinden erişilebilir:
+
+| Arayüz | URL | macOS | Windows |
+| --- | --- | --- | --- |
+| Dashboard | `http://<PI4-IP>:3000` | `open http://<PI4-IP>:3000` | `start http://<PI4-IP>:3000` |
+| Müşteri Ekranı | `http://<PI4-IP>:3000/display` | `open http://<PI4-IP>:3000/display` | `start http://<PI4-IP>:3000/display` |
+| Sağlık | `http://<PI4-IP>:3000/health` | — | — |
+
+---
+
+## İlk Kurulum (geliştirme makinesi)
 
 ```bash
 npm install
@@ -10,141 +24,144 @@ npm run db:migrate
 npm run db:seed
 ```
 
-## Kalite Kontrolu
+---
 
-```bash
-npm run ci               # lint + typecheck + test (commit oncesi calistir)
-npm run test:coverage    # kapsam raporu (esik packages/server/vitest.config.ts dosyasinda tanimli)
-npm run lint:fix         # otomatik bicimlendirme
-```
-
-## Gelistirme
+## Geliştirme
 
 ```bash
 # Terminal 1: Server
 npm run dev:server
 
-# Terminal 2: Web (Dashboard + Musteri Ekrani)
+# Terminal 2: Web (Dashboard + Müşteri Ekranı)
 npm run dev:web
 
 # Terminal 3: Kasa (opsiyonel)
 cd packages/kasa && npm run dev
 ```
 
-## Production Build + Calistirma
+Yerel erişim (Vite dev):
+
+- Dashboard: `http://localhost:5173`
+- Müşteri Ekranı: `http://localhost:5173/display`
+- Server (API): `http://localhost:3000`
+
+---
+
+## Deploy (Pi4)
+
+**A) Mac'ten — SSH ile build + gönder + yeniden başlat:**
+
+```bash
+# Bir kez: SSH key kur
+ssh-keygen -t ed25519
+ssh-copy-id admin@<PI4-IP>
+
+# Yeni Pi4 (ilk kurulum — Node.js + systemd + .env dahil)
+bash scripts/deploy.sh admin@<PI4-IP> --init
+
+# Kod güncellemesi
+bash scripts/deploy.sh admin@<PI4-IP>
+```
+
+**B) Pi4 üzerinde yerelde:**
+
+```bash
+bash scripts/pi4-deploy.sh
+```
+
+Deploy sonrası `deploy.sh` otomatik `/health` kontrolü yapar. Daha kapsamlı test (API + WS + ses):
+
+```bash
+bash scripts/pi4-smoke-test.sh
+```
+
+---
+
+## Servis Yönetimi (Pi4)
+
+```bash
+sudo systemctl status sepetarasi
+sudo systemctl restart sepetarasi
+journalctl -u sepetarasi -f
+```
+
+---
+
+## Kasa (Electron)
+
+**macOS .app build ve açma:**
+
+```bash
+cd packages/kasa && npm run build
+# Çıktı: packages/kasa/release/mac-arm64/
+
+open -a "Sepetarasi Kasa"
+# veya doğrudan:
+open "$PWD/packages/kasa/release/mac-arm64/Sepetarasi Kasa.app"
+```
+
+**Windows .exe build (Mac üzerinde cross-compile):**
+
+```bash
+cd packages/kasa && npm run build:win
+# Çıktı: packages/kasa/release/
+```
+
+Windows doğrulama politikası: `docs/dev-notes.md` → Windows Validation Gate
+
+---
+
+## Production Build (yerel test)
+
+Pi4'e deploy için `deploy.sh` kullan. Bu komutlar yalnızca yerel makine testi içindir:
 
 ```bash
 npm run build
 npm start
-# http://localhost:3000
 ```
 
-## Kasa — Gelistirme ve Test
+---
 
-**macOS'ta Electron olarak acmak (gelistirme / gorsel test):**
+## Kalite Kontrolü
 
 ```bash
-cd packages/kasa && npm run dev
-# Electron macOS'ta acilir; server URL'sini Pi4 IP veya localhost gir
+npm run ci               # lint + typecheck + test — commit öncesi çalıştır
+npm run test:coverage    # kapsam raporu (eşik packages/server/vitest.config.ts'de)
+npm run lint:fix         # otomatik biçimlendirme
 ```
 
-**macOS .app build:**
-
-```bash
-cd packages/kasa && npm run build
-# Cikti: packages/kasa/release/mac-arm64/
-```
-
-**macOS .app acma (hizli):**
-
-```bash
-# Uygulama adiyla ac
-open -a "Sepetarasi Kasa"
-
-# App adiyla acilmazsa (repo root'tan) dogrudan yol
-open "$PWD/packages/kasa/release/mac-arm64/Sepetarasi Kasa.app"
-```
-
-**Windows .exe build (Mac uzerinde cross-compile):**
-
-```bash
-cd packages/kasa && npm run build:win
-# Cikti: packages/kasa/release/
-```
-
-Windows dogrulama politikasi ve kalite kapisi: `docs/dev-notes.md` (Windows Validation Gate bolumu)
-
-> Dashboard ve musteri ekrani her iki platformda da tarayicidan eriselebilir:
-> `http://<sunucu-ip>:3000` ve `http://<sunucu-ip>:3000/display`
-
-## Deploy (Pi4)
-
-Iki yontem var:
-
-**A) Mac'ten uzaktan (tek komut)** — SSH ile build + gonder + restart:
-
-```bash
-# Onkosul: SSH key kur (bir kez yapilir)
-ssh-keygen -t ed25519        # key yoksa olustur
-ssh-copy-id admin@<PI4-IP>   # Pi4'e key kopyala
-# Pi4 IP bulmak icin: Pi4 uzerinde `hostname -I` calistir
-
-# Yeni Pi4 (ilk kurulum — Node.js + systemd dahil)
-bash scripts/deploy.sh admin@192.168.1.34 --init
-
-# Kod guncellemesi (mevcut kuruluma)
-bash scripts/deploy.sh admin@192.168.1.34
-```
-
-**B) Pi4 uzerinde yerelde** — dosyalar zaten Pi4'te ise:
-
-```bash
-# Pi4'e SSH ile baglan, proje dizinine gir
-bash scripts/pi4-deploy.sh
-```
-
-**Servis yonetimi (Pi4 uzerinde):**
-
-```bash
-sudo systemctl status sepetarasi      # durum
-sudo systemctl restart sepetarasi     # yeniden baslatma
-journalctl -u sepetarasi -f           # canli log takibi
-```
+---
 
 ## API
 
-| Method | Endpoint | Aciklama |
-| ------ | -------- | -------- |
-| POST | `/api/v1/orders` | Siparis olustur |
-| GET | `/api/v1/orders` | Gunun siparisleri |
-| PATCH | `/api/v1/orders/:id/status` | Durum degistir |
-| GET | `/api/v1/stats/today` | Istatistikler |
+| Method | Endpoint | Açıklama |
+| --- | --- | --- |
+| POST | `/api/v1/orders` | Sipariş oluştur |
+| GET | `/api/v1/orders` | Günün siparişleri |
+| PATCH | `/api/v1/orders/:id/status` | Durum değiştir |
+| GET | `/api/v1/stats/today` | İstatistikler |
 | GET | `/api/v1/settings` | Ayarlar (readonly) |
-| WS | `/ws?channel=orders` | Canli guncellemeler |
-| WS | `/ws?channel=display` | Anons olaylari |
+| WS | `/ws?channel=orders` | Canlı güncellemeler |
+| WS | `/ws?channel=display` | Anons olayları |
 
-## Sesli Anons Kurulumu (Pi4)
+---
 
-Servis her "Hazır" siparişi için otomatik anons yapar. İki yöntem:
-
-**A) Pre-recorded ses dosyaları (önerilen):**
-
-`packages/server/assets/announcements/` dizinine `1.mp3`, `2.mp3`, ..., `400.mp3` dosyalarını koy.
-Çalma sırası: `mpg123` (Linux) / `afplay` (macOS)
-
-**B) TTS fallback (kurulum gerektirmez):**
-
-`espeak-ng` (Pi4'te otomatik kurulu) Türkçe seslendirme yapar.
-Ses dosyası bulunamazsa otomatik devreye girer.
-
-Ses çıkışı için Pi4'te: `sudo raspi-config nonint do_audio 1` (3.5mm jack)
-
-## Ortam Degiskenleri
+## Ortam Değişkenleri
 
 ```env
 PORT=3000
 DB_PATH=./data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
-ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel, default bu
-DISABLE_AUDIO=false                                          # opsiyonel
+ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel
+DISABLE_AUDIO=false                                         # sesi kapatmak için true yap
 ```
+
+---
+
+## Sesli Anons (Pi4)
+
+**A) MP3 dosyaları (önerilen):** `packages/server/assets/announcements/` dizinine `1.mp3` … `400.mp3` koy. Çalma: `mpg123`.
+
+**B) TTS fallback:** `espeak-ng` Türkçe seslendirme — ses dosyası bulunamazsa otomatik devreye girer.
+
+Ses çıkışı (3.5mm jack): `sudo raspi-config nonint do_audio 1`
