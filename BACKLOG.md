@@ -18,3 +18,18 @@ build sonrası Pi4'te gereksiz kalıyor. Runtime'ı etkilemez ama SD kart dolma 
 3. Test: `bash scripts/pi4-smoke-test.sh`
 
 **Öncelik:** Düşük-Orta — 7/24 çalışan production Pi4'te 6-12 ay sonra disk alanı için önem kazanır.
+
+---
+
+## QA / Windows
+
+### [ ] Windows validation otomasyonu (Playwright/Windows runner)
+
+**Neden:** Windows kalite kapisi su an manuel checklist'e bagli. Otomasyon, regressions'i release oncesinde daha erken yakalar.
+
+**Nasil yapilir:**
+1. `windows-latest` runner'da `npm run build:win` adimini CI'ya ekle
+2. Kasa uygulamasi icin temel smoke senaryolari otomatiklestir (acilis, baglanti, siparis akisi, reconnect, config kalicilik)
+3. Manuel checklist'i (`scripts/win-exe-smoke-test.md`) otomasyon kapsami disinda kalan adimlar icin koru
+
+**Oncelik:** Orta — MVP'de manuel gate yeterli, release sayisi arttikca otomasyon kritik hale gelir.

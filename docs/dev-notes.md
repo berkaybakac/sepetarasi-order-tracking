@@ -41,3 +41,15 @@ When adding a new feature across packages, always start from shared:
 
 **Why:** The compiler immediately flags every package that hasn't implemented
 the new type yet. Prevents "works on web, broken on kasa" bugs.
+
+## Windows Validation Gate (MVP)
+
+Windows prod hedef, gelistirme cihazi macOS. Hiz ve risk dengesi icin politika:
+
+1. Gunluk gelistirme Mac'te devam eder.
+2. Su degisikliklerde ayni gun Windows smoke test zorunludur:
+   - `packages/kasa/electron`
+   - `npm run build:win` / installer
+   - hotkey, yazici, dosya yolu/kaydetme, baglanti/reconnect
+3. Her release oncesi tam checklist calistirilir: `scripts/win-exe-smoke-test.md`
+4. Sahaya cikmadan once (prod oncesi) gercek Windows cihazda tam E2E + installer kurulum testi tekrar edilir.

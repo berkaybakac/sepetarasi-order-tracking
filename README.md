@@ -55,12 +55,24 @@ cd packages/kasa && npm run build
 # Cikti: packages/kasa/release/mac-arm64/
 ```
 
+**macOS .app acma (hizli):**
+
+```bash
+# Uygulama adiyla ac
+open -a "Sepetarasi Kasa"
+
+# App adiyla acilmazsa (repo root'tan) dogrudan yol
+open "$PWD/packages/kasa/release/mac-arm64/Sepetarasi Kasa.app"
+```
+
 **Windows .exe build (Mac uzerinde cross-compile):**
 
 ```bash
 cd packages/kasa && npm run build:win
 # Cikti: packages/kasa/release/
 ```
+
+Windows dogrulama politikasi ve kalite kapisi: `docs/dev-notes.md` (Windows Validation Gate bolumu)
 
 > Dashboard ve musteri ekrani her iki platformda da tarayicidan eriselebilir:
 > `http://<sunucu-ip>:3000` ve `http://<sunucu-ip>:3000/display`
