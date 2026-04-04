@@ -21,6 +21,15 @@
 - `chore(quality): adjust CI scripts and thresholds`
 - `feat(...)/fix(...): functional code changes`
 
+## Intentional Separations
+
+**ADR: web vs. kasa API clients are intentionally separate.**
+`web/src/lib/api.ts` and `kasa/src/lib/api.ts` must not be merged.
+Why: web is a read-only browser dashboard (same-origin, Vite proxy).
+kasa is a read-write Electron app requiring dynamic baseUrl (LAN IP) and per-request terminalId injection.
+Merging would leak Electron-specific config into the browser bundle.
+Revisit only if web gains write operations or Electron is dropped.
+
 ## Feature Development Order
 
 When adding a new feature across packages, always start from shared:

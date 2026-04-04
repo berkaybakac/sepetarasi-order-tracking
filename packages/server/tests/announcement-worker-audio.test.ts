@@ -23,6 +23,7 @@ import type { AppDatabase } from "../src/db/connection.js";
 import { announcementQueue, orders } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { AnnouncementService } from "../src/services/announcement.service.js";
+import { AudioPlaybackService } from "../src/services/audio-playback.service.js";
 import { AnnouncementWorker } from "../src/workers/announcement.worker.js";
 import { Broadcaster } from "../src/ws/broadcaster.js";
 
@@ -76,13 +77,16 @@ function seedPendingAnnouncement(orderId: string, displayNo: number) {
 }
 
 function makeWorker(opts: { announcementsPath?: string; delayMs?: number } = {}) {
+	const audioPlayer = new AudioPlaybackService({
+		disableAudio: false,
+		announcementsPath: opts.announcementsPath ?? tempDir,
+		delayMs: opts.delayMs ?? 50,
+	});
 	return new AnnouncementWorker({
 		announcementService: service,
 		broadcaster,
-		delayMs: opts.delayMs ?? 50,
+		audioPlayer,
 		pollIntervalMs: 50,
-		disableAudio: false,
-		announcementsPath: opts.announcementsPath ?? tempDir,
 	});
 }
 

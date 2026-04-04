@@ -1,3 +1,4 @@
+// ADR: intentionally separate from kasa/api.ts — see docs/dev-notes.md "Intentional Separations"
 import type { DayStats, Order } from "@sepetarasi/shared";
 
 const baseUrl = "";

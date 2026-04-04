@@ -10,6 +10,7 @@ import { registerOrderRoutes } from "./routes/orders.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerStatsRoutes } from "./routes/stats.js";
 import { AnnouncementService } from "./services/announcement.service.js";
+import { AudioPlaybackService } from "./services/audio-playback.service.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
 import { Broadcaster } from "./ws/broadcaster.js";
 
@@ -102,13 +103,16 @@ export async function buildApp(opts: AppOptions) {
 	let worker: AnnouncementWorker | null = null;
 	if (!opts.disableWorker) {
 		const announcementService = new AnnouncementService(opts.db);
+		const audioPlayer = new AudioPlaybackService({
+			disableAudio: opts.disableAudio ?? false,
+			announcementsPath: opts.announcementsPath,
+			delayMs: opts.announcementDelayMs ?? 2500,
+		});
 		worker = new AnnouncementWorker({
 			announcementService,
 			broadcaster,
-			delayMs: opts.announcementDelayMs ?? 2500,
+			audioPlayer,
 			pollIntervalMs: opts.workerPollIntervalMs ?? 1000,
-			disableAudio: opts.disableAudio ?? false,
-			announcementsPath: opts.announcementsPath,
 		});
 
 		app.addHook("onReady", async () => {

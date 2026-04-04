@@ -1,10 +1,5 @@
-import type {
-	ApiResponse,
-	CreateOrderInput,
-	DayStats,
-	Order,
-	UpdateStatusInput,
-} from "@sepetarasi/shared";
+// ADR: intentionally separate from web/api.ts — see docs/dev-notes.md "Intentional Separations"
+import type { CreateOrderInput, DayStats, Order, UpdateStatusInput } from "@sepetarasi/shared";
 
 let baseUrl = "http://localhost:3000";
 let terminalId = "";

@@ -4,6 +4,7 @@ import type { AppDatabase } from "../src/db/connection.js";
 import { announcementQueue, orders } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { AnnouncementService } from "../src/services/announcement.service.js";
+import { AudioPlaybackService } from "../src/services/audio-playback.service.js";
 import { AnnouncementWorker } from "../src/workers/announcement.worker.js";
 import { Broadcaster } from "../src/ws/broadcaster.js";
 
@@ -16,12 +17,12 @@ beforeEach(() => {
 	db = createTestDb();
 	announcementService = new AnnouncementService(db);
 	broadcaster = new Broadcaster();
+	const audioPlayer = new AudioPlaybackService({ disableAudio: true, delayMs: 10 });
 	worker = new AnnouncementWorker({
 		announcementService,
 		broadcaster,
-		delayMs: 10, // fast for tests
+		audioPlayer,
 		pollIntervalMs: 50,
-		disableAudio: true, // no sound during tests
 	});
 });
 
