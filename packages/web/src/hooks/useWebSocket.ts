@@ -30,8 +30,8 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 				try {
 					const msg: WsMessage = JSON.parse(event.data);
 					onMessage(msg);
-				} catch {
-					// ignore
+				} catch (err) {
+					console.error("WS message parse error:", err);
 				}
 			};
 

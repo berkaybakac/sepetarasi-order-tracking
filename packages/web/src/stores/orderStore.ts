@@ -37,7 +37,8 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				orders.set(order.id, order);
 			}
 			set({ orders, stats, loading: false });
-		} catch {
+		} catch (err) {
+			console.error("Failed to hydrate orders:", err);
 			set({ loading: false });
 		}
 	},

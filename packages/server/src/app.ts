@@ -32,7 +32,7 @@ export interface AppOptions {
 }
 
 export async function buildApp(opts: AppOptions) {
-	const app = Fastify({ logger: false });
+	const app = Fastify({ logger: true });
 	const broadcaster = new Broadcaster();
 
 	// Allow Electron/web clients to call API across origins (LAN IP, localhost, file://)
@@ -70,8 +70,8 @@ export async function buildApp(opts: AppOptions) {
 					if (msg.event === "ping") {
 						socket.send(JSON.stringify({ event: "pong", timestamp: new Date().toISOString() }));
 					}
-				} catch {
-					// Ignore invalid messages
+				} catch (err) {
+					request.log.warn({ err }, "Invalid WS message received");
 				}
 			});
 		});

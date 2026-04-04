@@ -26,8 +26,8 @@ function loadConfig(): KasaConfig {
 			const saved = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
 			return { ...DEFAULT_CONFIG, ...saved };
 		}
-	} catch {
-		// ignore
+	} catch (err) {
+		console.error("Failed to load config, using defaults:", err);
 	}
 	return { ...DEFAULT_CONFIG };
 }
@@ -83,8 +83,8 @@ function registerHotkey() {
 	const accelerator = config.hotkey || "Ctrl+Shift+O";
 	try {
 		globalShortcut.register(accelerator, toggleWindow);
-	} catch {
-		// Invalid hotkey, ignore
+	} catch (err) {
+		console.error("Failed to register hotkey:", err);
 	}
 }
 

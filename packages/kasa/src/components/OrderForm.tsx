@@ -44,6 +44,12 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 			return;
 		}
 
+		const zeroPrice = validItems.find((item) => item.unit_price <= 0);
+		if (zeroPrice) {
+			setError(`"${zeroPrice.name}" için fiyat girilmedi`);
+			return;
+		}
+
 		// Convert TL to kuruş
 		const itemsWithKurus = validItems.map((item) => ({
 			...item,
