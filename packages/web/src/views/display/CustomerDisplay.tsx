@@ -57,7 +57,7 @@ export function CustomerDisplay() {
 					<h2 className="text-xl font-bold text-yellow-400 mb-4 text-center uppercase tracking-wider">
 						Hazirlaniyor
 					</h2>
-					<div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+					<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 						{preparingOrders.map((order) => (
 							<OrderNumber key={order.id} displayNo={order.display_no} />
 						))}
@@ -72,7 +72,7 @@ export function CustomerDisplay() {
 					<h2 className="text-xl font-bold text-green-400 mb-4 text-center uppercase tracking-wider">
 						Hazir
 					</h2>
-					<div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+					<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 						{readyOrders.map((order) => (
 							<OrderNumber
 								key={order.id}

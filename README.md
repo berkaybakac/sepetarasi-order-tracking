@@ -72,12 +72,15 @@ Iki yontem var:
 **A) Mac'ten uzaktan (tek komut)** — SSH ile build + gonder + restart:
 
 ```bash
-# Onkosul: ssh-copy-id admin@<IP>
+# Onkosul: SSH key kur (bir kez yapilir)
+ssh-keygen -t ed25519        # key yoksa olustur
+ssh-copy-id admin@<PI4-IP>   # Pi4'e key kopyala
+# Pi4 IP bulmak icin: Pi4 uzerinde `hostname -I` calistir
 
-# Yeni Pi4 (ilk kurulum)
+# Yeni Pi4 (ilk kurulum — Node.js + systemd dahil)
 bash scripts/deploy.sh admin@192.168.1.34 --init
 
-# Guncelleme
+# Kod guncellemesi (mevcut kuruluma)
 bash scripts/deploy.sh admin@192.168.1.34
 ```
 
@@ -86,6 +89,14 @@ bash scripts/deploy.sh admin@192.168.1.34
 ```bash
 # Pi4'e SSH ile baglan, proje dizinine gir
 bash scripts/pi4-deploy.sh
+```
+
+**Servis yonetimi (Pi4 uzerinde):**
+
+```bash
+sudo systemctl status sepetarasi      # durum
+sudo systemctl restart sepetarasi     # yeniden baslatma
+journalctl -u sepetarasi -f           # canli log takibi
 ```
 
 ## API

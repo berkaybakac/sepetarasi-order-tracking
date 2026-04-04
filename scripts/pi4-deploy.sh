@@ -76,6 +76,11 @@ fi
 echo "[5/7] Build (shared + web + server)..."
 npm run build
 
+# Migration SQL dosyalarini dist'e kopyala (tsc bunlari kopyalamaz)
+# server.ts startup'ta resolve(__dirname, "db/migrations") ile okuyor
+mkdir -p packages/server/dist/db/migrations
+cp -r packages/server/src/db/migrations/. packages/server/dist/db/migrations/
+
 # --- 6. Migration + Seed ---
 echo "[6/7] Veritabani migration + seed..."
 npm run db:migrate
