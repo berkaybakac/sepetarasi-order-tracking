@@ -5,6 +5,7 @@ set -euo pipefail
 # Raspberry Pi 4 (ARM64) uzerinde sifirdan kurulum yapar.
 # Kullanim: bash pi4-deploy.sh [repo-dizini]
 
+SCRIPT_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${1:-/opt/sepetarasi}"
 SERVICE_NAME="sepetarasi"
 NODE_VERSION="20"
@@ -81,6 +82,38 @@ npm run build
 mkdir -p packages/server/dist/db/migrations
 cp -r packages/server/src/db/migrations/. packages/server/dist/db/migrations/
 
+# --- Anons ses dosyalari ---
+AUDIO_DST="$APP_DIR/packages/server/assets/announcements"
+AUDIO_SRC="$SCRIPT_SRC_DIR/packages/server/assets/announcements"
+mkdir -p "$AUDIO_DST"
+if is_project_dir "$SCRIPT_SRC_DIR" && compgen -G "$AUDIO_SRC/*.mp3" > /dev/null 2>&1; then
+    if [ -x "$SCRIPT_SRC_DIR/scripts/validate-audio.sh" ]; then
+        echo "  Kaynak ses dosyalari dogrulaniyor..."
+        bash "$SCRIPT_SRC_DIR/scripts/validate-audio.sh" "$AUDIO_SRC"
+    fi
+    echo "  Anons ses dosyalari kopyalaniyor..."
+    rsync -a --delete --include="*.mp3" --exclude="*" "$AUDIO_SRC/" "$AUDIO_DST/"
+    MP3_COUNT=$(ls "$AUDIO_DST"/*.mp3 2>/dev/null | wc -l | tr -d ' ')
+    echo "  $MP3_COUNT ses dosyasi kopyalandi."
+    if [ -x "$SCRIPT_SRC_DIR/scripts/validate-audio.sh" ]; then
+        echo "  Hedef ses dosyalari dogrulaniyor..."
+        bash "$SCRIPT_SRC_DIR/scripts/validate-audio.sh" "$AUDIO_DST"
+    fi
+elif compgen -G "$AUDIO_DST/*.mp3" > /dev/null 2>&1; then
+    MP3_COUNT=$(ls "$AUDIO_DST"/*.mp3 2>/dev/null | wc -l | tr -d ' ')
+    echo "  $MP3_COUNT mevcut ses dosyasi dogrulaniyor..."
+    if [ -x "$SCRIPT_SRC_DIR/scripts/validate-audio.sh" ]; then
+        bash "$SCRIPT_SRC_DIR/scripts/validate-audio.sh" "$AUDIO_DST"
+    else
+        echo "  UYARI: validate-audio.sh bulunamadi, dogrulama atlandi."
+    fi
+else
+    echo "  UYARI: Anons ses dosyasi bulunamadi."
+    echo "         macOS'ta uret: bash scripts/generate-audio.sh"
+    echo "         Pi4'e kopyala: scp packages/server/assets/announcements/*.mp3 pi@<IP>:$AUDIO_DST/"
+    echo "         (Sistem calismaya devam eder; TTS kapaliysa anonslar sessiz gecilir.)"
+fi
+
 # --- 6. Migration (+ ilk kurulumda seed) ---
 echo "[6/7] Veritabani migration..."
 [ ! -f "$APP_DIR/data/sepetarasi.db" ] && SHOULD_SEED=true || SHOULD_SEED=false
@@ -108,6 +141,7 @@ RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=DB_PATH=$APP_DIR/data/sepetarasi.db
+Environment=ENABLE_TTS_FALLBACK=false
 
 [Install]
 WantedBy=multi-user.target
