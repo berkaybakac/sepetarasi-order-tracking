@@ -154,14 +154,22 @@ DB_PATH=./data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
 ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel
 DISABLE_AUDIO=false                                         # sesi kapatmak için true yap
+ENABLE_TTS_FALLBACK=false                                   # MVP: false (sadece pre-recorded mp3)
 ```
 
 ---
 
 ## Sesli Anons (Pi4)
 
-**A) MP3 dosyaları (önerilen):** `packages/server/assets/announcements/` dizinine `1.mp3` … `400.mp3` koy. Çalma: `mpg123`.
+MVP politikası: pre-recorded ses zorunlu (`1.mp3` … `400.mp3`), TTS fallback varsayılan kapalıdır.
+Windows kasa cihazları sadece API çağrısı yapar; gerçek ses çıkışı yalnızca Pi4 sunucuda gerçekleşir.
+MP3 dosyaları repoya commit edilmez (`.gitignore` ile hariç tutulur).
 
-**B) TTS fallback:** `espeak-ng` Türkçe seslendirme — ses dosyası bulunamazsa otomatik devreye girer.
+1. Ses dosyalarını üret:
+   `npm run audio:generate`
+2. Dosyaları doğrula:
+   `npm run audio:validate`
+3. Çalma: Linux'ta `mpg123`, macOS'ta `afplay`.
+4. TTS (opsiyonel): `ENABLE_TTS_FALLBACK=true` yapılırsa, ses dosyası yokken `espeak-ng/say` devreye girer.
 
 Ses çıkışı (3.5mm jack): `sudo raspi-config nonint do_audio 1`

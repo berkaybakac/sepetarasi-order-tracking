@@ -13,3 +13,5 @@ release/
 data/
 coverage/
 packages/server/coverage/
+packages/server/assets/announcements/*
+!packages/server/assets/announcements/.gitkeep
