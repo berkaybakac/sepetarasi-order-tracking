@@ -117,6 +117,50 @@ describe("AnnouncementService", () => {
 	});
 });
 
+describe("AnnouncementService.resetStuckAnnouncements()", () => {
+	it("resets playing announcements to pending", () => {
+		seedOrder("o-1", 1);
+		db.insert(announcementQueue)
+			.values({ id: "aq-1", order_id: "o-1", display_no: 1, type: "ready", status: "playing", enqueued_at: new Date().toISOString() })
+			.run();
+
+		announcementService.resetStuckAnnouncements();
+
+		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
+		expect(item.status).toBe("pending");
+	});
+
+	it("does not touch pending or played announcements", () => {
+		seedOrder("o-1", 1);
+		seedOrder("o-2", 2);
+		seedOrder("o-3", 3);
+
+		db.insert(announcementQueue).values([
+			{ id: "aq-1", order_id: "o-1", display_no: 1, type: "ready", status: "pending", enqueued_at: new Date().toISOString() },
+			{ id: "aq-2", order_id: "o-2", display_no: 2, type: "ready", status: "played", enqueued_at: new Date().toISOString() },
+			{ id: "aq-3", order_id: "o-3", display_no: 3, type: "ready", status: "playing", enqueued_at: new Date().toISOString() },
+		]).run();
+
+		announcementService.resetStuckAnnouncements();
+
+		const items = db.select().from(announcementQueue).all();
+		const byId = Object.fromEntries(items.map((i) => [i.id, i.status]));
+		expect(byId["aq-1"]).toBe("pending"); // unchanged
+		expect(byId["aq-2"]).toBe("played");  // unchanged
+		expect(byId["aq-3"]).toBe("pending"); // was playing → reset
+	});
+
+	it("is a no-op when no stuck announcements exist", () => {
+		seedOrder("o-1", 1);
+		seedAnnouncement("aq-1", "o-1", 1); // status: pending
+
+		announcementService.resetStuckAnnouncements();
+
+		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
+		expect(item.status).toBe("pending");
+	});
+});
+
 describe("AnnouncementWorker", () => {
 	it("should process a pending announcement to played", async () => {
 		seedOrder("o-1", 1);

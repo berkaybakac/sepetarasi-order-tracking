@@ -26,6 +26,8 @@ export interface AppOptions {
 	workerPollIntervalMs?: number;
 	/** Disable audio playback in announcement worker (useful for tests) */
 	disableAudio?: boolean;
+	/** Enable TTS fallback when MP3 is missing or player fails (default false for MVP) */
+	enableTtsFallback?: boolean;
 	/** Path to pre-recorded MP3 files named {display_no}.mp3 */
 	announcementsPath?: string;
 	/** Disable static file serving (useful for tests) */
@@ -105,6 +107,7 @@ export async function buildApp(opts: AppOptions) {
 		const announcementService = new AnnouncementService(opts.db);
 		const audioPlayer = new AudioPlaybackService({
 			disableAudio: opts.disableAudio ?? false,
+			enableTtsFallback: opts.enableTtsFallback ?? false,
 			announcementsPath: opts.announcementsPath,
 			delayMs: opts.announcementDelayMs ?? 2500,
 		});
@@ -116,6 +119,8 @@ export async function buildApp(opts: AppOptions) {
 		});
 
 		app.addHook("onReady", async () => {
+			// Reset any announcements stuck in "playing" from a previous crashed/power-cycled run
+			announcementService.resetStuckAnnouncements();
 			worker?.start();
 		});
 

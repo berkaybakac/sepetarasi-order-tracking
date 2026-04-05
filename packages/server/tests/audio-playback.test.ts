@@ -60,10 +60,25 @@ describe("AudioPlaybackService", () => {
 	it("uses TTS when no MP3 file exists", async () => {
 		mockSpawn.mockImplementation(() => makeProcess("close") as never);
 
-		await new AudioPlaybackService({ announcementsPath: tempDir, delayMs: 50 }).play(7);
+		await new AudioPlaybackService({
+			announcementsPath: tempDir,
+			enableTtsFallback: true,
+			delayMs: 50,
+		}).play(7);
 
 		expect(mockSpawn).toHaveBeenCalledTimes(1);
 		expect(["espeak-ng", "say"]).toContain(mockSpawn.mock.calls[0][0]);
+	});
+
+	// Happy: no MP3 + TTS disabled → silent resolve without spawn
+	it("skips announcement without spawning when no MP3 and TTS fallback is disabled", async () => {
+		await new AudioPlaybackService({
+			announcementsPath: tempDir,
+			enableTtsFallback: false,
+			delayMs: 20,
+		}).play(11);
+
+		expect(mockSpawn).not.toHaveBeenCalled();
 	});
 
 	// Sad: MP3 player fails → falls back to TTS
@@ -72,7 +87,11 @@ describe("AudioPlaybackService", () => {
 		let call = 0;
 		mockSpawn.mockImplementation(() => makeProcess(++call === 1 ? "error" : "close") as never);
 
-		await new AudioPlaybackService({ announcementsPath: tempDir, delayMs: 50 }).play(2);
+		await new AudioPlaybackService({
+			announcementsPath: tempDir,
+			enableTtsFallback: true,
+			delayMs: 50,
+		}).play(2);
 
 		expect(mockSpawn).toHaveBeenCalledTimes(2);
 		expect(["espeak-ng", "say"]).toContain(mockSpawn.mock.calls[1][0]);
@@ -83,7 +102,11 @@ describe("AudioPlaybackService", () => {
 		mockSpawn.mockImplementation(() => makeProcess("error") as never);
 
 		await expect(
-			new AudioPlaybackService({ announcementsPath: tempDir, delayMs: 20 }).play(9),
+			new AudioPlaybackService({
+				announcementsPath: tempDir,
+				enableTtsFallback: true,
+				delayMs: 20,
+			}).play(9),
 		).resolves.toBeUndefined();
 	});
 });

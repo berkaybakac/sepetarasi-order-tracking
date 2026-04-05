@@ -5,9 +5,11 @@ import { join } from "node:path";
 export interface AudioPlaybackOptions {
 	/** Disable audio playback (useful for tests) */
 	disableAudio?: boolean;
+	/** Allow TTS fallback when MP3 is missing or cannot be played (default: false for MVP) */
+	enableTtsFallback?: boolean;
 	/**
 	 * Directory containing pre-recorded MP3 files named {display_no}.mp3
-	 * Falls back to TTS (espeak-ng/say) if file not found.
+	 * Falls back to TTS (espeak-ng/say) only when enableTtsFallback=true.
 	 */
 	announcementsPath?: string;
 	/** How long to wait when audio is disabled or as a silent fallback (ms) */
@@ -16,11 +18,13 @@ export interface AudioPlaybackOptions {
 
 export class AudioPlaybackService {
 	private disableAudio: boolean;
+	private enableTtsFallback: boolean;
 	private announcementsPath: string;
 	private delayMs: number;
 
 	constructor(opts: AudioPlaybackOptions = {}) {
 		this.disableAudio = opts.disableAudio ?? false;
+		this.enableTtsFallback = opts.enableTtsFallback ?? false;
 		this.announcementsPath =
 			opts.announcementsPath ??
 			join(process.cwd(), "packages", "server", "assets", "announcements");
@@ -33,7 +37,7 @@ export class AudioPlaybackService {
 	 * Priority:
 	 * 1. Pre-recorded MP3 file: {announcementsPath}/{displayNo}.mp3  (best quality)
 	 *    - Linux: mpg123   macOS: afplay
-	 * 2. TTS fallback: espeak-ng (Linux) / say (macOS)
+	 * 2. TTS fallback (optional): espeak-ng (Linux) / say (macOS)
 	 * 3. Silent timer fallback: if no audio command available
 	 */
 	async play(displayNo: number): Promise<void> {
@@ -43,11 +47,24 @@ export class AudioPlaybackService {
 		}
 
 		const audioFile = join(this.announcementsPath, `${displayNo}.mp3`);
-		if (existsSync(audioFile)) {
+		const hasAudioFile = existsSync(audioFile);
+		if (hasAudioFile) {
 			const played = await this.playFile(audioFile);
 			if (played) return;
 		}
 
+		if (!this.enableTtsFallback) {
+			const reason = hasAudioFile ? "player failed" : "file missing";
+			console.warn(
+				`WARNING: Announcement audio skipped for order ${displayNo} (${reason}; TTS fallback disabled)`,
+			);
+			await new Promise<void>((resolve) => setTimeout(resolve, this.delayMs));
+			return;
+		}
+
+		if (!hasAudioFile) {
+			console.warn(`WARNING: No audio file for order ${displayNo} — falling back to TTS`);
+		}
 		await this.playTts(displayNo);
 	}
 

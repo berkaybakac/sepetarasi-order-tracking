@@ -14,6 +14,9 @@ const announcementsPath = process.env.ANNOUNCEMENTS_PATH;
 const disableAudio = ["1", "true", "yes", "on"].includes(
 	(process.env.DISABLE_AUDIO ?? "").toLowerCase(),
 );
+const enableTtsFallback = ["1", "true", "yes", "on"].includes(
+	(process.env.ENABLE_TTS_FALLBACK ?? "").toLowerCase(),
+);
 
 mkdirSync(dirname(dbPath), { recursive: true });
 
@@ -23,7 +26,7 @@ const db = createDb(dbPath);
 const migrationsFolder = resolve(__dirname, "db/migrations");
 migrate(db, { migrationsFolder });
 
-const app = await buildApp({ db, announcementsPath, disableAudio });
+const app = await buildApp({ db, announcementsPath, disableAudio, enableTtsFallback });
 
 function getLanIp(): string {
 	const nets = networkInterfaces();
@@ -39,13 +42,9 @@ function getLanIp(): string {
 
 app.listen({ port, host: "0.0.0.0" }, (err) => {
 	if (err) {
-		console.error(err);
+		app.log.error(err);
 		process.exit(1);
 	}
 	const lanIp = getLanIp();
-	console.log(`
-  Sepetarasi Order Tracking Server
-  Local:   http://localhost:${port}
-  LAN:     http://${lanIp}:${port}
-`);
+	app.log.info({ local: `http://localhost:${port}`, lan: `http://${lanIp}:${port}` }, "Sepetarasi Order Tracking Server started");
 });

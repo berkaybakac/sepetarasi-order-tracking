@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { announcementQueue } from "../db/schema.js";
 
@@ -36,6 +36,21 @@ export class AnnouncementService {
 				played_at: new Date().toISOString(),
 			})
 			.where(eq(announcementQueue.id, id))
+			.run();
+	}
+
+	/**
+	 * Reset any announcements stuck in "playing" state back to "pending".
+	 * Called once on server startup. If the server crashed or was power-cycled
+	 * while an announcement was playing, that row stays "playing" forever and
+	 * the worker never picks it up again (it only queries "pending"). This
+	 * ensures those announcements are replayed after restart.
+	 */
+	resetStuckAnnouncements() {
+		this.db
+			.update(announcementQueue)
+			.set({ status: "pending" })
+			.where(eq(announcementQueue.status, "playing"))
 			.run();
 	}
 

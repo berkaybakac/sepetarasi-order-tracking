@@ -76,9 +76,12 @@ function seedPendingAnnouncement(orderId: string, displayNo: number) {
 		.run();
 }
 
-function makeWorker(opts: { announcementsPath?: string; delayMs?: number } = {}) {
+function makeWorker(
+	opts: { announcementsPath?: string; delayMs?: number; enableTtsFallback?: boolean } = {},
+) {
 	const audioPlayer = new AudioPlaybackService({
 		disableAudio: false,
+		enableTtsFallback: opts.enableTtsFallback ?? false,
 		announcementsPath: opts.announcementsPath ?? tempDir,
 		delayMs: opts.delayMs ?? 50,
 	});
@@ -95,12 +98,26 @@ function makeWorker(opts: { announcementsPath?: string; delayMs?: number } = {})
 // ─────────────────────────────────────────────
 
 describe("AnnouncementWorker — audio happy paths", () => {
+	it("no mp3 file + TTS disabled → no spawn and announcement reaches played", async () => {
+		seedPendingAnnouncement("o-1", 10);
+
+		await makeWorker({ enableTtsFallback: false }).processOne();
+
+		const item = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-10"))
+			.get()!;
+		expect(item.status).toBe("played");
+		expect(mockSpawn).not.toHaveBeenCalled();
+	});
+
 	it("no mp3 file → TTS spawn called → announcement reaches played", async () => {
 		// tempDir is empty, so no .mp3 file exists → falls through to TTS
 		mockSpawn.mockImplementation(() => makeProcess("close") as never);
 		seedPendingAnnouncement("o-1", 1);
 
-		await makeWorker().processOne();
+		await makeWorker({ enableTtsFallback: true }).processOne();
 
 		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
 		expect(item.status).toBe("played");
@@ -133,7 +150,7 @@ describe("AnnouncementWorker — audio happy paths", () => {
 		mockSpawn.mockImplementation(() => makeProcess("close") as never);
 		seedPendingAnnouncement("o-1", 42);
 
-		await makeWorker().processOne();
+		await makeWorker({ enableTtsFallback: true }).processOne();
 
 		// Args passed to TTS must include the order number text
 		const args = mockSpawn.mock.calls[0][1] as string[];
@@ -158,7 +175,7 @@ describe("AnnouncementWorker — audio sad paths", () => {
 		});
 
 		seedPendingAnnouncement("o-1", 3);
-		await makeWorker().processOne();
+		await makeWorker({ enableTtsFallback: true }).processOne();
 
 		// Two spawns: file player attempted then TTS
 		expect(mockSpawn).toHaveBeenCalledTimes(2);
@@ -176,7 +193,7 @@ describe("AnnouncementWorker — audio sad paths", () => {
 		mockSpawn.mockImplementation(() => makeProcess("error") as never);
 		seedPendingAnnouncement("o-1", 7);
 
-		await makeWorker({ delayMs: 20 }).processOne();
+		await makeWorker({ delayMs: 20, enableTtsFallback: true }).processOne();
 
 		// Worker must not throw; announcement must still be played
 		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-7")).get()!;
@@ -193,7 +210,7 @@ describe("AnnouncementWorker — audio sad paths", () => {
 
 		// delayMs=20 → safety timeout = 20+5000ms — too long to wait in test.
 		// Use a very small delayMs so safety timeout fires quickly.
-		await makeWorker({ delayMs: 30 }).processOne();
+		await makeWorker({ delayMs: 30, enableTtsFallback: true }).processOne();
 
 		expect(hangingProc.kill).toHaveBeenCalled();
 
