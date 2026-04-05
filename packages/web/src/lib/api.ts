@@ -16,4 +16,6 @@ export const api = {
 		return request<Order[]>("GET", `/api/v1/orders${params}`);
 	},
 	getStats: () => request<DayStats>("GET", "/api/v1/stats/today"),
+	getStatsByPeriod: (period: "daily" | "weekly" | "monthly") =>
+		request<DayStats>("GET", `/api/v1/stats?period=${period}`),
 };

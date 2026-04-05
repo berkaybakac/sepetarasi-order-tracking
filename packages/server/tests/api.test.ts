@@ -193,6 +193,31 @@ describe("GET /api/v1/settings", () => {
 	});
 });
 
+describe("GET /api/v1/stats", () => {
+	it("returns daily stats by default", async () => {
+		const res = await app.inject({ method: "GET", url: "/api/v1/stats" });
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+		expect(res.json().data).toHaveProperty("totalOrders");
+		expect(res.json().data).toHaveProperty("averagePrepMinutes");
+	});
+
+	it("accepts weekly and monthly period", async () => {
+		for (const period of ["weekly", "monthly"]) {
+			const res = await app.inject({ method: "GET", url: `/api/v1/stats?period=${period}` });
+			expect(res.statusCode).toBe(200);
+			expect(res.json().ok).toBe(true);
+		}
+	});
+
+	it("returns 400 for invalid period", async () => {
+		const res = await app.inject({ method: "GET", url: "/api/v1/stats?period=invalid" });
+		expect(res.statusCode).toBe(400);
+		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("INVALID_PERIOD");
+	});
+});
+
 describe("GET /health", () => {
 	it("should return ok", async () => {
 		const res = await app.inject({ method: "GET", url: "/health" });
