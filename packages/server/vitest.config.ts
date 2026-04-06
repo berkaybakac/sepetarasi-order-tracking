@@ -9,6 +9,7 @@ export default defineConfig({
 			include: ["src/**/*.ts"],
 			exclude: ["src/db/migrate.ts", "src/db/seed.ts", "src/server.ts"],
 			thresholds: {
+				statements: 80,
 				lines: 80,
 				functions: 80,
 				branches: 80,

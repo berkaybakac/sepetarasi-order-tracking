@@ -163,6 +163,21 @@ npm run ci           # lint + typecheck + test — commit öncesi çalıştır
 npm run lint:fix     # otomatik biçimlendirme
 ```
 
+Test stratejisi:
+
+```bash
+npm run test:unit         # hızlı geri bildirim (audio-playback + broadcaster)
+npm run test:integration  # API + DB + worker akış testleri
+npm run test:coverage     # coverage raporu + threshold kontrolü (>=80)
+npm run test:smoke:pi4    # Pi4 release-gate smoke testi (API + WS + ses)
+```
+
+Önerilen kullanım:
+
+1. Günlük geliştirme: `npm run test:unit`
+2. Main'e commit/push öncesi: `npm run ci` + `npm run test:coverage`
+3. Müşteriye gitmeden önce: Pi4 üzerinde `npm run test:smoke:pi4`
+
 ---
 
 ## API

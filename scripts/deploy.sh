@@ -183,6 +183,38 @@ ssh "$TARGET" "
             exit 1
         fi
 
+        if ! command -v aplay > /dev/null 2>&1; then
+            echo \"[audio-check] FAIL: aplay bulunamadi (alsa-utils eksik)\"
+            exit 1
+        fi
+
+        ALSA_PLAYBACK_NAMES=\$(aplay -L 2>/dev/null || true)
+        ALSA_HARDWARE_LIST=\$(aplay -l 2>/dev/null || true)
+        ALSA_DEVICE_FOUND=0
+
+        if echo \"\$ALSA_PLAYBACK_NAMES\" | grep -Fqx \"\$EXPECTED_AUDIO_DEVICE\"; then
+            ALSA_DEVICE_FOUND=1
+        elif echo \"\$ALSA_PLAYBACK_NAMES\" | grep -Fq \"\$EXPECTED_AUDIO_DEVICE\"; then
+            ALSA_DEVICE_FOUND=1
+        elif echo \"\$EXPECTED_AUDIO_DEVICE\" | grep -Eq '^(plug)?hw:[0-9]+,[0-9]+$'; then
+            CARD_NUM=\$(echo \"\$EXPECTED_AUDIO_DEVICE\" | sed -E 's/^(plug)?hw:([0-9]+),([0-9]+)$/\2/')
+            DEV_NUM=\$(echo \"\$EXPECTED_AUDIO_DEVICE\" | sed -E 's/^(plug)?hw:([0-9]+),([0-9]+)$/\3/')
+            if echo \"\$ALSA_HARDWARE_LIST\" | grep -Eq \"card[[:space:]]+\$CARD_NUM:\" && \
+               echo \"\$ALSA_HARDWARE_LIST\" | grep -Eq \"device[[:space:]]+\$DEV_NUM:\"; then
+                ALSA_DEVICE_FOUND=1
+            fi
+        fi
+
+        if [ \"\$ALSA_DEVICE_FOUND\" != \"1\" ]; then
+            echo \"[audio-check] FAIL: AUDIO_ALSA_DEVICE sistemde bulunamadi\"
+            echo \"[audio-check] expected=\$EXPECTED_AUDIO_DEVICE\"
+            echo \"[audio-check] aplay -L (ilk 40 satir):\"
+            echo \"\$ALSA_PLAYBACK_NAMES\" | head -n 40
+            echo \"[audio-check] aplay -l (ilk 40 satir):\"
+            echo \"\$ALSA_HARDWARE_LIST\" | head -n 40
+            exit 1
+        fi
+
         echo \"[audio-check] OK: AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\"
     else
         echo \"[audio-check] SKIP: .env icinde AUDIO_ALSA_DEVICE yok\"
