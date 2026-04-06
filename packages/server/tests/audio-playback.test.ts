@@ -26,6 +26,19 @@ function makeProcess(outcome: "close" | "error") {
 	return proc;
 }
 
+function makeProcessWithCloseCode(code: number) {
+	const proc = new EventEmitter() as EventEmitter & { kill: () => void };
+	proc.kill = vi.fn();
+	setTimeout(() => proc.emit("close", code), 5);
+	return proc;
+}
+
+function makeHangingProcess() {
+	const proc = new EventEmitter() as EventEmitter & { kill: () => void };
+	proc.kill = vi.fn();
+	return proc;
+}
+
 let tempDir: string;
 
 beforeEach(() => {
@@ -95,6 +108,87 @@ describe("AudioPlaybackService", () => {
 
 		expect(mockSpawn).toHaveBeenCalledTimes(2);
 		expect(["espeak-ng", "say"]).toContain(mockSpawn.mock.calls[1][0]);
+	});
+
+	it("falls back to TTS when MP3 player exits non-zero", async () => {
+		writeFileSync(join(tempDir, "22.mp3"), Buffer.alloc(0));
+		let call = 0;
+		mockSpawn.mockImplementation(
+			() => (call++ === 0 ? makeProcessWithCloseCode(1) : makeProcess("close")) as never,
+		);
+
+		await new AudioPlaybackService({
+			announcementsPath: tempDir,
+			enableTtsFallback: true,
+			delayMs: 50,
+		}).play(22);
+
+		expect(mockSpawn).toHaveBeenCalledTimes(2);
+		expect(["espeak-ng", "say"]).toContain(mockSpawn.mock.calls[1][0]);
+	});
+
+	it("uses mpg123 -a on linux when alsaDevice is provided", async () => {
+		writeFileSync(join(tempDir, "5.mp3"), Buffer.alloc(0));
+		const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("linux");
+		mockSpawn.mockImplementation(() => makeProcess("close") as never);
+
+		try {
+			await new AudioPlaybackService({
+				announcementsPath: tempDir,
+				alsaDevice: "plughw:CARD=Headphones,DEV=0",
+				delayMs: 50,
+			}).play(5);
+		} finally {
+			platformSpy.mockRestore();
+		}
+
+		expect(mockSpawn).toHaveBeenCalledTimes(1);
+		expect(mockSpawn.mock.calls[0][0]).toBe("mpg123");
+		const args = mockSpawn.mock.calls[0][1] as string[];
+		expect(args).toContain("-a");
+		expect(args).toContain("plughw:CARD=Headphones,DEV=0");
+	});
+
+	it("falls back to TTS when MP3 player hangs and safety timeout kills it", async () => {
+		writeFileSync(join(tempDir, "33.mp3"), Buffer.alloc(0));
+		const hangingProc = makeHangingProcess();
+		let call = 0;
+		mockSpawn.mockImplementation(
+			() => (call++ === 0 ? hangingProc : makeProcess("close")) as never,
+		);
+		vi.useFakeTimers();
+
+		try {
+			const playPromise = new AudioPlaybackService({
+				announcementsPath: tempDir,
+				enableTtsFallback: true,
+				delayMs: 20,
+			}).play(33);
+
+			await vi.advanceTimersByTimeAsync(5200);
+			await playPromise;
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect(hangingProc.kill).toHaveBeenCalledTimes(1);
+		expect(mockSpawn).toHaveBeenCalledTimes(2);
+		expect(["espeak-ng", "say"]).toContain(mockSpawn.mock.calls[1][0]);
+	});
+
+	it("does not spawn TTS when MP3 player exits non-zero and TTS fallback is disabled", async () => {
+		writeFileSync(join(tempDir, "44.mp3"), Buffer.alloc(0));
+		mockSpawn.mockImplementation(() => makeProcessWithCloseCode(1) as never);
+
+		await expect(
+			new AudioPlaybackService({
+				announcementsPath: tempDir,
+				enableTtsFallback: false,
+				delayMs: 20,
+			}).play(44),
+		).resolves.toBeUndefined();
+
+		expect(mockSpawn).toHaveBeenCalledTimes(1);
 	});
 
 	// Critical: both MP3 and TTS fail → silent timer, never throws

@@ -98,13 +98,13 @@ export class AudioPlaybackService {
 
 			const safetyTimeout = setTimeout(() => {
 				proc.kill();
-				resolve(true);
+				resolve(false);
 			}, this.delayMs + 5000);
 
 			proc.on("close", (code) => {
 				clearTimeout(safetyTimeout);
 				if (code !== 0) console.warn(`[audio] ${cmd} exited with code ${code}`);
-				resolve(true);
+				resolve(code === 0);
 			});
 
 			proc.on("error", () => {

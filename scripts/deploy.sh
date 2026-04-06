@@ -153,8 +153,41 @@ SVCEOF
     "
 fi
 
-# Restart
+# Ensure .env is always honored (new + old installs) via systemd drop-in.
+ssh "$TARGET" "
+    sudo mkdir -p /etc/systemd/system/sepetarasi.service.d
+    sudo tee /etc/systemd/system/sepetarasi.service.d/10-envfile.conf > /dev/null << 'SVCDROP'
+[Service]
+EnvironmentFile=-$APP_DIR/.env
+SVCDROP
+    sudo systemctl daemon-reload
+"
+
+# Restart (single restart after unit/drop-in is in final state)
 ssh "$TARGET" "sudo systemctl restart sepetarasi"
+
+# Verify runtime env wiring for audio device (fail-fast on misconfigured units).
+ssh "$TARGET" "
+    if [ -f $APP_DIR/.env ] && grep -q '^AUDIO_ALSA_DEVICE=' $APP_DIR/.env; then
+        EXPECTED_AUDIO_DEVICE=\$(grep '^AUDIO_ALSA_DEVICE=' $APP_DIR/.env | tail -n 1 | cut -d= -f2-)
+        MAIN_PID=\$(sudo systemctl show -p MainPID --value sepetarasi)
+        if [ -z \"\$MAIN_PID\" ] || [ \"\$MAIN_PID\" = \"0\" ]; then
+            echo \"[audio-check] FAIL: sepetarasi MainPID bulunamadi\"
+            exit 1
+        fi
+
+        if ! sudo tr '\0' '\n' < /proc/\$MAIN_PID/environ | grep -q \"^AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\$\"; then
+            echo \"[audio-check] FAIL: process env icinde AUDIO_ALSA_DEVICE beklenen degerde degil\"
+            echo \"[audio-check] expected=\$EXPECTED_AUDIO_DEVICE\"
+            echo \"[audio-check] kontrol: sudo systemctl cat sepetarasi\"
+            exit 1
+        fi
+
+        echo \"[audio-check] OK: AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\"
+    else
+        echo \"[audio-check] SKIP: .env icinde AUDIO_ALSA_DEVICE yok\"
+    fi
+"
 
 # --- 4. Smoke test ---
 echo ""

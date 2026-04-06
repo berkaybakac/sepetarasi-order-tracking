@@ -95,17 +95,34 @@ bash scripts/deploy.sh
 
 `--init` Pi4 hostname'ini `sepetarasi` yapar → `sepetarasi.local:3000` ile erişim, IP değişse de çalışır.
 
+`deploy.sh` ayrıca systemd drop-in ile `.env` dosyasını servise bağlar ve restart sonrası `AUDIO_ALSA_DEVICE` process env kontrolü yapar (fail-fast).
+
 Kapsamlı test (API + WS + ses):
 
 ```bash
 bash scripts/pi4-smoke-test.sh
 ```
 
+**Yeni Pi4 (sıfır cihaz) kuralı:**
+
+1. İlk kez bu cihaza kurulum yapıyorsan mutlaka `--init` kullan.
+2. `--init` tamamlandıktan sonra günlük güncellemelerde normal deploy kullan.
+3. Cihaza güç + ethernet + 3.5mm hoparlör takıldığında sesin doğru çıkması bu akışla otomatik olmalı.
+
+**`--init` ne zaman tekrar gerekir?**
+
+1. Yeni Pi4 / yeni SD kart / OS reimage yapıldıysa.
+2. `sepetarasi.service` silindiyse veya cihazda temel paketler (ör. `mpg123`) yoksa.
+3. Hostname veya 3.5mm audio route ayarları bozulduysa.
+
+`--init` tekrar çalıştırmak genelde güvenlidir, sadece normal deploy'dan daha uzun sürer.
+
 **Müşteriye kurulum akışı:**
 
 1. Pi4'ü restoranın WiFi'ına bağla, geçici IP'yi öğren (`arp -a` veya router paneli)
 2. `bash scripts/deploy.sh admin@<geçici-IP> --init` → her şey otomatik kurulur
-3. Bundan sonra `http://sepetarasi.local:3000` — IP değişse de çalışır
+3. Restoranda güncelleme gerektiğinde sadece `bash scripts/deploy.sh admin@<cihaz-IP>` çalıştır
+4. Uygulama URL'leri: `http://sepetarasi.local:3000` ve `http://sepetarasi.local:3000/display`
 
 ---
 
