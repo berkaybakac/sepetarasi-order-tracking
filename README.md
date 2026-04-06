@@ -8,11 +8,23 @@ LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Dashboard ve M
 
 Sunucu çalışırken tüm arayüzler `http://<PI4-IP>:3000` üzerinden erişilebilir:
 
-| Arayüz | URL | macOS | Windows |
-| --- | --- | --- | --- |
-| Dashboard | `http://<PI4-IP>:3000` | `open http://<PI4-IP>:3000` | `start http://<PI4-IP>:3000` |
-| Müşteri Ekranı | `http://<PI4-IP>:3000/display` | `open http://<PI4-IP>:3000/display` | `start http://<PI4-IP>:3000/display` |
-| Sağlık | `http://<PI4-IP>:3000/health` | — | — |
+| Arayüz | URL |
+| --- | --- |
+| Dashboard | `http://<PI4-IP>:3000` |
+| Müşteri Ekranı | `http://<PI4-IP>:3000/display` |
+| Admin | `http://<PI4-IP>:3000/admin` |
+| Sağlık | `http://<PI4-IP>:3000/health` |
+
+macOS'tan Pi4 arayüzlerini açmak için:
+
+```bash
+open http://<PI4-IP>:3000
+open http://<PI4-IP>:3000/display
+open http://<PI4-IP>:3000/admin
+open http://<PI4-IP>:3000/health
+```
+
+Windows'ta URL açma komutu: `start http://<PI4-IP>:3000`
 
 ---
 
@@ -29,6 +41,8 @@ npm run db:seed
 ## Geliştirme
 
 ```bash
+# 3 ayrı terminal aç:
+
 # Terminal 1: Server
 npm run dev:server
 
@@ -41,9 +55,25 @@ cd packages/kasa && npm run dev
 
 Yerel erişim (Vite dev):
 
-- Dashboard: `http://localhost:5173`
-- Müşteri Ekranı: `http://localhost:5173/display`
-- Server (API): `http://localhost:3000`
+| Arayüz | URL |
+| --- | --- |
+| Dashboard | `http://localhost:5173` |
+| Müşteri Ekranı | `http://localhost:5173/display` |
+| Admin | `http://localhost:5173/admin` |
+| Server (API) | `http://localhost:3000` |
+
+macOS'ta local geliştirme arayüzlerini açmak için:
+
+```bash
+open http://localhost:5173
+open http://localhost:5173/display
+open http://localhost:5173/admin
+open http://localhost:3000/health
+```
+
+Not: `localhost:5173` Vite geliştirme sunucusudur (Mac'te çalışan canlı kod).
+`http://<PI4-IP>:3000` ise Pi4 üzerindeki deploy edilmiş build'dir.
+Ekranlar aynı görünebilir; kaynakları farklıdır.
 
 ---
 
@@ -79,10 +109,19 @@ bash scripts/pi4-smoke-test.sh
 
 ## Servis Yönetimi (Pi4)
 
+Pi4 içine SSH olduktan sonra:
+
 ```bash
 sudo systemctl status sepetarasi
 sudo systemctl restart sepetarasi
 journalctl -u sepetarasi -f
+```
+
+Mac'ten uzaktan:
+
+```bash
+ssh admin@<PI4-IP> "sudo systemctl status sepetarasi --no-pager"
+ssh admin@<PI4-IP> "sudo journalctl -u sepetarasi -f"
 ```
 
 ---
@@ -97,7 +136,7 @@ cd packages/kasa && npm run build
 
 open -a "Sepetarasi Kasa"
 # veya doğrudan:
-open "$PWD/packages/kasa/release/mac-arm64/Sepetarasi Kasa.app"
+open "$PWD/release/mac-arm64/Sepetarasi Kasa.app"
 ```
 
 **Windows .exe build (Mac üzerinde cross-compile):**
