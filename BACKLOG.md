@@ -99,6 +99,6 @@ build sonrası Pi4'te gereksiz kalıyor. Runtime'ı etkilemez ama SD kart dolma 
 **Nasıl yapılır:**
 1. `windows-latest` runner'da `npm run build:win` adımını CI'ya ekle
 2. Kasa uygulaması için temel smoke senaryolarını otomatikleştir (açılış, bağlantı, sipariş akışı, reconnect, config kalıcılık)
-3. Manuel checklist'i (`scripts/win-exe-smoke-test.md`) otomasyon kapsamı dışında kalan adımlar için koru
+3. Manuel checklist'i otomasyon kapsamı dışında kalan adımlar için koru
 
 **Öncelik:** Orta — MVP'de manuel gate yeterli, release sayısı arttıkça otomasyon kritik hale gelir.

@@ -14,13 +14,19 @@ export interface AudioPlaybackOptions {
 	announcementsPath?: string;
 	/** How long to wait when audio is disabled or as a silent fallback (ms) */
 	delayMs?: number;
+	/** ALSA device for mpg123 on Linux (e.g. "hw:2,0"). Uses default device if not set. */
+	alsaDevice?: string;
+	/** Returns current volume 0-100. Called on each play. Defaults to 100. */
+	getVolume?: () => number;
 }
 
 export class AudioPlaybackService {
 	private disableAudio: boolean;
 	private enableTtsFallback: boolean;
 	private announcementsPath: string;
+	private alsaDevice: string | undefined;
 	private delayMs: number;
+	private getVolume: () => number;
 
 	constructor(opts: AudioPlaybackOptions = {}) {
 		this.disableAudio = opts.disableAudio ?? false;
@@ -28,7 +34,9 @@ export class AudioPlaybackService {
 		this.announcementsPath =
 			opts.announcementsPath ??
 			join(process.cwd(), "packages", "server", "assets", "announcements");
+		this.alsaDevice = opts.alsaDevice;
 		this.delayMs = opts.delayMs ?? 2500;
+		this.getVolume = opts.getVolume ?? (() => 100);
 	}
 
 	/**
@@ -46,10 +54,14 @@ export class AudioPlaybackService {
 			return;
 		}
 
+		const volume = Math.max(0, Math.min(100, this.getVolume()));
+		console.log(
+			`[audio] play: order=${displayNo}, alsaDevice=${JSON.stringify(this.alsaDevice)}, volume=${volume}`,
+		);
 		const audioFile = join(this.announcementsPath, `${displayNo}.mp3`);
 		const hasAudioFile = existsSync(audioFile);
 		if (hasAudioFile) {
-			const played = await this.playFile(audioFile);
+			const played = await this.playFile(audioFile, volume);
 			if (played) return;
 		}
 
@@ -69,10 +81,17 @@ export class AudioPlaybackService {
 	}
 
 	/** Play a pre-recorded MP3 file. Returns true if successful, false if command unavailable. */
-	private async playFile(filePath: string): Promise<boolean> {
+	private async playFile(filePath: string, volume: number): Promise<boolean> {
 		const isLinux = process.platform === "linux";
 		const cmd = isLinux ? "mpg123" : "afplay";
-		const args = isLinux ? ["-q", filePath] : [filePath];
+		// mpg123: -f scale where 32768 = 100%
+		// afplay: -v level where 1.0 = 100%
+		const linuxArgs = ["-q", "-f", String(Math.round((volume / 100) * 32768))];
+		if (this.alsaDevice) linuxArgs.push("-a", this.alsaDevice);
+		linuxArgs.push(filePath);
+		const args = isLinux ? linuxArgs : ["-v", (volume / 100).toFixed(2), filePath];
+
+		console.log(`[audio] ${cmd} ${args.join(" ")}`);
 
 		return new Promise<boolean>((resolve) => {
 			const proc = spawn(cmd, args, { stdio: "ignore" });
@@ -82,8 +101,9 @@ export class AudioPlaybackService {
 				resolve(true);
 			}, this.delayMs + 5000);
 
-			proc.on("close", () => {
+			proc.on("close", (code) => {
 				clearTimeout(safetyTimeout);
+				if (code !== 0) console.warn(`[audio] ${cmd} exited with code ${code}`);
 				resolve(true);
 			});
 

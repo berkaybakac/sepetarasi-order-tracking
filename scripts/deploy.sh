@@ -5,11 +5,32 @@ set -euo pipefail
 # Mac uzerinde calistirilir. Kodu Pi4'e gonderir ve servisi baslatir.
 #
 # Kullanim:
-#   bash scripts/deploy.sh admin@192.168.1.34          # guncelleme
-#   bash scripts/deploy.sh admin@192.168.1.34 --init   # yeni Pi4 ilk kurulum
+#   bash scripts/deploy.sh                             # .pi4 dosyasindan hedef okur
+#   bash scripts/deploy.sh admin@192.168.1.34          # veya direkt IP/hostname
+#   bash scripts/deploy.sh admin@sepetarasi.local      # hostname ile
+#   bash scripts/deploy.sh admin@192.168.1.34 --init   # ilk kurulum
 
-TARGET="${1:?Kullanim: bash scripts/deploy.sh kullanici@ip [--init]}"
-INIT="${2:-}"
+PI4_FILE="$(dirname "$0")/../.pi4"
+DEFAULT_TARGET=""
+if [ -f "$PI4_FILE" ]; then
+  DEFAULT_TARGET="$(cat "$PI4_FILE" | tr -d '[:space:]')"
+fi
+
+TARGET=""
+INIT=""
+for arg in "$@"; do
+  if [ "$arg" = "--init" ]; then
+    INIT="--init"
+  else
+    TARGET="$arg"
+  fi
+done
+TARGET="${TARGET:-$DEFAULT_TARGET}"
+if [ -z "$TARGET" ]; then
+  echo "Hata: Hedef belirtilmedi. Kullanim: bash scripts/deploy.sh kullanici@ip [--init]"
+  echo "      Veya proje kokune .pi4 dosyasi olustur: echo 'admin@192.168.1.34' > .pi4"
+  exit 1
+fi
 APP_DIR="/opt/sepetarasi"
 HOST="${TARGET#*@}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -31,7 +52,21 @@ if [ "$INIT" = "--init" ]; then
     "
 
     echo "[init] Sistem bagimliliklari..."
-    ssh "$TARGET" "sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils espeak-ng mpg123 2>&1 | tail -1"
+    ssh "$TARGET" "sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils mpg123 avahi-daemon sqlite3 2>&1 | tail -1"
+
+    echo "[init] Hostname 'sepetarasi' olarak ayarlaniyor (sepetarasi.local erisilebilir olacak)..."
+    ssh "$TARGET" "
+        sudo hostnamectl set-hostname sepetarasi
+        sudo sed -i 's/127\.0\.1\.1.*/127.0.1.1\tsepetarasi/' /etc/hosts
+        sudo systemctl enable avahi-daemon
+        sudo systemctl start avahi-daemon
+    "
+
+    echo "[init] Ses cikisi 3.5mm jack olarak ayarlaniyor..."
+    ssh "$TARGET" "
+        sudo raspi-config nonint do_audio 1
+        sudo usermod -a -G audio \$(id -un)
+    "
 
     echo "[init] Uygulama dizini olusturuluyor..."
     ssh "$TARGET" "sudo mkdir -p $APP_DIR && sudo chown \$USER:\$USER $APP_DIR"
@@ -42,6 +77,7 @@ PORT=3000
 DB_PATH=$APP_DIR/data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
 ANNOUNCEMENTS_PATH=$APP_DIR/packages/server/assets/announcements
+AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0
 ENVEOF"
 
     ssh "$TARGET" "mkdir -p $APP_DIR/packages/server/assets/announcements"

@@ -17,6 +17,7 @@ const disableAudio = ["1", "true", "yes", "on"].includes(
 const enableTtsFallback = ["1", "true", "yes", "on"].includes(
 	(process.env.ENABLE_TTS_FALLBACK ?? "").toLowerCase(),
 );
+const alsaDevice = process.env.AUDIO_ALSA_DEVICE || undefined;
 
 mkdirSync(dirname(dbPath), { recursive: true });
 
@@ -26,7 +27,7 @@ const db = createDb(dbPath);
 const migrationsFolder = resolve(__dirname, "db/migrations");
 migrate(db, { migrationsFolder });
 
-const app = await buildApp({ db, announcementsPath, disableAudio, enableTtsFallback });
+const app = await buildApp({ db, announcementsPath, disableAudio, enableTtsFallback, alsaDevice });
 
 function getLanIp(): string {
 	const nets = networkInterfaces();

@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
-import { terminals } from "../src/db/schema.js";
+import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 
 let db: AppDatabase;
@@ -179,8 +179,6 @@ describe("POST /api/v1/orders with new fields", () => {
 
 describe("GET /api/v1/settings", () => {
 	it("should return settings as key-value object", async () => {
-		// Seed some settings
-		const { appSettings } = await import("../src/db/schema.js");
 		db.insert(appSettings).values({ key: "business_name", value: "Test Cafe" }).run();
 		db.insert(appSettings).values({ key: "receipt_phone", value: "555-1234" }).run();
 
@@ -190,6 +188,32 @@ describe("GET /api/v1/settings", () => {
 		expect(body.ok).toBe(true);
 		expect(body.data.business_name).toBe("Test Cafe");
 		expect(body.data.receipt_phone).toBe("555-1234");
+	});
+});
+
+describe("PATCH /api/v1/settings/:key", () => {
+	it("should upsert setting value", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/audio_volume",
+			payload: { value: "75" },
+		});
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+
+		const row = db.select().from(appSettings).where(eq(appSettings.key, "audio_volume")).get();
+		expect(row?.value).toBe("75");
+	});
+
+	it("should reject invalid audio_volume", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/audio_volume",
+			payload: { value: "200" },
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
 	});
 });
 

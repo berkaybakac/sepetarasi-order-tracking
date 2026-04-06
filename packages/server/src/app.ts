@@ -4,8 +4,10 @@ import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import { WS_CHANNELS } from "@sepetarasi/shared";
+import { eq } from "drizzle-orm";
 import Fastify from "fastify";
 import type { AppDatabase } from "./db/connection.js";
+import { appSettings } from "./db/schema.js";
 import { registerOrderRoutes } from "./routes/orders.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerStatsRoutes } from "./routes/stats.js";
@@ -30,6 +32,8 @@ export interface AppOptions {
 	enableTtsFallback?: boolean;
 	/** Path to pre-recorded MP3 files named {display_no}.mp3 */
 	announcementsPath?: string;
+	/** ALSA device for mpg123 on Linux (e.g. "hw:2,0"). Reads AUDIO_ALSA_DEVICE env var. */
+	alsaDevice?: string;
 	/** Disable static file serving (useful for tests) */
 	disableStatic?: boolean;
 }
@@ -109,7 +113,16 @@ export async function buildApp(opts: AppOptions) {
 			disableAudio: opts.disableAudio ?? false,
 			enableTtsFallback: opts.enableTtsFallback ?? false,
 			announcementsPath: opts.announcementsPath,
+			alsaDevice: opts.alsaDevice,
 			delayMs: opts.announcementDelayMs ?? 2500,
+			getVolume: () => {
+				const row = opts.db
+					.select()
+					.from(appSettings)
+					.where(eq(appSettings.key, "audio_volume"))
+					.get();
+				return row ? Math.max(0, Math.min(100, Number(row.value))) : 100;
+			},
 		});
 		worker = new AnnouncementWorker({
 			announcementService,

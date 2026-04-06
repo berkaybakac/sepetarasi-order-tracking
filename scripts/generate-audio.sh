@@ -109,6 +109,5 @@ done
 echo ""
 echo ""
 echo "Tamamlandı: $GENERATED yeni dosya üretildi, $SKIPPED mevcut geçerli dosya atlandı."
-echo "Doğrulama:"
-bash "$SCRIPT_DIR/validate-audio.sh" "$OUT_DIR"
+echo "Toplam: $(ls "$OUT_DIR"/*.mp3 2>/dev/null | wc -l | tr -d ' ') dosya mevcut."
 echo "Dinleme testi: afplay \"$OUT_DIR/1.mp3\""

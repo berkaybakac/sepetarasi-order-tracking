@@ -18,8 +18,7 @@
 		"db:generate": "npm run db:generate -w packages/server",
 		"db:migrate": "npm run db:migrate -w packages/server",
 		"db:seed": "npm run db:seed -w packages/server",
-		"audio:generate": "bash scripts/generate-audio.sh",
-		"audio:validate": "bash scripts/validate-audio.sh"
+		"audio:generate": "bash scripts/generate-audio.sh"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",

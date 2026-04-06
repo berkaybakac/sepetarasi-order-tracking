@@ -51,5 +51,5 @@ Windows prod hedef, geliştirme cihazı macOS. Hız ve risk dengesi için politi
    - `packages/kasa/electron`
    - `npm run build:win` / installer
    - hotkey, yazıcı, dosya yolu/kaydetme, bağlantı/reconnect
-3. Her sürüm öncesi tam checklist çalıştırılır: `scripts/win-exe-smoke-test.md`
+3. Her sürüm öncesi tam checklist çalıştırılır (manuel Windows E2E testi)
 4. Sahaya çıkmadan önce (prod öncesi) gerçek Windows cihazda tam E2E + installer kurulum testi tekrar edilir.

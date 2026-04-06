@@ -78,11 +78,13 @@ if command -v systemctl &>/dev/null; then
   fi
 fi
 
-# Ses cikisi kontrol
+# Ses cikisi kontrol (sadece Linux'ta zorunlu)
 if command -v aplay &>/dev/null; then
   pass "aplay mevcut"
 elif command -v mpv &>/dev/null; then
   pass "mpv mevcut"
+elif [[ "$(uname)" != "Linux" ]]; then
+  info "Ses araci yok — macOS'ta beklenen durum, Pi4'te calistir"
 else
   fail "Ses araci bulunamadi (aplay veya mpv gerekli)"
 fi

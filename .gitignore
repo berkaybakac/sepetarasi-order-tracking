@@ -9,6 +9,7 @@ release/
 .env
 .env.local
 .env.*.local
+.pi4
 .DS_Store
 data/
 coverage/
