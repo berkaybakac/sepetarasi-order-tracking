@@ -4,8 +4,9 @@
 # Hedef: Raspberry Pi 4 (ARM64) uzerinde API + WS + anons + ses
 # Onkosul: Node.js 20+, npm, aplay veya mpv kurulu
 # Calistir: bash scripts/pi4-smoke-test.sh
+# Not: Varsayilan olarak izole port + gecici DB kullanir (canli systemd servisiyle cakismasin diye)
 # =============================================================
-set -e
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,8 +18,34 @@ fail() { echo -e "${RED}[FAIL]${NC} $1"; FAILURES=$((FAILURES + 1)); }
 info() { echo -e "${YELLOW}[INFO]${NC} $1"; }
 
 FAILURES=0
-PORT=3000
+PORT="${PORT:-3100}"
 BASE="http://localhost:$PORT"
+TEST_DB_PATH="${TEST_DB_PATH:-/tmp/sepetarasi-smoke-test.db}"
+SERVER_LOG="${SERVER_LOG:-/tmp/sepetarasi-smoke-test-server.log}"
+SERVER_PID=""
+
+cleanup() {
+  if [[ -n "${SERVER_PID:-}" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+}
+
+wait_for_health() {
+  local deadline=$((SECONDS + 60))
+  while ((SECONDS < deadline)); do
+    if curl -sf "$BASE/health" >/dev/null 2>&1; then
+      return 0
+    fi
+    if [[ -n "${SERVER_PID:-}" ]] && ! kill -0 "$SERVER_PID" 2>/dev/null; then
+      return 1
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+trap cleanup EXIT INT TERM
 
 echo "======================================="
 echo "  Sepetarasi Pi4 Smoke Test"
@@ -40,6 +67,15 @@ if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
   pass "Mimari: $ARCH (ARM64)"
 else
   info "Mimari: $ARCH (Pi4 degil, test yine de calisir)"
+fi
+
+# Mevcut deploy servisini sadece bilgilendirme amacli kontrol et (testi etkilemez)
+if command -v systemctl &>/dev/null; then
+  if sudo -n systemctl is-active --quiet sepetarasi 2>/dev/null; then
+    pass "systemd sepetarasi servisi aktif"
+  else
+    info "systemd sepetarasi servisi aktif degil veya sudo -n yetkisi yok"
+  fi
 fi
 
 # Ses cikisi kontrol
@@ -65,42 +101,58 @@ echo ""
 
 # --- 2. Sunucu baslat ---
 info "2/7 Sunucu baslatiliyor"
+info "Izole test ortami: port=$PORT, db=$TEST_DB_PATH"
 
-# Onceki sureci durdur
-lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
-sleep 1
-
-rm -f data/sepetarasi.db*
-npx tsx packages/server/src/server.ts &
-SERVER_PID=$!
-sleep 3
-
-if kill -0 $SERVER_PID 2>/dev/null; then
-  pass "Sunucu calisiyor (PID: $SERVER_PID)"
-else
-  fail "Sunucu baslatma basarisiz"
+if lsof -ti:"$PORT" >/dev/null 2>&1; then
+  fail "Port $PORT mesgul. Farkli port icin: PORT=3101 bash scripts/pi4-smoke-test.sh"
   exit 1
 fi
 
-# Cleanup on exit
-trap "kill $SERVER_PID 2>/dev/null; exit" EXIT INT TERM
+rm -f "$TEST_DB_PATH" "$TEST_DB_PATH-wal" "$TEST_DB_PATH-shm" "$SERVER_LOG"
+
+START_CMD="npx tsx packages/server/src/server.ts"
+if [[ -f packages/server/dist/server.js ]]; then
+  START_CMD="node packages/server/dist/server.js"
+  PORT="$PORT" DB_PATH="$TEST_DB_PATH" node packages/server/dist/server.js >"$SERVER_LOG" 2>&1 &
+else
+  PORT="$PORT" DB_PATH="$TEST_DB_PATH" npx tsx packages/server/src/server.ts >"$SERVER_LOG" 2>&1 &
+fi
+SERVER_PID=$!
+
+if wait_for_health; then
+  pass "Sunucu hazir (PID: $SERVER_PID, port: $PORT)"
+else
+  fail "Sunucu health hazir olmadi (komut: $START_CMD)"
+  echo "---- server log (son 40 satir) ----"
+  tail -n 40 "$SERVER_LOG" || true
+  exit 1
+fi
 
 echo ""
 
 # --- 3. API testi ---
 info "3/7 API testleri"
 
-HEALTH=$(curl -sf $BASE/health)
-if echo "$HEALTH" | grep -q '"ok":true'; then
-  pass "GET /health"
+if HEALTH=$(curl -sf "$BASE/health"); then
+  if echo "$HEALTH" | grep -q '"ok":true'; then
+    pass "GET /health"
+  else
+    fail "GET /health: $HEALTH"
+  fi
 else
-  fail "GET /health: $HEALTH"
+  fail "GET /health: erisim yok"
+  echo "---- server log (son 40 satir) ----"
+  tail -n 40 "$SERVER_LOG" || true
+  exit 1
 fi
 
 # Siparis olustur
-CREATE_RES=$(curl -sf -X POST $BASE/api/v1/orders \
+if ! CREATE_RES=$(curl -sf -X POST "$BASE/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d '{"items":[{"name":"Doner","quantity":2,"unit_price":15000},{"name":"Ayran","quantity":2,"unit_price":3000}]}')
+  -d '{"items":[{"name":"Doner","quantity":2,"unit_price":15000},{"name":"Ayran","quantity":2,"unit_price":3000}]}'); then
+  fail "POST /orders basarisiz"
+  exit 1
+fi
 
 ORDER_ID=$(echo "$CREATE_RES" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['id'])" 2>/dev/null)
 DISPLAY_NO=$(echo "$CREATE_RES" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['display_no'])" 2>/dev/null)
@@ -112,9 +164,12 @@ else
 fi
 
 # Ikinci siparis
-CREATE_RES2=$(curl -sf -X POST $BASE/api/v1/orders \
+if ! CREATE_RES2=$(curl -sf -X POST "$BASE/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d '{"items":[{"name":"Lahmacun","quantity":1,"unit_price":12000}]}')
+  -d '{"items":[{"name":"Lahmacun","quantity":1,"unit_price":12000}]}'); then
+  fail "2. POST /orders basarisiz"
+  exit 1
+fi
 DISPLAY_NO2=$(echo "$CREATE_RES2" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['display_no'])" 2>/dev/null)
 
 if [[ "$DISPLAY_NO2" == "2" ]]; then
@@ -128,9 +183,12 @@ echo ""
 # --- 4. Durum gecisi + READY atomic ---
 info "4/7 Durum gecisi + atomic READY"
 
-READY_RES=$(curl -sf -X PATCH "$BASE/api/v1/orders/$ORDER_ID/status" \
+if ! READY_RES=$(curl -sf -X PATCH "$BASE/api/v1/orders/$ORDER_ID/status" \
   -H "Content-Type: application/json" \
-  -d '{"status":"READY"}')
+  -d '{"status":"READY"}'); then
+  fail "READY gecisi basarisiz"
+  exit 1
+fi
 
 READY_STATUS=$(echo "$READY_RES" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['status'])" 2>/dev/null)
 READY_AT=$(echo "$READY_RES" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['ready_at'])" 2>/dev/null)
@@ -141,16 +199,10 @@ else
   fail "Status change: status=$READY_STATUS, ready_at=$READY_AT"
 fi
 
-# Gecersiz gecis
-INVALID_RES=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE/api/v1/orders/$ORDER_ID/status" \
+# READY->PREPARING gecerli oldugu icin DELIVERED->PREPARING ile invalid gecisi test et
+curl -sf -X PATCH "$BASE/api/v1/orders/$ORDER_ID/status" \
   -H "Content-Type: application/json" \
-  -d '{"status":"PREPARING"}')
-
-# READY->PREPARING undo yapip tekrar kontrol edelim (once delivered deneyelim - gecersiz olmalı)
-# Aslında READY->PREPARING geçerli. DELIVERED->PREPARING geçersiz test edelim.
-DELIVERED_RES=$(curl -sf -X PATCH "$BASE/api/v1/orders/$ORDER_ID/status" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"DELIVERED"}')
+  -d '{"status":"DELIVERED"}' >/dev/null
 DELIVERED_INVALID=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE/api/v1/orders/$ORDER_ID/status" \
   -H "Content-Type: application/json" \
   -d '{"status":"PREPARING"}')
@@ -166,7 +218,10 @@ echo ""
 # --- 5. Stats ---
 info "5/7 Stats (averagePrepMinutes)"
 
-STATS_RES=$(curl -sf $BASE/api/v1/stats/today)
+if ! STATS_RES=$(curl -sf "$BASE/api/v1/stats/today"); then
+  fail "GET /stats/today basarisiz"
+  exit 1
+fi
 TOTAL=$(echo "$STATS_RES" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['totalOrders'])" 2>/dev/null)
 AVG=$(echo "$STATS_RES" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['averagePrepMinutes'])" 2>/dev/null)
 
@@ -198,7 +253,8 @@ if command -v websocat &>/dev/null; then
 else
   # Node.js ile WS test
   WS_RES=$(timeout 5 node -e "
-    const WebSocket = require('ws') || (await import('ws')).default;
+    let WebSocket;
+    try { WebSocket = require('ws'); } catch { process.exit(2); }
     const ws = new WebSocket('ws://localhost:$PORT/ws?channel=orders');
     ws.on('open', () => { ws.send(JSON.stringify({event:'ping'})); });
     ws.on('message', (d) => { console.log(d.toString()); ws.close(); });
@@ -243,11 +299,24 @@ for i in range(44100):  # 1 saniye
 f.close()
 " 2>/dev/null
 
+  PLAYED=0
   if aplay /tmp/test-beep.wav 2>/dev/null; then
-    pass "3.5mm ses cikisi calisiyor (440Hz beep duyulduysa)"
+    pass "Ses cikisi calisiyor (default ALSA cihaz)"
+    PLAYED=1
   else
-    fail "aplay basarisiz (ses cikisini kontrol edin: raspi-config -> Audio)"
+    for dev in "plughw:CARD=Headphones,DEV=0" "plughw:CARD=vc4hdmi0,DEV=0"; do
+      if aplay -D "$dev" /tmp/test-beep.wav 2>/dev/null; then
+        pass "Ses cikisi calisiyor (ALSA cihaz: $dev)"
+        PLAYED=1
+        break
+      fi
+    done
   fi
+
+  if [[ "$PLAYED" -eq 0 ]]; then
+    fail "aplay basarisiz (default + fallback cihazlar). raspi-config ile output secimini kontrol edin"
+  fi
+
   rm -f /tmp/test-beep.wav
 elif command -v mpv &>/dev/null; then
   info "mpv ile ses testi yapilabilir: mpv --no-video /path/to/test.wav"
@@ -269,8 +338,9 @@ if [[ $FAILURES -gt 0 ]]; then
   echo ""
   echo "Sorun Giderme:"
   echo "  Ses yok:   sudo raspi-config -> System -> Audio -> 3.5mm"
-  echo "  Port mesgul: lsof -ti:3000 | xargs kill -9"
-  echo "  ARM build:   npm rebuild better-sqlite3"
+  echo "  Port mesgul: lsof -ti:$PORT | xargs kill -9"
+  echo "  Log:       tail -n 80 $SERVER_LOG"
+  echo "  ARM build: npm rebuild better-sqlite3"
 fi
 
 exit $FAILURES
