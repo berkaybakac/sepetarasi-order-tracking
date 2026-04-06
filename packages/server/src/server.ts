@@ -46,5 +46,8 @@ app.listen({ port, host: "0.0.0.0" }, (err) => {
 		process.exit(1);
 	}
 	const lanIp = getLanIp();
-	app.log.info({ local: `http://localhost:${port}`, lan: `http://${lanIp}:${port}` }, "Sepetarasi Order Tracking Server started");
+	app.log.info(
+		{ local: `http://localhost:${port}`, lan: `http://${lanIp}:${port}` },
+		"Sepetarasi Order Tracking Server started",
+	);
 });

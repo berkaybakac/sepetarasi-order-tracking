@@ -17,17 +17,14 @@ export function AdminView() {
 	const [stats, setStats] = useState<DayStats | null>(null);
 	const [loading, setLoading] = useState(false);
 
-	const fetchStats = useCallback(
-		(p: Period) => {
-			setLoading(true);
-			api
-				.getStatsByPeriod(p)
-				.then(setStats)
-				.catch(() => {})
-				.finally(() => setLoading(false));
-		},
-		[],
-	);
+	const fetchStats = useCallback((p: Period) => {
+		setLoading(true);
+		api
+			.getStatsByPeriod(p)
+			.then(setStats)
+			.catch(() => {})
+			.finally(() => setLoading(false));
+	}, []);
 
 	// Refresh stats when an order is created or its status changes via WebSocket.
 	// This keeps the average prep time up-to-date without the user having to

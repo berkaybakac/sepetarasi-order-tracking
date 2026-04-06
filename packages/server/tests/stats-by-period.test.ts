@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "../src/db/test-utils.js";
 import { orders } from "../src/db/schema.js";
+import { createTestDb } from "../src/db/test-utils.js";
 import { StatsService } from "../src/services/stats.service.js";
 
 const tz = "Europe/Istanbul";
@@ -29,7 +29,13 @@ describe("StatsService.getByPeriod()", () => {
 		const db = createTestDb();
 		db.insert(orders)
 			.values([
-				makeOrder({ id: "a", business_date: businessDate(0), display_no: 1, status: "READY", ready_at: new Date().toISOString() }),
+				makeOrder({
+					id: "a",
+					business_date: businessDate(0),
+					display_no: 1,
+					status: "READY",
+					ready_at: new Date().toISOString(),
+				}),
 				makeOrder({ id: "b", business_date: businessDate(8), display_no: 1 }), // 8 days ago — outside weekly+daily
 			])
 			.run();
@@ -88,8 +94,20 @@ describe("StatsService.getByPeriod()", () => {
 
 		db.insert(orders)
 			.values([
-				makeOrder({ id: "a", display_no: 1, status: "READY", created_at: twentyMinAgo, ready_at: now.toISOString() }), // 20 min
-				makeOrder({ id: "b", display_no: 2, status: "READY", created_at: tenMinAgo, ready_at: now.toISOString() }),   // 10 min
+				makeOrder({
+					id: "a",
+					display_no: 1,
+					status: "READY",
+					created_at: twentyMinAgo,
+					ready_at: now.toISOString(),
+				}), // 20 min
+				makeOrder({
+					id: "b",
+					display_no: 2,
+					status: "READY",
+					created_at: tenMinAgo,
+					ready_at: now.toISOString(),
+				}), // 10 min
 			])
 			.run();
 
