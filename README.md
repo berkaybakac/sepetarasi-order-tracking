@@ -178,6 +178,16 @@ npm run test:smoke:pi4    # Pi4 release-gate smoke testi (API + WS + ses)
 2. Main'e commit/push öncesi: `npm run ci` + `npm run test:coverage`
 3. Müşteriye gitmeden önce: Pi4 üzerinde `npm run test:smoke:pi4`
 
+### Release Gate (MVP)
+
+Müşteriye çıkmadan önce Pi4 üzerinde aşağıdaki smoke test zorunludur:
+
+```bash
+bash scripts/pi4-smoke-test.sh
+```
+
+Bu gate manueldir (MVP): CI'da hard-blocking zorunluluk yoktur.
+
 ---
 
 ## API

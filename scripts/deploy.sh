@@ -168,66 +168,84 @@ ssh "$TARGET" "sudo systemctl restart sepetarasi"
 
 # Verify runtime env wiring for audio device (fail-fast on misconfigured units).
 ssh "$TARGET" "
-    if [ -f $APP_DIR/.env ] && grep -q '^AUDIO_ALSA_DEVICE=' $APP_DIR/.env; then
-        EXPECTED_AUDIO_DEVICE=\$(grep '^AUDIO_ALSA_DEVICE=' $APP_DIR/.env | tail -n 1 | cut -d= -f2-)
-        MAIN_PID=\$(sudo systemctl show -p MainPID --value sepetarasi)
-        if [ -z \"\$MAIN_PID\" ] || [ \"\$MAIN_PID\" = \"0\" ]; then
-            echo \"[audio-check] FAIL: sepetarasi MainPID bulunamadi\"
-            exit 1
-        fi
-
-        if ! sudo tr '\0' '\n' < /proc/\$MAIN_PID/environ | grep -q \"^AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\$\"; then
-            echo \"[audio-check] FAIL: process env icinde AUDIO_ALSA_DEVICE beklenen degerde degil\"
-            echo \"[audio-check] expected=\$EXPECTED_AUDIO_DEVICE\"
-            echo \"[audio-check] kontrol: sudo systemctl cat sepetarasi\"
-            exit 1
-        fi
-
-        if ! command -v aplay > /dev/null 2>&1; then
-            echo \"[audio-check] FAIL: aplay bulunamadi (alsa-utils eksik)\"
-            exit 1
-        fi
-
-        ALSA_PLAYBACK_NAMES=\$(aplay -L 2>/dev/null || true)
-        ALSA_HARDWARE_LIST=\$(aplay -l 2>/dev/null || true)
-        ALSA_DEVICE_FOUND=0
-
-        if echo \"\$ALSA_PLAYBACK_NAMES\" | grep -Fqx \"\$EXPECTED_AUDIO_DEVICE\"; then
-            ALSA_DEVICE_FOUND=1
-        elif echo \"\$ALSA_PLAYBACK_NAMES\" | grep -Fq \"\$EXPECTED_AUDIO_DEVICE\"; then
-            ALSA_DEVICE_FOUND=1
-        elif echo \"\$EXPECTED_AUDIO_DEVICE\" | grep -Eq '^(plug)?hw:[0-9]+,[0-9]+$'; then
-            CARD_NUM=\$(echo \"\$EXPECTED_AUDIO_DEVICE\" | sed -E 's/^(plug)?hw:([0-9]+),([0-9]+)$/\2/')
-            DEV_NUM=\$(echo \"\$EXPECTED_AUDIO_DEVICE\" | sed -E 's/^(plug)?hw:([0-9]+),([0-9]+)$/\3/')
-            if echo \"\$ALSA_HARDWARE_LIST\" | grep -Eq \"card[[:space:]]+\$CARD_NUM:\" && \
-               echo \"\$ALSA_HARDWARE_LIST\" | grep -Eq \"device[[:space:]]+\$DEV_NUM:\"; then
-                ALSA_DEVICE_FOUND=1
-            fi
-        fi
-
-        if [ \"\$ALSA_DEVICE_FOUND\" != \"1\" ]; then
-            echo \"[audio-check] FAIL: AUDIO_ALSA_DEVICE sistemde bulunamadi\"
-            echo \"[audio-check] expected=\$EXPECTED_AUDIO_DEVICE\"
-            echo \"[audio-check] aplay -L (ilk 40 satir):\"
-            echo \"\$ALSA_PLAYBACK_NAMES\" | head -n 40
-            echo \"[audio-check] aplay -l (ilk 40 satir):\"
-            echo \"\$ALSA_HARDWARE_LIST\" | head -n 40
-            exit 1
-        fi
-
-        echo \"[audio-check] OK: AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\"
-    else
-        echo \"[audio-check] SKIP: .env icinde AUDIO_ALSA_DEVICE yok\"
+    if [ ! -f $APP_DIR/.env ]; then
+        echo \"[audio-check] FAIL: $APP_DIR/.env bulunamadi\"
+        echo \"[audio-check] ornek: AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0\"
+        exit 1
     fi
+
+    EXPECTED_AUDIO_DEVICE=\$(grep '^AUDIO_ALSA_DEVICE=' $APP_DIR/.env | tail -n 1 | cut -d= -f2- | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+    if [ -z \"\$EXPECTED_AUDIO_DEVICE\" ]; then
+        echo \"[audio-check] FAIL: .env icinde AUDIO_ALSA_DEVICE zorunlu\"
+        echo \"[audio-check] ornek: AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0\"
+        exit 1
+    fi
+
+    MAIN_PID=\$(sudo systemctl show -p MainPID --value sepetarasi)
+    if [ -z \"\$MAIN_PID\" ] || [ \"\$MAIN_PID\" = \"0\" ]; then
+        echo \"[audio-check] FAIL: sepetarasi MainPID bulunamadi\"
+        exit 1
+    fi
+
+    if ! sudo tr '\0' '\n' < /proc/\$MAIN_PID/environ | grep -q \"^AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\$\"; then
+        echo \"[audio-check] FAIL: process env icinde AUDIO_ALSA_DEVICE beklenen degerde degil\"
+        echo \"[audio-check] expected=\$EXPECTED_AUDIO_DEVICE\"
+        echo \"[audio-check] kontrol: sudo systemctl cat sepetarasi\"
+        exit 1
+    fi
+
+    if ! command -v aplay > /dev/null 2>&1; then
+        echo \"[audio-check] FAIL: aplay bulunamadi (alsa-utils eksik)\"
+        exit 1
+    fi
+
+    ALSA_PLAYBACK_NAMES=\$(aplay -L 2>/dev/null || true)
+    ALSA_HARDWARE_LIST=\$(aplay -l 2>/dev/null || true)
+    ALSA_DEVICE_FOUND=0
+
+    if echo \"\$ALSA_PLAYBACK_NAMES\" | grep -Fqx \"\$EXPECTED_AUDIO_DEVICE\"; then
+        ALSA_DEVICE_FOUND=1
+    elif echo \"\$ALSA_PLAYBACK_NAMES\" | grep -Fq \"\$EXPECTED_AUDIO_DEVICE\"; then
+        ALSA_DEVICE_FOUND=1
+    elif echo \"\$EXPECTED_AUDIO_DEVICE\" | grep -Eq '^(plug)?hw:[0-9]+,[0-9]+$'; then
+        CARD_NUM=\$(echo \"\$EXPECTED_AUDIO_DEVICE\" | sed -E 's/^(plug)?hw:([0-9]+),([0-9]+)$/\2/')
+        DEV_NUM=\$(echo \"\$EXPECTED_AUDIO_DEVICE\" | sed -E 's/^(plug)?hw:([0-9]+),([0-9]+)$/\3/')
+        if echo \"\$ALSA_HARDWARE_LIST\" | grep -Eq \"card[[:space:]]+\$CARD_NUM:\" && \
+           echo \"\$ALSA_HARDWARE_LIST\" | grep -Eq \"device[[:space:]]+\$DEV_NUM:\"; then
+            ALSA_DEVICE_FOUND=1
+        fi
+    fi
+
+    if [ \"\$ALSA_DEVICE_FOUND\" != \"1\" ]; then
+        echo \"[audio-check] FAIL: AUDIO_ALSA_DEVICE sistemde bulunamadi\"
+        echo \"[audio-check] expected=\$EXPECTED_AUDIO_DEVICE\"
+        echo \"[audio-check] aplay -L (ilk 40 satir):\"
+        echo \"\$ALSA_PLAYBACK_NAMES\" | head -n 40
+        echo \"[audio-check] aplay -l (ilk 40 satir):\"
+        echo \"\$ALSA_HARDWARE_LIST\" | head -n 40
+        exit 1
+    fi
+
+    echo \"[audio-check] OK: AUDIO_ALSA_DEVICE=\$EXPECTED_AUDIO_DEVICE\"
 "
 
 # --- 4. Smoke test ---
 echo ""
 echo "[4/4] Saglik kontrolu..."
-sleep 2
-if curl -sf "http://$HOST:3000/health" > /dev/null; then
-    echo "OK"
-else
+HEALTH_OK=0
+for ATTEMPT in $(seq 1 10); do
+    if curl -sf "http://$HOST:3000/health" > /dev/null; then
+        HEALTH_OK=1
+        echo "OK (deneme $ATTEMPT/10)"
+        break
+    fi
+    if [ "$ATTEMPT" -lt 10 ]; then
+        echo "Health bekleniyor... deneme $ATTEMPT/10 basarisiz, 3sn sonra tekrar"
+        sleep 3
+    fi
+done
+
+if [ "$HEALTH_OK" != "1" ]; then
     echo "BASARISIZ - kontrol: ssh $TARGET 'sudo journalctl -u sepetarasi -n 20'"
     exit 1
 fi

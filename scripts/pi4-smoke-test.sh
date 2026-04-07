@@ -17,6 +17,33 @@ pass() { echo -e "${GREEN}[PASS]${NC} $1"; }
 fail() { echo -e "${RED}[FAIL]${NC} $1"; FAILURES=$((FAILURES + 1)); }
 info() { echo -e "${YELLOW}[INFO]${NC} $1"; }
 
+run_aplay_with_retry() {
+  local attempt=1
+  local max_attempts=5
+  local output=""
+  local rc=0
+
+  while ((attempt <= max_attempts)); do
+    if output="$("$@" 2>&1)"; then
+      return 0
+    fi
+
+    rc=$?
+    if echo "$output" | grep -qi "device or resource busy"; then
+      info "ALSA cihazi mesgul, tekrar deneniyor ($attempt/$max_attempts)"
+      sleep 1
+      attempt=$((attempt + 1))
+      continue
+    fi
+    break
+  done
+
+  if [[ -n "$output" ]]; then
+    echo "$output" | head -n 3
+  fi
+  return $rc
+}
+
 FAILURES=0
 PORT="${PORT:-3100}"
 BASE="http://localhost:$PORT"
@@ -284,7 +311,28 @@ curl -sf -X PATCH "$BASE/api/v1/orders/$ORDER2_ID/status" \
   -d '{"status":"READY"}' > /dev/null
 
 info "Siparis #2 READY yapildi, anons worker'i bekliyor..."
-sleep 4
+
+# READY sonrasi olasi ALSA cakismasini azaltmak icin:
+# - Once player surecinin baslayip baslamayacagini kisa bir pencere boyunca gozle
+# - Baslamissa bitene kadar (max 20s) bekle
+AUDIO_WAIT_START=$SECONDS
+AUDIO_WAIT_DEADLINE=$((SECONDS + 20))
+PLAYER_SEEN=0
+while ((SECONDS < AUDIO_WAIT_DEADLINE)); do
+  if pgrep -x mpg123 >/dev/null 2>&1 || pgrep -x espeak-ng >/dev/null 2>&1; then
+    PLAYER_SEEN=1
+  else
+    if [[ "$PLAYER_SEEN" -eq 1 ]]; then
+      info "Anons player'i bitti, beep testine geciliyor"
+      break
+    fi
+    if ((SECONDS - AUDIO_WAIT_START >= 5)); then
+      info "Anons player sureci gozlenmedi, beep testine geciliyor"
+      break
+    fi
+  fi
+  sleep 1
+done
 
 # Gercek ses testi: basit bir beep cal
 if command -v aplay &>/dev/null; then
@@ -299,15 +347,15 @@ for i in range(44100):  # 1 saniye
     v = int(32767 * math.sin(2 * math.pi * 440 * i / 44100))
     f.writeframes(struct.pack('<h', v))
 f.close()
-" 2>/dev/null
+  " 2>/dev/null
 
   PLAYED=0
-  if aplay /tmp/test-beep.wav 2>/dev/null; then
+  if run_aplay_with_retry aplay /tmp/test-beep.wav; then
     pass "Ses cikisi calisiyor (default ALSA cihaz)"
     PLAYED=1
   else
     for dev in "plughw:CARD=Headphones,DEV=0" "plughw:CARD=vc4hdmi0,DEV=0"; do
-      if aplay -D "$dev" /tmp/test-beep.wav 2>/dev/null; then
+      if run_aplay_with_retry aplay -D "$dev" /tmp/test-beep.wav; then
         pass "Ses cikisi calisiyor (ALSA cihaz: $dev)"
         PLAYED=1
         break
