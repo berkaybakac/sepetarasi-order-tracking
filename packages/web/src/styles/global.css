@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+@theme {
+	/* Marka Renkleri - Single Source of Truth */
+	--color-brand-primary: #2563eb; /* blue-600 */
+	--color-brand-primary-hover: #1d4ed8; /* blue-700 */
+	--color-brand-warning: #ca8a04; /* yellow-600 */
+	--color-brand-success: #16a34a; /* green-600 */
+
+	/* Arka Plan ve Yüzeyler */
+	--color-brand-surface: #ffffff; /* bg-white yerine */
+	--color-brand-bg: #f9fafb; /* gray-50 - sayfa arkaplanı */
+
+	/* Köşe Yuvarlaklığı */
+	--radius-card: 0.75rem; /* rounded-xl yerine */
+	--radius-btn: 0.5rem; /* rounded-lg yerine */
+}

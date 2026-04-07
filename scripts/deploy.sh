@@ -252,5 +252,6 @@ fi
 
 echo ""
 echo "=== Deploy tamamlandi! ==="
-echo "Dashboard:       http://$HOST:3000"
+echo "Yonetici paneli: http://$HOST:3000"
 echo "Musteri ekrani:  http://$HOST:3000/display"
+echo "Admin:           http://$HOST:3000/admin"

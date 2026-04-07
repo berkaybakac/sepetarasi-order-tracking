@@ -1,6 +1,7 @@
 import { OrderStatus, WS_CHANNELS } from "@sepetarasi/shared";
 import type { Order, WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { UI_LABELS } from "../../constants/labels";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 
@@ -106,7 +107,9 @@ export function CustomerDisplay() {
 						))}
 					</div>
 					{preparingOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-lg mt-8">Hazırlanıyor sipariş yok</p>
+						<p className="text-gray-600 text-center text-lg mt-8">
+							{UI_LABELS.DISPLAY.NO_PREPARING_ORDERS}
+						</p>
 					)}
 				</div>
 
@@ -126,7 +129,9 @@ export function CustomerDisplay() {
 						))}
 					</div>
 					{readyOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-lg mt-8">Hazır sipariş yok</p>
+						<p className="text-gray-600 text-center text-lg mt-8">
+							{UI_LABELS.DISPLAY.NO_READY_ORDERS}
+						</p>
 					)}
 				</div>
 			</div>
