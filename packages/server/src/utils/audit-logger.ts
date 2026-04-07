@@ -13,7 +13,7 @@ try {
 export function auditLog(action: string, details: string) {
 	const timestamp = new Date().toISOString();
 	const logLine = `[${timestamp}] ${action} - ${details}\n`;
-	
+
 	try {
 		appendFileSync(logFilePath, logLine, "utf-8");
 	} catch (error) {

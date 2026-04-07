@@ -1,21 +1,32 @@
+import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
+import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import bcrypt from "bcrypt";
+import { ADMIN_COOKIE_NAME, AUTH_CONFIG } from "../config/auth.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
-import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
-import { ADMIN_COOKIE_NAME, AUTH_CONFIG } from "../config/auth.js";
 import { auditLog } from "../utils/audit-logger.js";
 
 async function getAdminHash(db: AppDatabase): Promise<string> {
-	const row = db.select().from(appSettings).where(eq(appSettings.key, SETTING_KEYS.ADMIN_PASSWORD_HASH)).get();
+	const row = db
+		.select()
+		.from(appSettings)
+		.where(eq(appSettings.key, SETTING_KEYS.ADMIN_PASSWORD_HASH))
+		.get();
 	if (row?.value) return row.value;
 
 	// If no hash exists, initialize default 'admin123'
 	const defaultHash = await bcrypt.hash("admin123", 10);
 	db.insert(appSettings)
-		.values({ key: SETTING_KEYS.ADMIN_PASSWORD_HASH, value: defaultHash, updated_at: new Date().toISOString() })
-		.onConflictDoUpdate({ target: appSettings.key, set: { value: defaultHash, updated_at: new Date().toISOString() } })
+		.values({
+			key: SETTING_KEYS.ADMIN_PASSWORD_HASH,
+			value: defaultHash,
+			updated_at: new Date().toISOString(),
+		})
+		.onConflictDoUpdate({
+			target: appSettings.key,
+			set: { value: defaultHash, updated_at: new Date().toISOString() },
+		})
 		.run();
 	return defaultHash;
 }
@@ -26,12 +37,16 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 		API_ROUTES.V1.AUTH.LOGIN,
 		{
 			schema: {
-				body: { type: "object", properties: { password: { type: "string" } }, required: ["password"] },
+				body: {
+					type: "object",
+					properties: { password: { type: "string" } },
+					required: ["password"],
+				},
 			},
 			config: {
 				// simple rate limit config could be applied here if @fastify/rate-limit is set globally
-				rateLimit: { max: 5, timeWindow: "1 minute" }
-			}
+				rateLimit: { max: 5, timeWindow: "1 minute" },
+			},
 		},
 		async (request, reply) => {
 			const { password } = request.body;
@@ -40,30 +55,32 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			const match = await bcrypt.compare(password ?? "", hash);
 			if (!match) {
 				auditLog("LOGIN_FAILED", `Failed login attempt from ${request.ip}`);
-				return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
+				return reply
+					.code(401)
+					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
 			}
 
 			const token = app.jwt.sign({ role: "admin" }, { expiresIn: "7d" });
-			
+
 			auditLog("LOGIN_SUCCESS", `Admin logged in from ${request.ip}`);
-			
+
 			// Send http-only secure cookie
 			reply.setCookie(ADMIN_COOKIE_NAME, token, {
 				path: "/",
 				httpOnly: true,
 				secure: AUTH_CONFIG.isProduction,
 				sameSite: "strict",
-				maxAge: 60 * 60 * 24 * 7 // 7 days
+				maxAge: 60 * 60 * 24 * 7, // 7 days
 			});
 
 			return { ok: true, data: { message: "Logged in successfully" } };
-		}
+		},
 	);
 
 	// POST /api/v1/auth/logout
 	app.post(API_ROUTES.V1.AUTH.LOGOUT, async (request, reply) => {
 		reply.clearCookie(ADMIN_COOKIE_NAME, { path: "/" });
-		auditLog("LOGOUT", `Admin logged out`);
+		auditLog("LOGOUT", "Admin logged out");
 		return { ok: true, data: null };
 	});
 
@@ -73,7 +90,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			await request.jwtVerify({ onlyCookie: true });
 			return { ok: true, data: { role: "admin" } };
 		} catch (err) {
-			return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", message: "Not logged in" } });
+			return reply
+				.code(401)
+				.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Not logged in" } });
 		}
 	});
 
@@ -82,13 +101,13 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 		API_ROUTES.V1.AUTH.CHANGE_PASSWORD,
 		{
 			schema: {
-				body: { 
-					type: "object", 
-					properties: { 
-						currentPassword: { type: "string" }, 
-						newPassword: { type: "string", minLength: 6 } 
-					}, 
-					required: ["currentPassword", "newPassword"] 
+				body: {
+					type: "object",
+					properties: {
+						currentPassword: { type: "string" },
+						newPassword: { type: "string", minLength: 6 },
+					},
+					required: ["currentPassword", "newPassword"],
 				},
 			},
 		},
@@ -97,7 +116,9 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			try {
 				await request.jwtVerify({ onlyCookie: true });
 			} catch (err) {
-				return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", message: "Not logged in" } });
+				return reply
+					.code(401)
+					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Not logged in" } });
 			}
 
 			const { currentPassword, newPassword } = request.body;
@@ -105,17 +126,27 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 
 			const match = await bcrypt.compare(currentPassword ?? "", hash);
 			if (!match) {
-				return reply.code(400).send({ ok: false, error: { code: "INVALID_CURRENT_PASSWORD", message: "Current password is wrong" } });
+				return reply.code(400).send({
+					ok: false,
+					error: { code: "INVALID_CURRENT_PASSWORD", message: "Current password is wrong" },
+				});
 			}
 
 			const newHash = await bcrypt.hash(newPassword ?? "", 10);
 			db.insert(appSettings)
-				.values({ key: SETTING_KEYS.ADMIN_PASSWORD_HASH, value: newHash, updated_at: new Date().toISOString() })
-				.onConflictDoUpdate({ target: appSettings.key, set: { value: newHash, updated_at: new Date().toISOString() } })
+				.values({
+					key: SETTING_KEYS.ADMIN_PASSWORD_HASH,
+					value: newHash,
+					updated_at: new Date().toISOString(),
+				})
+				.onConflictDoUpdate({
+					target: appSettings.key,
+					set: { value: newHash, updated_at: new Date().toISOString() },
+				})
 				.run();
 
 			auditLog("PASSWORD_CHANGED", `Admin password was changed from ${request.ip}`);
 			return { ok: true, data: { message: "Password updated successfully" } };
-		}
+		},
 	);
 }

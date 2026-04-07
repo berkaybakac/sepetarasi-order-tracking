@@ -20,17 +20,18 @@ export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 
 	// GET /api/v1/stats?period=daily|weekly|monthly
 	app.get<{ Querystring: { period?: string } }>(
-		API_ROUTES.V1.STATS, 
+		API_ROUTES.V1.STATS,
 		{ preHandler: requireAdmin },
 		async (request, reply) => {
-		const period = (request.query.period || "daily") as StatPeriod;
-		if (!STAT_PERIODS.includes(period)) {
-			return reply.status(400).send({
-				ok: false,
-				error: { code: "INVALID_PERIOD", message: "period must be daily, weekly, or monthly" },
-			});
-		}
-		const stats = statsService.getByPeriod(period);
-		return { ok: true, data: stats };
-	});
+			const period = (request.query.period || "daily") as StatPeriod;
+			if (!STAT_PERIODS.includes(period)) {
+				return reply.status(400).send({
+					ok: false,
+					error: { code: "INVALID_PERIOD", message: "period must be daily, weekly, or monthly" },
+				});
+			}
+			const stats = statsService.getByPeriod(period);
+			return { ok: true, data: stats };
+		},
+	);
 }

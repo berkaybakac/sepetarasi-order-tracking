@@ -33,8 +33,6 @@ export function getOrderTimer(createdAtStr: string, targetMinutes = 20) {
 		remainingMins,
 		isUrgent,
 		isOverdue,
-		formatted: isOverdue 
-			? `Gecikti (${Math.abs(remainingMins)} dk)` 
-			: `${remainingMins} dk kaldı`
+		formatted: isOverdue ? `Gecikti (${Math.abs(remainingMins)} dk)` : `${remainingMins} dk kaldı`,
 	};
 }

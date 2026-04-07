@@ -41,9 +41,7 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 			<div className="flex items-center justify-between px-1">
 				<div className="flex items-center gap-2">
 					<span className={`w-2 h-2 rounded-full ${dotClass}`} />
-					<h2 className="text-sm font-semibold text-dark-text tracking-wide uppercase">
-						{title}
-					</h2>
+					<h2 className="text-sm font-semibold text-dark-text tracking-wide uppercase">{title}</h2>
 				</div>
 				<span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${countClass}`}>
 					{orders.length}
@@ -62,6 +60,7 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
+							aria-hidden="true"
 						>
 							<path
 								strokeLinecap="round"

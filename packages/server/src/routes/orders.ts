@@ -6,10 +6,10 @@ import { OrderCommandService } from "../services/order.command.service.js";
 import { InvalidTransitionError, OrderNotFoundError } from "../services/order.errors.js";
 import { OrderQueryService } from "../services/order.query.service.js";
 import { StatsService } from "../services/stats.service.js";
+import { auditLog } from "../utils/audit-logger.js";
+import { requireAdmin, requireCashierOrAdmin } from "../utils/auth-middleware.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
 import { createOrderBodySchema, updateStatusBodySchema } from "./schemas.js";
-import { requireAdmin, requireCashierOrAdmin } from "../utils/auth-middleware.js";
-import { auditLog } from "../utils/audit-logger.js";
 
 export function registerOrderRoutes(
 	app: FastifyInstance,
@@ -23,14 +23,17 @@ export function registerOrderRoutes(
 	// POST /api/v1/orders
 	app.post<{ Body: CreateOrderInput }>(
 		API_ROUTES.V1.ORDERS,
-		{ 
+		{
 			preHandler: requireCashierOrAdmin,
-			schema: { body: createOrderBodySchema } 
+			schema: { body: createOrderBodySchema },
 		},
 		async (request, reply) => {
 			try {
 				const order = orderCommand.create(request.body);
-				auditLog("ORDER_CREATED", `Order ID: ${order.id}, Display NO: ${order.display_no} created by Cashier/Admin`);
+				auditLog(
+					"ORDER_CREATED",
+					`Order ID: ${order.id}, Display NO: ${order.display_no} created by Cashier/Admin`,
+				);
 
 				broadcaster.broadcast(
 					[WS_CHANNELS.ORDERS, WS_CHANNELS.DISPLAY],
@@ -81,9 +84,9 @@ export function registerOrderRoutes(
 	// PATCH /api/v1/orders/:id/status
 	app.patch<{ Params: { id: string }; Body: UpdateStatusInput }>(
 		"/api/v1/orders/:id/status",
-		{ 
+		{
 			preHandler: requireCashierOrAdmin,
-			schema: { body: updateStatusBodySchema } 
+			schema: { body: updateStatusBodySchema },
 		},
 		async (request, reply) => {
 			const { id } = request.params;
@@ -135,12 +138,15 @@ export function registerOrderRoutes(
 			const { id } = request.params;
 			try {
 				const order = orderCommand.delete(id);
-				auditLog("ORDER_DELETED", `Order ID: ${id}, Display NO: ${order.display_no} deleted by Admin`);
+				auditLog(
+					"ORDER_DELETED",
+					`Order ID: ${id}, Display NO: ${order.display_no} deleted by Admin`,
+				);
 
 				// Provide real-time update that an order was removed
 				const stats = statsService.getToday();
 				broadcaster.broadcast([WS_CHANNELS.ORDERS], WS_EVENTS.STATS_UPDATED, stats);
-				
+
 				return { ok: true, data: { message: "Order deleted successfully" } };
 			} catch (err) {
 				if (err instanceof OrderNotFoundError) {
@@ -151,6 +157,6 @@ export function registerOrderRoutes(
 				}
 				throw err;
 			}
-		}
+		},
 	);
 }

@@ -183,11 +183,11 @@ export class OrderCommandService {
 		if (!order) {
 			throw new OrderNotFoundError(orderId);
 		}
-		
+
 		this.db.transaction((tx) => {
 			tx.delete(orders).where(eq(orders.id, orderId)).run();
 		});
-		
+
 		return order;
 	}
 }

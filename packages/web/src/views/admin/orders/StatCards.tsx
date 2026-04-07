@@ -16,8 +16,19 @@ export function StatCards() {
 			valueClass: "text-dark-text",
 			iconClass: "text-brand-primary bg-brand-primary/10",
 			icon: (
-				<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+				<svg
+					className="w-5 h-5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+					/>
 				</svg>
 			),
 		},
@@ -27,8 +38,19 @@ export function StatCards() {
 			valueClass: "text-brand-warning",
 			iconClass: "text-brand-warning bg-brand-warning/10",
 			icon: (
-				<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+				<svg
+					className="w-5 h-5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
 				</svg>
 			),
 		},
@@ -38,7 +60,13 @@ export function StatCards() {
 			valueClass: "text-brand-success",
 			iconClass: "text-brand-success bg-brand-success/10",
 			icon: (
-				<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg
+					className="w-5 h-5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 				</svg>
 			),
@@ -56,7 +84,9 @@ export function StatCards() {
 						<p className="text-xs font-medium text-dark-muted uppercase tracking-wider">
 							{card.label}
 						</p>
-						<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${card.iconClass}`}>
+						<div
+							className={`w-8 h-8 rounded-lg flex items-center justify-center ${card.iconClass}`}
+						>
 							{card.icon}
 						</div>
 					</div>

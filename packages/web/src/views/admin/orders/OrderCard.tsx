@@ -30,7 +30,7 @@ function TimerBadge({ createdAt, status }: { createdAt: string; status: OrderSta
 	if (isOverdue) {
 		return (
 			<span className="inline-flex items-center gap-1 text-xs font-bold text-brand-danger bg-brand-danger/15 border border-brand-danger/40 rounded-full px-2 py-0.5 animate-pulse">
-				<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+				<svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 					<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
 				</svg>
 				{formatted}
@@ -41,8 +41,19 @@ function TimerBadge({ createdAt, status }: { createdAt: string; status: OrderSta
 	if (isUrgent) {
 		return (
 			<span className="inline-flex items-center gap-1 text-xs font-bold text-brand-warning bg-brand-warning/15 border border-brand-warning/40 rounded-full px-2 py-0.5 animate-pulse">
-				<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+				<svg
+					className="w-3 h-3"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2.5}
+						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
 				</svg>
 				{formatted}
 			</span>
@@ -108,8 +119,9 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 	const borderClass = isOverdue
 		? styles.overdueBorder
 		: isUrgent
-		? styles.urgentBorder
-		: styles.border;
+			? styles.urgentBorder
+			: styles.border;
+	const lineItemCounts = new Map<string, number>();
 
 	return (
 		<div
@@ -130,14 +142,21 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 
 			{order.items && order.items.length > 0 && (
 				<div className="space-y-1.5 mt-3 pt-3 border-t border-white/5">
-					{order.items.map((item, i) => (
-						<div key={i} className="flex items-center gap-2 text-xs text-dark-muted">
-							<span className="w-5 h-5 rounded bg-white/5 border border-white/5 flex items-center justify-center text-dark-text font-bold text-[10px] shrink-0">
-								{item.quantity}
-							</span>
-							<span className="truncate">{item.name}</span>
-						</div>
-					))}
+					{order.items.map((item) => {
+						const baseKey = `${item.name}:${item.quantity}:${item.unit_price}`;
+						const nextCount = (lineItemCounts.get(baseKey) ?? 0) + 1;
+						lineItemCounts.set(baseKey, nextCount);
+						const key = `${order.id}:${baseKey}:${nextCount}`;
+
+						return (
+							<div key={key} className="flex items-center gap-2 text-xs text-dark-muted">
+								<span className="w-5 h-5 rounded bg-white/5 border border-white/5 flex items-center justify-center text-dark-text font-bold text-[10px] shrink-0">
+									{item.quantity}
+								</span>
+								<span className="truncate">{item.name}</span>
+							</div>
+						);
+					})}
 				</div>
 			)}
 		</div>

@@ -46,6 +46,6 @@ export const api = {
 	authLogin: (password: string) => request<null>("POST", API_ROUTES.V1.AUTH.LOGIN, { password }),
 	authLogout: () => request<null>("POST", API_ROUTES.V1.AUTH.LOGOUT),
 	authCheck: () => request<{ role: string }>("GET", API_ROUTES.V1.AUTH.ME),
-	authChangePassword: (currentPassword: string, newPassword: string) => 
+	authChangePassword: (currentPassword: string, newPassword: string) =>
 		request<null>("POST", API_ROUTES.V1.AUTH.CHANGE_PASSWORD, { currentPassword, newPassword }),
 };

@@ -1,11 +1,13 @@
-import type { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "../config/auth.js";
 
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
 	try {
 		await request.jwtVerify({ onlyCookie: true });
 	} catch (err) {
-		return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", message: "Admin access required" } });
+		return reply
+			.code(401)
+			.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Admin access required" } });
 	}
 }
 
@@ -25,5 +27,8 @@ export async function requireCashierOrAdmin(request: FastifyRequest, reply: Fast
 		return; // Is Cashier
 	}
 
-	return reply.code(401).send({ ok: false, error: { code: "UNAUTHORIZED", message: "Cashier token or Admin access required" } });
+	return reply.code(401).send({
+		ok: false,
+		error: { code: "UNAUTHORIZED", message: "Cashier token or Admin access required" },
+	});
 }

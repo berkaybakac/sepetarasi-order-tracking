@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { api } from "./lib/api";
+import { useAuthStore } from "./stores/auth.store";
 import { AdminView } from "./views/admin/AdminView";
 import { LoginView } from "./views/admin/LoginView";
 import { CustomerDisplay } from "./views/display/CustomerDisplay";
-import { useAuthStore } from "./stores/auth.store";
-import { api } from "./lib/api";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
 	const { isAdmin, setAuthStatus } = useAuthStore();
@@ -12,7 +13,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 	useEffect(() => {
 		if (isAdmin === null) {
-			api.authCheck()
+			api
+				.authCheck()
 				.then(() => setAuthStatus(true))
 				.catch(() => setAuthStatus(false));
 		}
@@ -21,7 +23,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 	if (isAdmin === null) {
 		return (
 			<div className="min-h-screen bg-slate-900 flex items-center justify-center">
-				<div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+				<div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
 			</div>
 		);
 	}
@@ -38,13 +40,13 @@ export default function App() {
 		<BrowserRouter>
 			<Routes>
 				<Route path="/admin/login" element={<LoginView />} />
-				<Route 
-					path="/admin/*" 
+				<Route
+					path="/admin/*"
 					element={
 						<RequireAuth>
 							<AdminView />
 						</RequireAuth>
-					} 
+					}
 				/>
 				<Route path="/display" element={<CustomerDisplay />} />
 				<Route path="*" element={<Navigate to="/admin" replace />} />

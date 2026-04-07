@@ -1,5 +1,5 @@
-import type { FastifyInstance } from "fastify";
 import { API_ROUTES } from "@sepetarasi/shared";
+import type { FastifyInstance } from "fastify";
 import { AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "../src/config/auth.js";
 
 export function withCashierAuth(headers: Record<string, string> = {}) {

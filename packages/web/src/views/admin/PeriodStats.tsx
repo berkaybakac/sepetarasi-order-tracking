@@ -66,10 +66,12 @@ export function PeriodStats({ refreshTrigger }: Props) {
 			</div>
 
 			<div className="text-center py-6 relative z-10">
-				<p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-2">{UI_LABELS.AVG_PREP_TIME}</p>
+				<p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-2">
+					{UI_LABELS.AVG_PREP_TIME}
+				</p>
 				{loading ? (
 					<div className="flex justify-center h-14 items-center">
-						<div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+						<div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
 					</div>
 				) : (
 					<p className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
@@ -88,7 +90,20 @@ export function PeriodStats({ refreshTrigger }: Props) {
 				<div className="h-6 mt-3 flex items-center justify-center">
 					{stats && !loading && (
 						<span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full border border-brand-primary/20">
-							<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+								/>
+							</svg>
 							{stats.totalOrders} toplam sipariş
 						</span>
 					)}
