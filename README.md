@@ -211,11 +211,16 @@ Bu gate manueldir (MVP): CI'da hard-blocking zorunluluk yoktur.
 PORT=3000
 DB_PATH=./data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
+JWT_SECRET=replace-with-strong-secret                          # production'da zorunlu (fail-fast)
+COOKIE_SECRET=replace-with-strong-secret                       # production'da zorunlu (fail-fast)
+CASHIER_TOKEN=replace-with-strong-token                        # production'da zorunlu (fail-fast)
 ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel
 AUDIO_ALSA_DEVICE=hw:2,0                                    # Pi4 ses çıkış cihazı (3.5mm jack)
 DISABLE_AUDIO=false                                         # sesi kapatmak için true
 ENABLE_TTS_FALLBACK=false                                   # MP3 yoksa espeak-ng/say devreye girer
 ```
+
+Web admin paneli cashier-yetkili API çağrısı yapacaksa web tarafında ayrıca `VITE_CASHIER_TOKEN` tanımlı olmalıdır.
 
 ---
 
