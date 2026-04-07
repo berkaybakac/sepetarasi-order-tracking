@@ -176,4 +176,18 @@ export class OrderCommandService {
 		// biome-ignore lint/style/noNonNullAssertion: order was just updated in the transaction above
 		return this.query.getById(orderId)!;
 	}
+
+	/** Delete an order completely */
+	delete(orderId: string) {
+		const order = this.db.select().from(orders).where(eq(orders.id, orderId)).get();
+		if (!order) {
+			throw new OrderNotFoundError(orderId);
+		}
+		
+		this.db.transaction((tx) => {
+			tx.delete(orders).where(eq(orders.id, orderId)).run();
+		});
+		
+		return order;
+	}
 }

@@ -2,10 +2,11 @@ import { API_ROUTES } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
+import { requireAdmin } from "../utils/auth-middleware.js";
 
 export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 	// GET /api/v1/settings - readonly, tum key-value ciftlerini doner
-	app.get(API_ROUTES.V1.SETTINGS, async () => {
+	app.get(API_ROUTES.V1.SETTINGS, { preHandler: requireAdmin }, async () => {
 		const rows = db.select().from(appSettings).all();
 		const settings: Record<string, string> = {};
 		for (const row of rows) {
@@ -18,6 +19,7 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 	app.patch<{ Params: { key: string }; Body: { value: string } }>(
 		API_ROUTES.V1.SETTING_BY_KEY(":key"),
 		{
+			preHandler: requireAdmin,
 			schema: {
 				params: { type: "object", properties: { key: { type: "string" } }, required: ["key"] },
 				body: { type: "object", properties: { value: { type: "string" } }, required: ["value"] },

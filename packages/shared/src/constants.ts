@@ -52,6 +52,7 @@ export const WS_CHANNELS = {
 /** Sistem Ayarları Anahtarları (Magic Strings SSoT) */
 export const SETTING_KEYS = {
 	AUDIO_VOLUME: "audio_volume",
+	ADMIN_PASSWORD_HASH: "admin_password_hash",
 } as const;
 
 /** İstatistik Periyotları Seçenekleri (SSoT) */
@@ -68,5 +69,11 @@ export const API_ROUTES = {
 		STATS: "/api/v1/stats",
 		SETTINGS: "/api/v1/settings",
 		SETTING_BY_KEY: (key: string) => `/api/v1/settings/${key}`,
+		AUTH: {
+			LOGIN: "/api/v1/auth/login",
+			LOGOUT: "/api/v1/auth/logout",
+			ME: "/api/v1/auth/me",
+			CHANGE_PASSWORD: "/api/v1/auth/change-password",
+		},
 	},
 } as const;

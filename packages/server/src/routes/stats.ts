@@ -3,6 +3,7 @@ import type { StatPeriod } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../db/connection.js";
 import { StatsService } from "../services/stats.service.js";
+import { requireAdmin } from "../utils/auth-middleware.js";
 
 export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 	const statsService = new StatsService(db);
@@ -10,6 +11,7 @@ export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 	// GET /api/v1/stats/today
 	app.get<{ Querystring: { business_date?: string } }>(
 		API_ROUTES.V1.STATS_TODAY,
+		{ preHandler: requireAdmin },
 		async (request) => {
 			const stats = statsService.getToday(request.query.business_date || undefined);
 			return { ok: true, data: stats };
@@ -17,7 +19,10 @@ export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 	);
 
 	// GET /api/v1/stats?period=daily|weekly|monthly
-	app.get<{ Querystring: { period?: string } }>(API_ROUTES.V1.STATS, async (request, reply) => {
+	app.get<{ Querystring: { period?: string } }>(
+		API_ROUTES.V1.STATS, 
+		{ preHandler: requireAdmin },
+		async (request, reply) => {
 		const period = (request.query.period || "daily") as StatPeriod;
 		if (!STAT_PERIODS.includes(period)) {
 			return reply.status(400).send({

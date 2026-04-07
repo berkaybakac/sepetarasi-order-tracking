@@ -3,14 +3,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
+import fastifyCookie from "@fastify/cookie";
+import fastifyJwt from "@fastify/jwt";
+import fastifyRateLimit from "@fastify/rate-limit";
 import { SETTING_KEYS, WS_CHANNELS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import Fastify from "fastify";
+import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
 import type { AppDatabase } from "./db/connection.js";
 import { appSettings } from "./db/schema.js";
 import { registerOrderRoutes } from "./routes/orders.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerStatsRoutes } from "./routes/stats.js";
+import { registerAuthRoutes } from "./routes/auth.js";
 import { AnnouncementService } from "./services/announcement.service.js";
 import { AudioPlaybackService } from "./services/audio-playback.service.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
@@ -48,7 +53,10 @@ export async function buildApp(opts: AppOptions) {
 		reply.header("Access-Control-Allow-Origin", origin ?? "*");
 		reply.header("Vary", "Origin");
 		reply.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
-		reply.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+		reply.header(
+			"Access-Control-Allow-Headers",
+			`Content-Type, Authorization, ${CASHIER_TOKEN_HEADER}`,
+		);
 
 		if (request.method === "OPTIONS") {
 			reply.code(204).send();
@@ -97,7 +105,16 @@ export async function buildApp(opts: AppOptions) {
 		},
 	);
 
+	// Setup Rate Limiting, Cookie, JWT
+	await app.register(fastifyRateLimit, { max: 100, timeWindow: "1 minute" });
+	await app.register(fastifyCookie, { secret: AUTH_CONFIG.cookieSecret });
+	await app.register(fastifyJwt, {
+		secret: AUTH_CONFIG.jwtSecret,
+		cookie: { cookieName: ADMIN_COOKIE_NAME, signed: false },
+	});
+
 	// HTTP routes
+	registerAuthRoutes(app, opts.db);
 	registerOrderRoutes(app, opts.db, broadcaster);
 	registerStatsRoutes(app, opts.db);
 	registerSettingsRoutes(app, opts.db);
