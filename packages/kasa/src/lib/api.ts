@@ -1,4 +1,5 @@
 // ADR: intentionally separate from web/api.ts — see docs/dev-notes.md "Intentional Separations"
+import { API_ROUTES } from "@sepetarasi/shared";
 import type { CreateOrderInput, DayStats, Order, UpdateStatusInput } from "@sepetarasi/shared";
 
 let baseUrl = "http://localhost:3000";
@@ -62,18 +63,18 @@ export class ApiError extends Error {
 
 export const api = {
 	createOrder: (input: CreateOrderInput) =>
-		request<Order>("POST", "/api/v1/orders", {
+		request<Order>("POST", API_ROUTES.V1.ORDERS, {
 			...input,
 			...(terminalId ? { terminal_id: terminalId } : {}),
 		}),
 
 	listOrders: (businessDate?: string) => {
 		const params = businessDate ? `?business_date=${businessDate}` : "";
-		return request<Order[]>("GET", `/api/v1/orders${params}`);
+		return request<Order[]>("GET", `${API_ROUTES.V1.ORDERS}${params}`);
 	},
 
 	changeStatus: (orderId: string, input: UpdateStatusInput) =>
-		request<Order>("PATCH", `/api/v1/orders/${orderId}/status`, input),
+		request<Order>("PATCH", API_ROUTES.V1.ORDER_STATUS(orderId), input),
 
-	getStats: () => request<DayStats>("GET", "/api/v1/stats/today"),
+	getStats: () => request<DayStats>("GET", API_ROUTES.V1.STATS_TODAY),
 };

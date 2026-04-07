@@ -1,4 +1,4 @@
-import { type OrderStatus, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
+import { API_ROUTES, type OrderStatus, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { CreateOrderInput, UpdateStatusInput } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../db/connection.js";
@@ -20,7 +20,7 @@ export function registerOrderRoutes(
 
 	// POST /api/v1/orders
 	app.post<{ Body: CreateOrderInput }>(
-		"/api/v1/orders",
+		API_ROUTES.V1.ORDERS,
 		{ schema: { body: createOrderBodySchema } },
 		async (request, reply) => {
 			try {
@@ -51,7 +51,7 @@ export function registerOrderRoutes(
 	// GET /api/v1/orders
 	app.get<{
 		Querystring: { business_date?: string; status?: string };
-	}>("/api/v1/orders", async (request) => {
+	}>(API_ROUTES.V1.ORDERS, async (request) => {
 		const { business_date, status } = request.query;
 		const orderList = orderQuery.list(
 			business_date || undefined,
@@ -61,7 +61,7 @@ export function registerOrderRoutes(
 	});
 
 	// GET /api/v1/orders/:id
-	app.get<{ Params: { id: string } }>("/api/v1/orders/:id", async (request, reply) => {
+	app.get<{ Params: { id: string } }>(API_ROUTES.V1.ORDER_BY_ID, async (request, reply) => {
 		const order = orderQuery.getById(request.params.id);
 		if (!order) {
 			return reply.status(404).send({

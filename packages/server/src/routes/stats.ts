@@ -1,23 +1,25 @@
+import { API_ROUTES, STAT_PERIODS } from "@sepetarasi/shared";
+import type { StatPeriod } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../db/connection.js";
 import { StatsService } from "../services/stats.service.js";
-
-const VALID_PERIODS = ["daily", "weekly", "monthly"] as const;
-type Period = (typeof VALID_PERIODS)[number];
 
 export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 	const statsService = new StatsService(db);
 
 	// GET /api/v1/stats/today
-	app.get<{ Querystring: { business_date?: string } }>("/api/v1/stats/today", async (request) => {
-		const stats = statsService.getToday(request.query.business_date || undefined);
-		return { ok: true, data: stats };
-	});
+	app.get<{ Querystring: { business_date?: string } }>(
+		API_ROUTES.V1.STATS_TODAY,
+		async (request) => {
+			const stats = statsService.getToday(request.query.business_date || undefined);
+			return { ok: true, data: stats };
+		},
+	);
 
 	// GET /api/v1/stats?period=daily|weekly|monthly
-	app.get<{ Querystring: { period?: string } }>("/api/v1/stats", async (request, reply) => {
-		const period = (request.query.period || "daily") as Period;
-		if (!VALID_PERIODS.includes(period)) {
+	app.get<{ Querystring: { period?: string } }>(API_ROUTES.V1.STATS, async (request, reply) => {
+		const period = (request.query.period || "daily") as StatPeriod;
+		if (!STAT_PERIODS.includes(period)) {
 			return reply.status(400).send({
 				ok: false,
 				error: { code: "INVALID_PERIOD", message: "period must be daily, weekly, or monthly" },

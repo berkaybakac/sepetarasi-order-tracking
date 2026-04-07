@@ -1,6 +1,6 @@
 # Sepetarasi Order Tracking
 
-LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Dashboard ve Müşteri Ekranı.
+LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Paneli ve Müşteri Ekranı.
 
 ---
 
@@ -10,7 +10,7 @@ LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Dashboard ve M
 
 | Arayüz | URL |
 | --- | --- |
-| Dashboard | `http://sepetarasi.local:3000` |
+| Yönetici Paneli | `http://sepetarasi.local:3000` |
 | Müşteri Ekranı | `http://sepetarasi.local:3000/display` |
 | Admin | `http://sepetarasi.local:3000/admin` |
 
@@ -48,7 +48,7 @@ Pi4'e gerek yok — `localhost:5173` yeterli. Ses macOS'ta `afplay` ile çalış
 # Terminal 1: Server
 npm run dev:server
 
-# Terminal 2: Web (Dashboard + Müşteri Ekranı)
+# Terminal 2: Web (Yönetici Paneli + Müşteri Ekranı)
 npm run dev:web
 
 # Terminal 3: Kasa (opsiyonel)
@@ -57,13 +57,13 @@ cd packages/kasa && npm run dev
 
 | Arayüz | URL |
 | --- | --- |
-| Dashboard | `http://localhost:5173` |
+| Yönetici Paneli | `http://localhost:5173` |
 | Müşteri Ekranı | `http://localhost:5173/display` |
 | Admin | `http://localhost:5173/admin` |
 | Server (API) | `http://localhost:3000` |
 
 ```bash
-open http://localhost:5173          # Dashboard
+open http://localhost:5173          # Yönetici Paneli
 open http://localhost:5173/display  # Müşteri Ekranı
 open http://localhost:5173/admin    # Admin Paneli
 open http://localhost:3000/health   # API sağlık

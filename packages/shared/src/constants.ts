@@ -48,3 +48,25 @@ export const WS_CHANNELS = {
 	ORDERS: "orders",
 	DISPLAY: "display",
 } as const;
+
+/** Sistem Ayarları Anahtarları (Magic Strings SSoT) */
+export const SETTING_KEYS = {
+	AUDIO_VOLUME: "audio_volume",
+} as const;
+
+/** İstatistik Periyotları Seçenekleri (SSoT) */
+export const STAT_PERIODS = ["daily", "weekly", "monthly"] as const;
+export type StatPeriod = (typeof STAT_PERIODS)[number];
+
+/** API Endpoint Yolları (SSoT) */
+export const API_ROUTES = {
+	V1: {
+		ORDERS: "/api/v1/orders",
+		ORDER_BY_ID: "/api/v1/orders/:id",
+		ORDER_STATUS: (id: string | number) => `/api/v1/orders/${id}/status`,
+		STATS_TODAY: "/api/v1/stats/today",
+		STATS: "/api/v1/stats",
+		SETTINGS: "/api/v1/settings",
+		SETTING_BY_KEY: (key: string) => `/api/v1/settings/${key}`,
+	},
+} as const;

@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
-import { WS_CHANNELS } from "@sepetarasi/shared";
+import { SETTING_KEYS, WS_CHANNELS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import Fastify from "fastify";
 import type { AppDatabase } from "./db/connection.js";
@@ -119,7 +119,7 @@ export async function buildApp(opts: AppOptions) {
 				const row = opts.db
 					.select()
 					.from(appSettings)
-					.where(eq(appSettings.key, "audio_volume"))
+					.where(eq(appSettings.key, SETTING_KEYS.AUDIO_VOLUME))
 					.get();
 				return row ? Math.max(0, Math.min(100, Number(row.value))) : 100;
 			},
