@@ -44,17 +44,20 @@ export function PeriodStats({ refreshTrigger }: Props) {
 	}, [refreshTrigger, fetchStats]);
 
 	return (
-		<div className="bg-brand-surface rounded-card shadow-sm p-5 space-y-4">
-			<div className="flex gap-2">
+		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 space-y-5 relative overflow-hidden group hover:border-white/10 transition-colors">
+			{/* Subtle inner glow */}
+			<div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+			<div className="flex gap-2 relative z-10 w-full p-1 bg-slate-900/50 rounded-xl border border-white/5">
 				{STAT_PERIODS.map((p) => (
 					<button
 						key={p}
 						type="button"
 						onClick={() => setPeriod(p)}
-						className={`flex-1 py-2 px-4 rounded-btn font-medium text-sm transition-colors ${
+						className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all duration-300 ${
 							period === p
-								? "bg-brand-primary text-white"
-								: "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+								? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/20"
+								: "text-slate-400 hover:text-white hover:bg-white/5"
 						}`}
 					>
 						{PERIOD_LABELS[p]}
@@ -62,27 +65,34 @@ export function PeriodStats({ refreshTrigger }: Props) {
 				))}
 			</div>
 
-			<div className="text-center py-4">
-				<p className="text-sm text-gray-500 mb-2">{UI_LABELS.AVG_PREP_TIME}</p>
+			<div className="text-center py-6 relative z-10">
+				<p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-2">{UI_LABELS.AVG_PREP_TIME}</p>
 				{loading ? (
-					<p className="text-5xl font-bold text-gray-200">...</p>
+					<div className="flex justify-center h-14 items-center">
+						<div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+					</div>
 				) : (
-					<p className="text-5xl font-bold text-gray-800">
+					<p className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
 						{stats?.averagePrepMinutes != null ? (
 							<>
 								{stats.averagePrepMinutes}
-								<span className="text-2xl font-normal text-gray-500 ml-1">
+								<span className="text-2xl font-medium text-slate-500 ml-2">
 									{UI_LABELS.ORDERS.MINUTES_SHORT}
 								</span>
 							</>
 						) : (
-							<span className="text-gray-300">-</span>
+							<span className="text-slate-600">-</span>
 						)}
 					</p>
 				)}
-				{stats && !loading && (
-					<p className="text-sm text-gray-400 mt-2">{stats.totalOrders} sipariş</p>
-				)}
+				<div className="h-6 mt-3 flex items-center justify-center">
+					{stats && !loading && (
+						<span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full border border-brand-primary/20">
+							<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+							{stats.totalOrders} toplam sipariş
+						</span>
+					)}
+				</div>
 			</div>
 		</div>
 	);

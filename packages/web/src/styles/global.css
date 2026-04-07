@@ -1,17 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-	/* Marka Renkleri - Single Source of Truth */
-	--color-brand-primary: #2563eb; /* blue-600 */
+	/* ── Marka Renkleri - Single Source of Truth ── */
+	--color-brand-primary: #2563eb;       /* blue-600 */
 	--color-brand-primary-hover: #1d4ed8; /* blue-700 */
-	--color-brand-warning: #ca8a04; /* yellow-600 */
-	--color-brand-success: #16a34a; /* green-600 */
+	--color-brand-warning: #f59e0b;       /* amber-500 */
+	--color-brand-success: #10b981;       /* emerald-500 */
+	--color-brand-danger: #ef4444;        /* red-500 */
 
-	/* Arka Plan ve Yüzeyler */
-	--color-brand-surface: #ffffff; /* bg-white yerine */
-	--color-brand-bg: #f9fafb; /* gray-50 - sayfa arkaplanı */
+	/* ── Açık Tema Yüzeyleri ── */
+	--color-brand-surface: #ffffff;
+	--color-brand-bg: #f9fafb;            /* gray-50 */
 
-	/* Köşe Yuvarlaklığı */
-	--radius-card: 0.75rem; /* rounded-xl yerine */
-	--radius-btn: 0.5rem; /* rounded-lg yerine */
+	/* ── Koyu Tema Yüzeyleri ── */
+	--color-dark-bg: #0f172a;             /* slate-900 */
+	--color-dark-surface: rgba(255,255,255,0.05);
+	--color-dark-border: rgba(255,255,255,0.08);
+	--color-dark-text: #f1f5f9;           /* slate-100 */
+	--color-dark-muted: #94a3b8;          /* slate-400 */
+
+	/* ── Köşe Yuvarlaklığı ── */
+	--radius-card: 0.75rem;
+	--radius-btn: 0.5rem;
+}
+
+/* ── Beyaz scroll bug fix: tarayıcı kendi arkaplanını göstermesin ── */
+html,
+body {
+	background-color: #0f172a; /* dark-bg ile aynı */
+	margin: 0;
+	padding: 0;
 }

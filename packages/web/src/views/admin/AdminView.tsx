@@ -8,6 +8,8 @@ import { OrderColumns, StatCards } from "./OrderColumns";
 import { PeriodStats } from "./PeriodStats";
 import { VolumeControl } from "./VolumeControl";
 
+import { AdminHeader } from "./AdminHeader";
+
 /**
  * AdminView — orkestratör.
  * Tek sorumluluk: WebSocket bağlantısını yönet, layout'u oluştur.
@@ -54,22 +56,23 @@ export function AdminView() {
 	}, [hydrate]);
 
 	return (
-		<div className="min-h-screen bg-brand-bg">
-			<header className="bg-brand-surface shadow-sm border-b px-4 py-3">
-				<div className="flex items-center justify-between">
-					<h1 className="text-xl font-bold text-gray-800">{UI_LABELS.ADMIN_TITLE}</h1>
-					<span
-						className={`w-2 h-2 rounded-full ${connected ? "bg-brand-success" : "bg-red-500"}`}
-					/>
-				</div>
-			</header>
+		<div className="min-h-screen bg-slate-900 relative overflow-hidden">
+			{/* Ambient Background Globs */}
+			<div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
+			<div className="absolute bottom-[20%] right-[-10%] w-[30%] h-[40%] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-			<main className="p-4 space-y-6">
-				<StatCards />
-				<PeriodStats refreshTrigger={statsRefreshTrigger} />
-				<VolumeControl />
-				<OrderColumns />
-			</main>
+			<div className="relative z-10 min-h-screen flex flex-col">
+				<AdminHeader connected={connected} />
+
+				<main className="flex-1 p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
+					<StatCards />
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<PeriodStats refreshTrigger={statsRefreshTrigger} />
+						<VolumeControl />
+					</div>
+					<OrderColumns />
+				</main>
+			</div>
 		</div>
 	);
 }
