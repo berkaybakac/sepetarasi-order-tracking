@@ -5,14 +5,17 @@ import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
+import { loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;
+let adminCookie: string;
 
 beforeEach(async () => {
 	db = createTestDb();
 	db.insert(terminals).values({ id: "t-1", name: "Kasa 1", type: "kasa", is_active: 1 }).run();
 	app = await buildApp({ db, disableWorker: true });
+	adminCookie = await loginAsAdmin(app);
 });
 
 afterEach(async () => {
@@ -24,6 +27,7 @@ describe("POST /api/v1/orders", () => {
 		const res = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: {
 				terminal_id: "t-1",
 				items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
@@ -42,6 +46,7 @@ describe("POST /api/v1/orders", () => {
 		const res = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: { items: [] },
 		});
 
@@ -53,6 +58,7 @@ describe("POST /api/v1/orders", () => {
 		const res = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: {
 				terminal_id: "KASA-1",
 				items: [{ name: "Pizza", quantity: 1, unit_price: 20000 }],
@@ -74,11 +80,13 @@ describe("GET /api/v1/orders", () => {
 		await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: { items: [{ name: "A", quantity: 1, unit_price: 1000 }] },
 		});
 		await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: { items: [{ name: "B", quantity: 1, unit_price: 2000 }] },
 		});
 
@@ -95,6 +103,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 		const createRes = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
 		});
 		const orderId = createRes.json().data.id;
@@ -102,6 +111,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 		const res = await app.inject({
 			method: "PATCH",
 			url: `/api/v1/orders/${orderId}/status`,
+			headers: withCashierAuth(),
 			payload: { status: "READY" },
 		});
 
@@ -115,6 +125,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 		const createRes = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
 		});
 		const orderId = createRes.json().data.id;
@@ -122,6 +133,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 		const res = await app.inject({
 			method: "PATCH",
 			url: `/api/v1/orders/${orderId}/status`,
+			headers: withCashierAuth(),
 			payload: { status: "DELIVERED" },
 		});
 
@@ -133,6 +145,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 		const res = await app.inject({
 			method: "PATCH",
 			url: "/api/v1/orders/non-existent/status",
+			headers: withCashierAuth(),
 			payload: { status: "READY" },
 		});
 
@@ -145,10 +158,15 @@ describe("GET /api/v1/stats/today", () => {
 		await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: { items: [{ name: "A", quantity: 1, unit_price: 1000 }] },
 		});
 
-		const res = await app.inject({ method: "GET", url: "/api/v1/stats/today" });
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/stats/today",
+			headers: { cookie: adminCookie },
+		});
 		const body = res.json();
 		expect(body.ok).toBe(true);
 		expect(body.data.totalOrders).toBe(1);
@@ -161,6 +179,7 @@ describe("POST /api/v1/orders with new fields", () => {
 		const res = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
+			headers: withCashierAuth(),
 			payload: {
 				customer_name: "Ali",
 				order_type: "paket",
@@ -182,7 +201,11 @@ describe("GET /api/v1/settings", () => {
 		db.insert(appSettings).values({ key: "business_name", value: "Test Cafe" }).run();
 		db.insert(appSettings).values({ key: "receipt_phone", value: "555-1234" }).run();
 
-		const res = await app.inject({ method: "GET", url: "/api/v1/settings" });
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/settings",
+			headers: { cookie: adminCookie },
+		});
 		expect(res.statusCode).toBe(200);
 		const body = res.json();
 		expect(body.ok).toBe(true);
@@ -196,6 +219,7 @@ describe("PATCH /api/v1/settings/:key", () => {
 		const res = await app.inject({
 			method: "PATCH",
 			url: "/api/v1/settings/audio_volume",
+			headers: { cookie: adminCookie },
 			payload: { value: "75" },
 		});
 		expect(res.statusCode).toBe(200);
@@ -209,6 +233,7 @@ describe("PATCH /api/v1/settings/:key", () => {
 		const res = await app.inject({
 			method: "PATCH",
 			url: "/api/v1/settings/audio_volume",
+			headers: { cookie: adminCookie },
 			payload: { value: "200" },
 		});
 		expect(res.statusCode).toBe(400);
@@ -219,7 +244,11 @@ describe("PATCH /api/v1/settings/:key", () => {
 
 describe("GET /api/v1/stats", () => {
 	it("returns daily stats by default", async () => {
-		const res = await app.inject({ method: "GET", url: "/api/v1/stats" });
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/stats",
+			headers: { cookie: adminCookie },
+		});
 		expect(res.statusCode).toBe(200);
 		expect(res.json().ok).toBe(true);
 		expect(res.json().data).toHaveProperty("totalOrders");
@@ -228,14 +257,22 @@ describe("GET /api/v1/stats", () => {
 
 	it("accepts weekly and monthly period", async () => {
 		for (const period of ["weekly", "monthly"]) {
-			const res = await app.inject({ method: "GET", url: `/api/v1/stats?period=${period}` });
+			const res = await app.inject({
+				method: "GET",
+				url: `/api/v1/stats?period=${period}`,
+				headers: { cookie: adminCookie },
+			});
 			expect(res.statusCode).toBe(200);
 			expect(res.json().ok).toBe(true);
 		}
 	});
 
 	it("returns 400 for invalid period", async () => {
-		const res = await app.inject({ method: "GET", url: "/api/v1/stats?period=invalid" });
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/stats?period=invalid",
+			headers: { cookie: adminCookie },
+		});
 		expect(res.statusCode).toBe(400);
 		expect(res.json().ok).toBe(false);
 		expect(res.json().error.code).toBe("INVALID_PERIOD");
@@ -273,6 +310,8 @@ describe("GET /health", () => {
 
 		expect(res.statusCode).toBe(204);
 		expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
-		expect(res.headers["access-control-allow-headers"]).toBe("Content-Type, Authorization");
+		expect(res.headers["access-control-allow-headers"]).toBe(
+			"Content-Type, Authorization, x-cashier-token",
+		);
 	});
 });
