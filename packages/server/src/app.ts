@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 import fastifyCookie from "@fastify/cookie";
 import fastifyJwt from "@fastify/jwt";
 import fastifyRateLimit from "@fastify/rate-limit";
@@ -23,6 +24,8 @@ import { AnnouncementWorker } from "./workers/announcement.worker.js";
 import { Broadcaster } from "./ws/broadcaster.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const HEARTBEAT_INTERVAL = 60000;
+const HEARTBEAT_INTERVAL_LABEL = "60s";
 
 export interface AppOptions {
 	db: AppDatabase;
@@ -48,6 +51,10 @@ export async function buildApp(opts: AppOptions) {
 	const app = Fastify({ logger: true });
 	const broadcaster = new Broadcaster();
 	const wsAlive = new WeakMap<WebSocket, boolean>();
+	const wsMeta = new WeakMap<
+		WebSocket,
+		{ connectionId: string; channels: string[]; remoteAddress?: string }
+	>();
 
 	// Allow Electron/web clients to call API across origins (LAN IP, localhost, file://)
 	app.addHook("onRequest", (request, reply, done) => {
@@ -73,6 +80,7 @@ export async function buildApp(opts: AppOptions) {
 
 	app.register(async (wsApp) => {
 		wsApp.get("/ws", { websocket: true }, (socket, request) => {
+			const ws = socket as unknown as WebSocket;
 			const url = new URL(request.url, "http://localhost");
 			const channel = url.searchParams.get("channel") || WS_CHANNELS.ORDERS;
 			const key = url.searchParams.get("key");
@@ -87,21 +95,28 @@ export async function buildApp(opts: AppOptions) {
 
 			const validChannels = Object.values(WS_CHANNELS) as string[];
 			if (validChannels.includes(channel)) {
-				broadcaster.subscribe(channel, socket);
+				broadcaster.subscribe(channel, ws);
 			}
 
 			// Heartbeat: Mark as alive on connection and on pong (Display clients are typically listen-only)
-			wsAlive.set(socket as unknown as WebSocket, true);
-			socket.on("pong", () => {
-				wsAlive.set(socket as unknown as WebSocket, true);
+			const connectionId = randomUUID().slice(0, 8);
+			const remoteAddress =
+				(request as any).ip ??
+				(request as any).socket?.remoteAddress ??
+				(request as any).raw?.socket?.remoteAddress;
+			wsMeta.set(ws, { connectionId, channels: [channel], remoteAddress });
+
+			wsAlive.set(ws, true);
+			ws.on("pong", () => {
+				wsAlive.set(ws, true);
 			});
-			socket.on("message", (data: { toString(): string }) => {
+			ws.on("message", (data: { toString(): string }) => {
 				// Lenient: any inbound message also counts as alive
-				wsAlive.set(socket as unknown as WebSocket, true);
+				wsAlive.set(ws, true);
 				try {
 					const msg = JSON.parse(data.toString());
 					if (msg.event === "ping") {
-						socket.send(JSON.stringify({ event: "pong", timestamp: new Date().toISOString() }));
+						ws.send(JSON.stringify({ event: "pong", timestamp: new Date().toISOString() }));
 					}
 				} catch (err) {
 					request.log.warn({ err }, "Invalid WS message received");
@@ -118,7 +133,17 @@ export async function buildApp(opts: AppOptions) {
 
 			const alive = wsAlive.get(socket) ?? true;
 			if (!alive) {
-				app.log.info("Terminating ghost WS connection (no pong)");
+				const meta = wsMeta.get(socket);
+				app.log.warn(
+					{
+						reason: "heartbeat_timeout",
+						interval: HEARTBEAT_INTERVAL_LABEL,
+						remoteAddress: meta?.remoteAddress,
+						channels: meta?.channels,
+						connectionId: meta?.connectionId,
+					},
+					"Terminating ghost WS connection",
+				);
 				socket.terminate();
 				continue;
 			}
@@ -128,11 +153,22 @@ export async function buildApp(opts: AppOptions) {
 			try {
 				socket.ping();
 			} catch (err) {
-				app.log.debug({ err }, "WS ping failed; will terminate if no pong next tick");
+				const meta = wsMeta.get(socket);
+				app.log.debug(
+					{
+						err,
+						reason: "heartbeat_ping_failed",
+						interval: HEARTBEAT_INTERVAL_LABEL,
+						remoteAddress: meta?.remoteAddress,
+						channels: meta?.channels,
+						connectionId: meta?.connectionId,
+					},
+					"WS ping failed; will terminate if no pong next tick",
+				);
 				// If ping fails, let the next tick terminate if it stays non-responsive
 			}
 		}
-	}, 60000);
+	}, HEARTBEAT_INTERVAL);
 
 	app.addHook("onClose", async () => {
 		clearInterval(heartbeatInterval);
