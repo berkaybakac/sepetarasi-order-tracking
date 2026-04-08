@@ -40,12 +40,12 @@ describe("Web orderStore", () => {
 		vi.mocked(api.getStats).mockResolvedValueOnce({ totalOrders: 0 } as DayStats);
 
 		const hydratePromise = useOrderStore.getState().hydrate();
-		
+
 		expect(useOrderStore.getState().loading).toBe(true);
 		expect(useOrderStore.getState().isHydrating).toBe(true);
-		
+
 		await hydratePromise;
-		
+
 		expect(useOrderStore.getState().loading).toBe(false);
 		expect(useOrderStore.getState().isHydrating).toBe(false);
 	});
@@ -56,9 +56,9 @@ describe("Web orderStore", () => {
 
 		const p1 = useOrderStore.getState().hydrate();
 		const p2 = useOrderStore.getState().hydrate();
-		
+
 		await Promise.all([p1, p2]);
-		
+
 		// Should only have called the API once because p2 was guarded
 		expect(api.listOrders).toHaveBeenCalledTimes(1);
 	});
@@ -66,16 +66,16 @@ describe("Web orderStore", () => {
 	it("should retry 3 times in silent mode before failing", async () => {
 		vi.useFakeTimers();
 		vi.mocked(api.listOrders).mockRejectedValue(new Error("Transient Error"));
-		
+
 		const hydratePromise = useOrderStore.getState().hydrate(true);
-		
+
 		// Attempt 1 fails, wait for backoff
-		await vi.advanceTimersByTimeAsync(2000); 
-		// Attempt 2 fails, wait for backoff  
+		await vi.advanceTimersByTimeAsync(2000);
+		// Attempt 2 fails, wait for backoff
 		await vi.advanceTimersByTimeAsync(4000);
 		// Attempt 3 fails, wait for backoff
 		await vi.advanceTimersByTimeAsync(8000);
-		
+
 		// Since attempt 4 (attempt > 3) will also fail, it should finally stop
 		await hydratePromise;
 
@@ -87,7 +87,7 @@ describe("Web orderStore", () => {
 
 	it("should update lastReconnectedAt when reconnecting", () => {
 		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(undefined);
-		
+
 		// First connect
 		useOrderStore.getState().setConnected(true);
 		expect(useOrderStore.getState().hasConnectedOnce).toBe(true);
@@ -98,7 +98,7 @@ describe("Web orderStore", () => {
 
 		// Reconnect
 		useOrderStore.getState().setConnected(true);
-		
+
 		expect(useOrderStore.getState().lastReconnectedAt).toBeGreaterThan(0);
 		expect(hydrateSpy).toHaveBeenCalledWith(true);
 	});

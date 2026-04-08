@@ -37,7 +37,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 		if (!silent) set({ loading: true, error: null });
 
-		let retries = silent ? 3 : 0;
+		const retries = silent ? 3 : 0;
 		let attempt = 0;
 
 		while (attempt <= retries) {
