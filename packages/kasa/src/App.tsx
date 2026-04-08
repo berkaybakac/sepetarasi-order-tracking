@@ -20,8 +20,7 @@ function KasaApp() {
 
 	const onConnect = useCallback(() => {
 		setConnected(true);
-		hydrate();
-	}, [setConnected, hydrate]);
+	}, [setConnected]);
 
 	const onDisconnect = useCallback(() => {
 		setConnected(false);

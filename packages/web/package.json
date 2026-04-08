@@ -7,7 +7,10 @@
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"typecheck": "tsc --noEmit",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"test": "vitest run",
+		"test:unit": "vitest run tests/orderStore.test.ts",
+		"test:integration": "echo 'No integration tests for web yet' && exit 0"
 	},
 	"dependencies": {
 		"@sepetarasi/shared": "*",

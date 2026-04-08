@@ -8,7 +8,10 @@
 		"build": "tsc && vite build && electron-builder",
 		"build:win": "tsc && vite build && electron-builder --win --x64",
 		"typecheck": "tsc --noEmit",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"test": "vitest run",
+		"test:unit": "vitest run tests/orderStore.test.ts",
+		"test:integration": "echo 'No integration tests for kasa yet' && exit 0"
 	},
 	"dependencies": {
 		"@sepetarasi/shared": "*",

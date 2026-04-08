@@ -64,8 +64,7 @@ export function CustomerDisplay() {
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
 	const onConnect = useCallback(() => {
 		setConnected(true);
-		hydrate();
-	}, [setConnected, hydrate]);
+	}, [setConnected]);
 	const onDisconnect = useCallback(() => setConnected(false), [setConnected]);
 
 	useWebSocket({ channel: WS_CHANNELS.DISPLAY, onMessage, onConnect, onDisconnect });

@@ -9,12 +9,17 @@ interface OrderState {
 	connected: boolean;
 	loading: boolean;
 	error: string | null;
+	hasConnectedOnce: boolean;
+	isHydrating: boolean;
+	lastReconnectedAt: number;
 
 	// Actions
-	hydrate: () => Promise<void>;
+	hydrate: (silent?: boolean) => Promise<void>;
 	applyWsEvent: (msg: WsMessage) => void;
 	setConnected: (connected: boolean) => void;
 }
+
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 export const useOrderStore = create<OrderState>((set, get) => ({
 	orders: new Map(),
@@ -22,18 +27,42 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 	connected: false,
 	loading: false,
 	error: null,
+	hasConnectedOnce: false,
+	isHydrating: false,
+	lastReconnectedAt: 0,
 
-	hydrate: async () => {
-		set({ loading: true, error: null });
-		try {
-			const [orderList, stats] = await Promise.all([api.listOrders(), api.getStats()]);
-			const orders = new Map<string, Order>();
-			for (const order of orderList) {
-				orders.set(order.id, order);
+	hydrate: async (silent = false) => {
+		if (get().isHydrating) return;
+		set({ isHydrating: true });
+
+		if (!silent) set({ loading: true, error: null });
+
+		let retries = silent ? 3 : 0;
+		let attempt = 0;
+
+		while (attempt <= retries) {
+			try {
+				const [orderList, stats] = await Promise.all([api.listOrders(), api.getStats()]);
+				const orders = new Map<string, Order>();
+				for (const order of orderList) {
+					orders.set(order.id, order);
+				}
+				set({ orders, stats, loading: false, isHydrating: false, error: null });
+				return;
+			} catch (err) {
+				attempt++;
+				const errorMsg = (err as Error).message;
+				console.error(`Failed to hydrate orders (attempt ${attempt}):`, errorMsg);
+
+				if (attempt <= retries) {
+					const backoff = 1000 * 2 ** attempt;
+					await delay(backoff);
+				} else {
+					set({ error: errorMsg });
+					if (!silent) set({ loading: false });
+					set({ isHydrating: false });
+				}
 			}
-			set({ orders, stats, loading: false });
-		} catch (err) {
-			set({ error: (err as Error).message, loading: false });
 		}
 	},
 
@@ -45,7 +74,24 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 		}
 	},
 
-	setConnected: (connected: boolean) => set({ connected }),
+	setConnected: (connected: boolean) => {
+		const state = get();
+		if (state.connected === connected) return;
+
+		set({ connected });
+
+		if (connected) {
+			if (state.hasConnectedOnce) {
+				// Re-connected after being disconnected!
+				set({ lastReconnectedAt: Date.now() });
+				// Silently re-hydrate the state with latest events
+				get().hydrate(true);
+			} else {
+				// First time connection established
+				set({ hasConnectedOnce: true });
+			}
+		}
+	},
 }));
 
 /** Helper: get orders as sorted array (by display_no desc) */

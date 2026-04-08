@@ -1,7 +1,6 @@
 import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { WsMessage } from "@sepetarasi/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { UI_LABELS } from "../../constants/labels";
+import { useCallback, useEffect, useState } from "react";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useOrderStore } from "../../stores/orderStore";
 import { OrderColumns, StatCards } from "./OrderColumns";
@@ -20,9 +19,10 @@ export function AdminView() {
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);
 	const connected = useOrderStore((s) => s.connected);
-	const hasConnectedOnceRef = useRef(false);
-	// PeriodStats'ı WS eventi sonrası yenileme için sinyal
-	const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0);
+	const lastReconnectedAt = useOrderStore((s) => s.lastReconnectedAt);
+
+	// Local trigger for WS events (not reconnects)
+	const [internalStatsTrigger, setInternalStatsTrigger] = useState(0);
 
 	const onMessage = useCallback(
 		(msg: WsMessage) => {
@@ -32,21 +32,13 @@ export function AdminView() {
 				msg.event === WS_EVENTS.ORDER_STATUS_CHANGED ||
 				msg.event === WS_EVENTS.STATS_UPDATED
 			) {
-				setStatsRefreshTrigger((n) => n + 1);
+				setInternalStatsTrigger((n) => n + 1);
 			}
 		},
 		[applyWsEvent],
 	);
 
-	const onConnect = useCallback(() => {
-		setConnected(true);
-		if (hasConnectedOnceRef.current) {
-			hydrate();
-		} else {
-			hasConnectedOnceRef.current = true;
-		}
-	}, [setConnected, hydrate]);
-
+	const onConnect = useCallback(() => setConnected(true), [setConnected]);
 	const onDisconnect = useCallback(() => setConnected(false), [setConnected]);
 
 	useWebSocket({ channel: WS_CHANNELS.ORDERS, onMessage, onConnect, onDisconnect });
@@ -67,7 +59,7 @@ export function AdminView() {
 				<main className="flex-1 p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
 					<StatCards />
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-						<PeriodStats refreshTrigger={statsRefreshTrigger} />
+						<PeriodStats wsTrigger={internalStatsTrigger} reconnectedAt={lastReconnectedAt} />
 						<VolumeControl />
 					</div>
 					<OrderColumns />

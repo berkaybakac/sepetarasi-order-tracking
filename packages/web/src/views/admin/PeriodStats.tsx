@@ -11,26 +11,29 @@ const PERIOD_LABELS: Record<StatPeriod, string> = {
 };
 
 interface Props {
-	/** AdminView'deki WS eventi her tetiklendiğinde artan sayaç.
-	 * Bu değer değişince PeriodStats mevcut period için yeniden çeker. */
-	refreshTrigger?: number;
+	/** WS'den gelen veri değişim sinyali */
+	wsTrigger?: number;
+	/** Re-connect zaman damgası (Store'dan gelir) */
+	reconnectedAt?: number;
 }
 
-export function PeriodStats({ refreshTrigger }: Props) {
+export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 	const [period, setPeriod] = useState<StatPeriod>("daily");
 	const periodRef = useRef<StatPeriod>("daily");
 	const [stats, setStats] = useState<DayStats | null>(null);
 	const [loading, setLoading] = useState(false);
 
-	const fetchStats = useCallback((p: StatPeriod) => {
-		setLoading(true);
+	const fetchStats = useCallback((p: StatPeriod, silent = false) => {
+		if (!silent) setLoading(true);
 		api
 			.getStatsByPeriod(p)
 			.then((data) => {
 				setStats(data);
 			})
 			.catch((err) => console.error("[PeriodStats] fetch failed:", err))
-			.finally(() => setLoading(false));
+			.finally(() => {
+				if (!silent) setLoading(false);
+			});
 	}, []);
 
 	useEffect(() => {
@@ -38,10 +41,15 @@ export function PeriodStats({ refreshTrigger }: Props) {
 		fetchStats(period);
 	}, [period, fetchStats]);
 
-	// WS eventi gelince (AdminView'den refreshTrigger artar) → yeniden çek
+	// WS eventi gelince → yeniden çek (sessizce)
 	useEffect(() => {
-		if (refreshTrigger) fetchStats(periodRef.current);
-	}, [refreshTrigger, fetchStats]);
+		if (wsTrigger) fetchStats(periodRef.current, true);
+	}, [wsTrigger, fetchStats]);
+
+	// Re-connect olunca → yeniden çek (sessizce)
+	useEffect(() => {
+		if (reconnectedAt) fetchStats(periodRef.current, true);
+	}, [reconnectedAt, fetchStats]);
 
 	return (
 		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 space-y-5 relative overflow-hidden group hover:border-white/10 transition-colors">
