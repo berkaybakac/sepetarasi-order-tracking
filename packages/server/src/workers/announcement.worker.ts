@@ -1,4 +1,5 @@
 import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
+import type { FastifyBaseLogger } from "fastify";
 import type { AnnouncementService } from "../services/announcement.service.js";
 import type { AudioPlaybackService } from "../services/audio-playback.service.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
@@ -8,6 +9,7 @@ export interface AnnouncementWorkerOptions {
 	broadcaster: Broadcaster;
 	audioPlayer: AudioPlaybackService;
 	pollIntervalMs?: number;
+	logger?: FastifyBaseLogger;
 }
 
 export class AnnouncementWorker {
@@ -17,12 +19,14 @@ export class AnnouncementWorker {
 	private broadcaster: Broadcaster;
 	private audioPlayer: AudioPlaybackService;
 	private pollIntervalMs: number;
+	private logger: FastifyBaseLogger | Console;
 
 	constructor(opts: AnnouncementWorkerOptions) {
 		this.service = opts.announcementService;
 		this.broadcaster = opts.broadcaster;
 		this.audioPlayer = opts.audioPlayer;
 		this.pollIntervalMs = opts.pollIntervalMs ?? 1000;
+		this.logger = opts.logger ?? console;
 	}
 
 	start() {
@@ -67,7 +71,7 @@ export class AnnouncementWorker {
 				{ order_id: item.order_id, display_no: item.display_no },
 			);
 		} catch (err) {
-			console.error("Announcement worker error:", err);
+			this.logger.error({ err }, "Announcement worker error");
 		} finally {
 			this.processing = false;
 		}

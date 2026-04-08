@@ -228,6 +228,7 @@ export async function buildApp(opts: AppOptions) {
 			broadcaster,
 			audioPlayer,
 			pollIntervalMs: opts.workerPollIntervalMs ?? 1000,
+			logger: app.log,
 		});
 
 		app.addHook("onReady", async () => {

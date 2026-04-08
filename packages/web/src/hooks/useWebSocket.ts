@@ -49,7 +49,10 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 	}, [channel, onMessage, onConnect, onDisconnect]);
 
 	const scheduleReconnect = useCallback(() => {
-		const delay = Math.min(1000 * 2 ** reconnectAttempt.current, 30000);
+		const baseDelay = Math.min(1000 * 2 ** reconnectAttempt.current, 30000);
+		// Add jitter to avoid thundering herd reconnects when multiple clients drop together.
+		const jitter = Math.floor(baseDelay * (0.2 * Math.random()));
+		const delay = baseDelay + jitter;
 		reconnectAttempt.current++;
 		reconnectTimer.current = setTimeout(connect, delay);
 	}, [connect]);
