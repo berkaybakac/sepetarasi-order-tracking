@@ -38,4 +38,5 @@ export const AUTH_CONFIG = {
 	jwtSecret: getSecret("JWT_SECRET"),
 	cookieSecret: getSecret("COOKIE_SECRET"),
 	cashierToken: getCashierToken(),
+	wsAuthKey: getSecret("WS_AUTH_KEY"),
 } as const;

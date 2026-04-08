@@ -73,6 +73,15 @@ export async function buildApp(opts: AppOptions) {
 		wsApp.get("/ws", { websocket: true }, (socket, request) => {
 			const url = new URL(request.url, "http://localhost");
 			const channel = url.searchParams.get("channel") || WS_CHANNELS.ORDERS;
+			const key = url.searchParams.get("key");
+
+			// Only require key for non-display channels (orders, admin, etc.)
+			if (channel !== WS_CHANNELS.DISPLAY && key !== AUTH_CONFIG.wsAuthKey) {
+				request.log.warn({ key, channel }, "Unauthorized WS connection attempt");
+				socket.send(JSON.stringify({ event: "error", message: "Unauthorized" }));
+				socket.close();
+				return;
+			}
 
 			const validChannels = Object.values(WS_CHANNELS) as string[];
 			if (validChannels.includes(channel)) {

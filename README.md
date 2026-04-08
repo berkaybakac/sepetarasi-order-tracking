@@ -200,8 +200,8 @@ Bu gate manueldir (MVP): CI'da hard-blocking zorunluluk yoktur.
 | GET | `/api/v1/stats/today` | İstatistikler |
 | GET | `/api/v1/settings` | Tüm ayarlar |
 | PATCH | `/api/v1/settings/:key` | Ayar güncelle |
-| WS | `/ws?channel=orders` | Canlı güncellemeler |
-| WS | `/ws?channel=display` | Anons olayları |
+| WS | `/ws?channel=orders&key=...` | Canlı güncellemeler |
+| WS | `/ws?channel=display&key=...` | Anons olayları |
 
 ---
 
@@ -218,6 +218,7 @@ ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel
 AUDIO_ALSA_DEVICE=hw:2,0                                    # Pi4 ses çıkış cihazı (3.5mm jack)
 DISABLE_AUDIO=false                                         # sesi kapatmak için true
 ENABLE_TTS_FALLBACK=false                                   # MP3 yoksa espeak-ng/say devreye girer
+WS_AUTH_KEY=replace-with-strong-key                            # WebSocket erişimi için zorunlu (fail-fast)
 ```
 
 Web admin paneli cashier-yetkili API çağrısı yapacaksa web tarafında ayrıca `VITE_CASHIER_TOKEN` tanımlı olmalıdır.
