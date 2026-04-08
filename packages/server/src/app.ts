@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
 import fastifyCookie from "@fastify/cookie";
 import fastifyJwt from "@fastify/jwt";
 import fastifyRateLimit from "@fastify/rate-limit";
@@ -9,7 +9,7 @@ import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import { SETTING_KEYS, WS_CHANNELS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
 import type { AppDatabase } from "./db/connection.js";
@@ -26,6 +26,10 @@ import { Broadcaster } from "./ws/broadcaster.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const HEARTBEAT_INTERVAL = 60000;
 const HEARTBEAT_INTERVAL_LABEL = "60s";
+
+function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
+	return request.ip || request.socket?.remoteAddress || undefined;
+}
 
 export interface AppOptions {
 	db: AppDatabase;
@@ -87,7 +91,14 @@ export async function buildApp(opts: AppOptions) {
 
 			// Only require key for non-display channels (orders, admin, etc.)
 			if (channel !== WS_CHANNELS.DISPLAY && key !== AUTH_CONFIG.wsAuthKey) {
-				request.log.warn({ key, channel }, "Unauthorized WS connection attempt");
+				request.log.warn(
+					{
+						channel,
+						receivedKeyMasked: key ? `${key.slice(0, 3)}...${key.slice(-3)}` : "missing",
+						expectedKeyMasked: `${AUTH_CONFIG.wsAuthKey.slice(0, 3)}...${AUTH_CONFIG.wsAuthKey.slice(-3)}`,
+					},
+					"Unauthorized WS connection attempt - Key mismatch",
+				);
 				socket.send(JSON.stringify({ event: "error", message: "Unauthorized" }));
 				socket.close();
 				return;
@@ -100,10 +111,7 @@ export async function buildApp(opts: AppOptions) {
 
 			// Heartbeat: Mark as alive on connection and on pong (Display clients are typically listen-only)
 			const connectionId = randomUUID().slice(0, 8);
-			const remoteAddress =
-				(request as any).ip ??
-				(request as any).socket?.remoteAddress ??
-				(request as any).raw?.socket?.remoteAddress;
+			const remoteAddress = wsClientRemoteAddress(request);
 			wsMeta.set(ws, { connectionId, channels: [channel], remoteAddress });
 
 			wsAlive.set(ws, true);

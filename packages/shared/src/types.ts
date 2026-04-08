@@ -115,7 +115,8 @@ export interface UpdateStatusInput {
 
 export interface WsMessage<T = unknown> {
 	event: string;
-	data: T;
+	data?: T;
+	message?: string;
 	timestamp: string;
 }
 

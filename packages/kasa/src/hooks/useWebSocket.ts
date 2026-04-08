@@ -15,7 +15,15 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 	const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
 	const connect = useCallback(() => {
-		const wsUrl = `${getBaseUrl().replace(/^http/, "ws")}/ws?channel=${channel}`;
+		const key = import.meta.env.VITE_WS_AUTH_KEY;
+
+		if (!key) {
+			console.error(
+				"VITE_WS_AUTH_KEY is missing! WebSocket connection will likely fail for non-display channels.",
+			);
+		}
+
+		const wsUrl = `${getBaseUrl().replace(/^http/, "ws")}/ws?channel=${channel}${key ? `&key=${encodeURIComponent(key)}` : ""}`;
 
 		try {
 			const ws = new WebSocket(wsUrl);
@@ -29,6 +37,11 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 			ws.onmessage = (event) => {
 				try {
 					const msg: WsMessage = JSON.parse(event.data);
+					if (msg.event === "error" && msg.message === "Unauthorized") {
+						console.error(
+							"WebSocket Unauthorized! This usually means VITE_WS_AUTH_KEY does not match the server's WS_AUTH_KEY. Please check your .env files and rebuild the app.",
+						);
+					}
 					onMessage(msg);
 				} catch (err) {
 					console.error("WS message parse error:", err);
