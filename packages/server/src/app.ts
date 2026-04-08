@@ -9,6 +9,7 @@ import fastifyWebsocket from "@fastify/websocket";
 import { SETTING_KEYS, WS_CHANNELS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import Fastify from "fastify";
+import type { WebSocket } from "ws";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
 import type { AppDatabase } from "./db/connection.js";
 import { appSettings } from "./db/schema.js";
@@ -46,6 +47,7 @@ export interface AppOptions {
 export async function buildApp(opts: AppOptions) {
 	const app = Fastify({ logger: true });
 	const broadcaster = new Broadcaster();
+	const wsAlive = new WeakMap<WebSocket, boolean>();
 
 	// Allow Electron/web clients to call API across origins (LAN IP, localhost, file://)
 	app.addHook("onRequest", (request, reply, done) => {
@@ -88,7 +90,14 @@ export async function buildApp(opts: AppOptions) {
 				broadcaster.subscribe(channel, socket);
 			}
 
+			// Heartbeat: Mark as alive on connection and on pong (Display clients are typically listen-only)
+			wsAlive.set(socket as unknown as WebSocket, true);
+			socket.on("pong", () => {
+				wsAlive.set(socket as unknown as WebSocket, true);
+			});
 			socket.on("message", (data: { toString(): string }) => {
+				// Lenient: any inbound message also counts as alive
+				wsAlive.set(socket as unknown as WebSocket, true);
 				try {
 					const msg = JSON.parse(data.toString());
 					if (msg.event === "ping") {
@@ -99,6 +108,34 @@ export async function buildApp(opts: AppOptions) {
 				}
 			});
 		});
+	});
+
+	// Active Heartbeat: Periodically check and cleanup ghost connections
+	const heartbeatInterval = setInterval(() => {
+		const clients = broadcaster.getAllClients();
+		for (const socket of clients) {
+			if (socket.readyState !== socket.OPEN) continue;
+
+			const alive = wsAlive.get(socket) ?? true;
+			if (!alive) {
+				app.log.info("Terminating ghost WS connection (no pong)");
+				socket.terminate();
+				continue;
+			}
+
+			// Expect a pong before next interval tick
+			wsAlive.set(socket, false);
+			try {
+				socket.ping();
+			} catch (err) {
+				app.log.debug({ err }, "WS ping failed; will terminate if no pong next tick");
+				// If ping fails, let the next tick terminate if it stays non-responsive
+			}
+		}
+	}, 60000);
+
+	app.addHook("onClose", async () => {
+		clearInterval(heartbeatInterval);
 	});
 
 	// Normalize Fastify schema validation errors to our API error format

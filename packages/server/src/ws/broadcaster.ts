@@ -3,16 +3,26 @@ import type { WebSocket } from "ws";
 
 export class Broadcaster {
 	private channels = new Map<string, Set<WebSocket>>();
+	private allClients = new Set<WebSocket>();
+	private closeHandlerInstalled = new WeakSet<WebSocket>();
 
 	subscribe(channel: string, ws: WebSocket) {
 		if (!this.channels.has(channel)) {
 			this.channels.set(channel, new Set());
 		}
 		this.channels.get(channel)?.add(ws);
+		this.allClients.add(ws);
 
-		ws.on("close", () => {
-			this.channels.get(channel)?.delete(ws);
-		});
+		// Install exactly one close handler per socket, even if it subscribes to multiple channels.
+		if (!this.closeHandlerInstalled.has(ws)) {
+			this.closeHandlerInstalled.add(ws);
+			ws.on("close", () => {
+				for (const clients of this.channels.values()) {
+					clients.delete(ws);
+				}
+				this.allClients.delete(ws);
+			});
+		}
 	}
 
 	/** Broadcast a message to all clients in the given channels */
@@ -42,5 +52,10 @@ export class Broadcaster {
 			stats[channel] = clients.size;
 		}
 		return stats;
+	}
+
+	/** Get all unique connected clients across all channels */
+	getAllClients(): ReadonlySet<WebSocket> {
+		return this.allClients;
 	}
 }
