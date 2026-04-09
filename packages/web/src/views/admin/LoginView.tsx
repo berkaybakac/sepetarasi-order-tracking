@@ -1,7 +1,7 @@
-import { BasketIcon } from "@sepetarasi/shared";
 import type React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BasketIcon } from "../../components/BasketIcon";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { getErrorMessage } from "../../utils/error";

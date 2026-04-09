@@ -1,6 +1,6 @@
-import { BasketIcon } from "@sepetarasi/shared";
 import type React from "react";
 import { useState } from "react";
+import { BasketIcon } from "../../components/BasketIcon";
 import { UI_LABELS } from "../../constants/labels";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth.store";

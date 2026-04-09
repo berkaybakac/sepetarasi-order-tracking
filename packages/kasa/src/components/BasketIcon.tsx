@@ -5,10 +5,6 @@ interface BasketIconProps extends React.SVGProps<SVGSVGElement> {
 	color?: string;
 }
 
-/**
- * BasketIcon Component
- * A11y optimized branding icon for Sepet Arası.
- */
 export const BasketIcon: React.FC<BasketIconProps> = ({
 	size = 24,
 	color = "currentColor",
@@ -30,13 +26,8 @@ export const BasketIcon: React.FC<BasketIconProps> = ({
 			{...props}
 		>
 			<title id="basket-title">Sepet Arası</title>
-			{/* Handle */}
 			<path d="M7 10C7 10 7 6 12 6C17 6 17 10 17 10" />
-
-			{/* Basket Body */}
 			<path d="M4 10H20C20 10 19 19 12 19C5 19 4 10 4 10Z" />
-
-			{/* Mesh/Pattern Detail */}
 			<path d="M9 10V18" strokeOpacity="0.5" />
 			<path d="M12 10V18" strokeOpacity="0.5" />
 			<path d="M15 10V18" strokeOpacity="0.5" />
