@@ -4,6 +4,19 @@ LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Pane
 
 ---
 
+## Mimari (SSOT)
+
+Bu proje bir **Monorepo** yapısındadır. Tüm paketler `packages/shared` üzerinden ortak tipleri, bileşenleri (`BasketIcon` vb.) ve Tailwind temasını paylaşır.
+
+| Paket | Açıklama |
+| --- | --- |
+| `packages/kasa` | Electron tabanlı kasiyer arayüzü (Windows/macOS) |
+| `packages/web` | Yönetici paneli ve Müşteri takip ekranı (Vite/React) |
+| `packages/server` | Fastify tabanlı API ve WebSocket sunucusu |
+| `packages/shared` | **Single Source of Truth:** Ortak mantık, tipler ve ikonlar |
+
+---
+
 ## Erişim (Pi4)
 
 `--init` ile kurulumdan sonra aynı ağdaki tüm cihazlar hostname ile bağlanır:
@@ -30,12 +43,15 @@ ssh admin@sepetarasi.local
 
 ---
 
-## İlk Kurulum (geliştirme makinesi)
+## İlk Kurulum & Build
+
+Geliştirme makinesinde tüm projeyi hazır hale getirmek için:
 
 ```bash
 npm install
-npm run db:migrate
-npm run db:seed
+npm run build        # Tüm paketleri (shared -> web -> kasa -> server) derler
+npm run db:migrate   # Veritabanını hazırla
+npm run db:seed      # Örnek verileri yükle
 ```
 
 ---
@@ -51,7 +67,7 @@ npm run dev:server
 # Terminal 2: Web (Yönetici Paneli + Müşteri Ekranı)
 npm run dev:web
 
-# Terminal 3: Kasa (opsiyonel)
+# Terminal 3: Kasa
 cd packages/kasa && npm run dev
 ```
 
@@ -154,13 +170,15 @@ open "$PWD/release/mac-arm64/Sepetarasi Kasa.app"
 cd packages/kasa && npm run build:win
 ```
 
+> **İkon Güncelleme:** Marka ikonunu değiştirmek isterseniz `packages/kasa/build/icon.png` dosyasını değiştirip `./scripts/generate-icons.sh` scriptini çalıştırmanız yeterlidir.
+
 ---
 
 ## Kalite Kontrolü
 
 ```bash
 npm run ci           # lint + typecheck + test — commit öncesi çalıştır
-npm run lint:fix     # otomatik biçimlendirme
+npm run lint:fix     # Biome ile otomatik biçimlendirme
 ```
 
 Test stratejisi:
@@ -190,7 +208,7 @@ Bu gate manueldir (MVP): CI'da hard-blocking zorunluluk yoktur.
 
 ---
 
-## API
+## API & WebSocket
 
 | Method | Endpoint | Açıklama |
 | --- | --- | --- |
@@ -200,35 +218,32 @@ Bu gate manueldir (MVP): CI'da hard-blocking zorunluluk yoktur.
 | GET | `/api/v1/stats/today` | İstatistikler |
 | GET | `/api/v1/settings` | Tüm ayarlar |
 | PATCH | `/api/v1/settings/:key` | Ayar güncelle |
-| WS | `/ws?channel=orders&key=...` | Canlı güncellemeler |
-| WS | `/ws?channel=display&key=...` | Anons olayları |
+| WS | `/ws?channel=orders` | Canlı güncellemeler |
+| WS | `/ws?channel=display` | Anons olayları |
 
 ---
 
-## Ortam Değişkenleri
+## Ortam Değişkenleri (.env)
 
 ```env
 PORT=3000
 DB_PATH=./data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
-JWT_SECRET=replace-with-strong-secret                          # production'da zorunlu (fail-fast)
-COOKIE_SECRET=replace-with-strong-secret                       # production'da zorunlu (fail-fast)
-CASHIER_TOKEN=replace-with-strong-token                        # production'da zorunlu (fail-fast)
+JWT_SECRET=replace-with-strong-secret                          # production'da zorunlu
+COOKIE_SECRET=replace-with-strong-secret                       # production'da zorunlu
+CASHIER_TOKEN=replace-with-strong-token                        # production'da zorunlu
 ANNOUNCEMENTS_PATH=./packages/server/assets/announcements   # opsiyonel
 AUDIO_ALSA_DEVICE=hw:2,0                                    # Pi4 ses çıkış cihazı (3.5mm jack)
 DISABLE_AUDIO=false                                         # sesi kapatmak için true
-ENABLE_TTS_FALLBACK=false                                   # MP3 yoksa espeak-ng/say devreye girer
-WS_AUTH_KEY=replace-with-strong-key                            # WebSocket erişimi için zorunlu (fail-fast)
+ENABLE_TTS_FALLBACK=false                                   # MP3 yoksa TTS devreye girer
+WS_AUTH_KEY=replace-with-strong-key                            # WebSocket için zorunlu
 ```
-
-Web admin paneli cashier-yetkili API çağrısı yapacaksa web tarafında ayrıca `VITE_CASHIER_TOKEN` tanımlı olmalıdır.
 
 ---
 
 ## Sesli Anons (Pi4)
 
 Pre-recorded MP3 zorunlu (`1.mp3` … `400.mp3`), TTS fallback varsayılan kapalı.
-MP3 dosyaları repoya commit edilmez — deploy öncesi üretilmeli.
 
 ```bash
 npm run audio:generate   # 400 adet MP3 üret (macOS, say + ffmpeg gerekli)

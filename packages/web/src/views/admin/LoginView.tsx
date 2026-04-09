@@ -1,3 +1,4 @@
+import { BasketIcon } from "@sepetarasi/shared";
 import type React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -37,20 +38,7 @@ export function LoginView() {
 			<div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative z-10 transition-all duration-300 hover:shadow-blue-500/10 hover:border-white/20">
 				<div className="text-center mb-8">
 					<div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-blue-500/25">
-						<svg
-							className="w-10 h-10 text-white"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth="2"
-								d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-							/>
-						</svg>
+						<BasketIcon size={40} className="text-white" strokeWidth={2} />
 					</div>
 					<h1 className="text-3xl font-bold text-white tracking-tight">Yönetici Girişi</h1>
 					<p className="text-slate-400 mt-2 text-sm">

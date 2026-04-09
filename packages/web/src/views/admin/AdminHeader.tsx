@@ -1,3 +1,4 @@
+import { BasketIcon } from "@sepetarasi/shared";
 import type React from "react";
 import { useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
@@ -54,20 +55,7 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 				<div className="flex items-center justify-between max-w-7xl mx-auto">
 					<div className="flex items-center gap-3">
 						<div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
-							<svg
-								className="w-5 h-5 text-white"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth="2"
-									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-								/>
-							</svg>
+							<BasketIcon size={20} className="text-white" strokeWidth={2} />
 						</div>
 						<h1 className="text-xl font-bold text-white tracking-tight">{UI_LABELS.ADMIN_TITLE}</h1>
 						<span
@@ -101,20 +89,7 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 					<div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 						<div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
 							<h3 className="font-semibold text-white text-lg flex items-center gap-2">
-								<svg
-									className="w-5 h-5 text-brand-primary"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-									aria-hidden="true"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-									/>
-								</svg>
+								<BasketIcon size={20} className="text-brand-primary" strokeWidth={2} />
 								Güvenlik Ayarları
 							</h3>
 							<button

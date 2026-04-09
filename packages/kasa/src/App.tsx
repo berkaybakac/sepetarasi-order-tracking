@@ -1,5 +1,4 @@
-import { WS_CHANNELS } from "@sepetarasi/shared";
-import type { WsMessage } from "@sepetarasi/shared";
+import { BasketIcon, type WsMessage, WS_CHANNELS } from "@sepetarasi/shared";
 import { useCallback, useEffect, useState } from "react";
 import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
@@ -42,7 +41,10 @@ function KasaApp() {
 			{/* Header */}
 			<header className="bg-white shadow-sm border-b px-4 py-3">
 				<div className="flex items-center justify-between max-w-5xl mx-auto">
-					<h1 className="text-xl font-bold text-gray-800">Sepetarasi Kasa</h1>
+					<div className="flex items-center gap-2">
+						<BasketIcon size={24} className="text-brand-primary" strokeWidth={2.5} />
+						<h1 className="text-xl font-bold text-gray-800">Sepetarasi Kasa</h1>
+					</div>
 					<div className="flex items-center gap-4 text-sm">
 						{stats && (
 							<span className="text-gray-500">
