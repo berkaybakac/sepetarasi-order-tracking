@@ -1,6 +1,8 @@
 {
 	"name": "@sepetarasi/web",
 	"version": "0.1.0",
+	"description": "Sepetarasi Order Tracking Admin Panel",
+	"author": "Berkay Bakac",
 	"private": true,
 	"type": "module",
 	"scripts": {

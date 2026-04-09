@@ -1,12 +1,15 @@
 {
 	"name": "@sepetarasi/kasa",
 	"version": "0.1.0",
+	"description": "Sepetarasi Order Tracking Kasa Application",
+	"author": "Berkay Bakac",
 	"private": true,
 	"main": "dist-electron/main.js",
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc && vite build && electron-builder",
 		"build:win": "tsc && vite build && electron-builder --win --x64",
+		"build:mac": "tsc && vite build && electron-builder --mac",
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"test": "vitest run",
@@ -40,11 +43,15 @@
 		},
 		"win": {
 			"target": "nsis",
-			"icon": null
+			"icon": "build/icon.png"
 		},
 		"nsis": {
 			"oneClick": true,
 			"allowToChangeInstallationDirectory": false
+		},
+		"mac": {
+			"target": "dmg",
+			"icon": "build/icon.png"
 		}
 	}
 }
