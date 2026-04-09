@@ -1,4 +1,4 @@
-import { BasketIcon, type WsMessage, WS_CHANNELS } from "@sepetarasi/shared";
+import { BasketIcon, WS_CHANNELS, type WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useState } from "react";
 import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
