@@ -71,7 +71,11 @@ export class AnnouncementWorker {
 				{ order_id: item.order_id, display_no: item.display_no },
 			);
 		} catch (err) {
-			this.logger.error({ err }, "Announcement worker error");
+			if ("child" in this.logger) {
+				this.logger.error({ err }, "Announcement worker error");
+			} else {
+				this.logger.error("Announcement worker error", err);
+			}
 		} finally {
 			this.processing = false;
 		}
