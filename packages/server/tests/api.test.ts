@@ -1,6 +1,7 @@
+import { WS_EVENTS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
@@ -121,6 +122,37 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 		expect(body.data.ready_at).not.toBeNull();
 	});
 
+	it("should broadcast previousStatus in ORDER_STATUS_CHANGED payload", async () => {
+		const createRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
+		});
+		const orderId = createRes.json().data.id;
+
+		const broadcaster = (
+			app as unknown as { broadcaster: { broadcast: (...args: unknown[]) => void } }
+		).broadcaster;
+		const broadcastSpy = vi.spyOn(broadcaster, "broadcast");
+
+		const res = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/orders/${orderId}/status`,
+			headers: withCashierAuth(),
+			payload: { status: "READY" },
+		});
+
+		expect(res.statusCode).toBe(200);
+
+		const statusChangeCall = broadcastSpy.mock.calls.find(
+			(call) => call[1] === WS_EVENTS.ORDER_STATUS_CHANGED,
+		);
+		expect(statusChangeCall).toBeDefined();
+		const payload = statusChangeCall?.[2] as { previousStatus?: string };
+		expect(payload.previousStatus).toBe("PREPARING");
+	});
+
 	it("should return 422 for invalid transition", async () => {
 		const createRes = await app.inject({
 			method: "POST",
@@ -239,6 +271,32 @@ describe("PATCH /api/v1/settings/:key", () => {
 		expect(res.statusCode).toBe(400);
 		expect(res.json().ok).toBe(false);
 		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
+	});
+
+	it("should reject unknown setting keys", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/unsupported_key",
+			headers: { cookie: adminCookie },
+			payload: { value: "x" },
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("INVALID_SETTING_KEY");
+	});
+
+	it("should accept business_name as editable setting", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/business_name",
+			headers: { cookie: adminCookie },
+			payload: { value: "Test Cafe Updated" },
+		});
+
+		expect(res.statusCode).toBe(200);
+		const row = db.select().from(appSettings).where(eq(appSettings.key, "business_name")).get();
+		expect(row?.value).toBe("Test Cafe Updated");
 	});
 });
 

@@ -1,5 +1,6 @@
 import { API_ROUTES } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
+import { isEditableSettingKey, validateSettingValue } from "../config/settings.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
@@ -28,15 +29,25 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 		async (request, reply) => {
 			const { key } = request.params;
 			const { value } = request.body;
-			if (key === "audio_volume") {
-				const num = Number(value);
-				if (Number.isNaN(num) || num < 0 || num > 100) {
-					return reply.code(400).send({
-						ok: false,
-						error: { code: "INVALID_SETTING_VALUE", message: "audio_volume must be 0-100" },
-					});
-				}
+
+			if (!isEditableSettingKey(key)) {
+				return reply.code(400).send({
+					ok: false,
+					error: {
+						code: "INVALID_SETTING_KEY",
+						message: `Unknown or non-editable setting key: ${key}`,
+					},
+				});
 			}
+
+			const validationError = validateSettingValue(key, value);
+			if (validationError) {
+				return reply.code(400).send({
+					ok: false,
+					error: { code: "INVALID_SETTING_VALUE", message: validationError },
+				});
+			}
+
 			const now = new Date().toISOString();
 			db.insert(appSettings)
 				.values({ key, value, updated_at: now })
