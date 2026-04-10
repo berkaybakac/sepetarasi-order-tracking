@@ -122,7 +122,7 @@ open "$PWD/release/mac-arm64/Sepetarasi Kasa.app"
 cd packages/kasa && npm run build:win
 ```
 
-> İkon değiştirmek için `packages/kasa/build/icon.png` güncelle → `./scripts/generate-icons.sh` çalıştır.
+> İkon değiştirmek için `packages/kasa/build/icon.png` güncelle (1024x1024 PNG) → `bash scripts/generate-icons.sh packages/kasa/build/icon.png packages/kasa/build` çalıştır.
 
 ---
 
