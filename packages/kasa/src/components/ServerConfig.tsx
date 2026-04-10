@@ -20,6 +20,7 @@ declare global {
 		electronAPI?: {
 			getConfig: () => Promise<KasaConfig>;
 			saveConfig: (config: KasaConfig) => Promise<boolean>;
+			discoverServer: () => Promise<string | null>;
 		};
 	}
 }
@@ -35,7 +36,9 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [printerName, setPrinterName] = useState("");
 	const [cashierToken, setCashierToken] = useState("local-dev-cashier-token");
 	const [testing, setTesting] = useState(false);
+	const [discovering, setDiscovering] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [discoverHint, setDiscoverHint] = useState<string | null>(null);
 
 	useEffect(() => {
 		async function load() {
@@ -50,6 +53,30 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 		}
 		load();
 	}, []);
+
+	const handleDiscover = async () => {
+		if (!window.electronAPI) return;
+		setDiscovering(true);
+		setDiscoverHint(null);
+		setError(null);
+		try {
+			const found = await window.electronAPI.discoverServer();
+			if (found) {
+				setUrl(found);
+			} else {
+				const isWindows = navigator.platform.toLowerCase().includes("win");
+				setDiscoverHint(
+					isWindows
+						? "Sunucu bulunamadı. Windows'ta .local adresleri için Apple Bonjour gereklidir — iTunes ile gelir veya Apple'dan ayrıca kurulabilir."
+						: "Sunucu bulunamadı. Cihazın aynı ağda olduğundan emin olun.",
+				);
+			}
+		} catch {
+			setDiscoverHint("Arama sırasında hata oluştu.");
+		} finally {
+			setDiscovering(false);
+		}
+	};
 
 	const handleTest = async () => {
 		setTesting(true);
@@ -164,15 +191,34 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 
 				{error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
-				<button
-					type="button"
-					onClick={handleTest}
-					disabled={testing}
-					className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg text-lg
-						disabled:opacity-50 transition-colors"
-				>
-					{testing ? "Bağlanıyor..." : "Bağlan"}
-				</button>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={handleDiscover}
+						disabled={testing || discovering || !window.electronAPI}
+						className="flex-1 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold py-3 rounded-lg text-base
+							disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+					>
+						{discovering ? (
+							<>
+								<span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+								Sunucu aranıyor...
+							</>
+						) : (
+							"Otomatik Ara"
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={handleTest}
+						disabled={testing || discovering}
+						className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg text-base
+							disabled:opacity-50 transition-colors"
+					>
+						{testing ? "Bağlanıyor..." : "Bağlan"}
+					</button>
+				</div>
+				{discoverHint && <p className="text-amber-600 text-sm mt-3">{discoverHint}</p>}
 			</div>
 		</div>
 	);

@@ -84,34 +84,77 @@ function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 
 export default function App() {
 	const [configured, setConfigured] = useState(false);
+	const [discovering, setDiscovering] = useState(false);
 
 	useEffect(() => {
-		async function loadConfig() {
+		async function init() {
+			let serverUrl = "http://localhost:3000";
+			let config = {
+				serverUrl,
+				terminalId: "",
+				terminalName: "",
+				hotkey: "",
+				printerName: "",
+				cashierToken: "",
+			};
+
 			if (window.electronAPI) {
-				const config = await window.electronAPI.getConfig();
-				setBaseUrl(config.serverUrl);
+				config = await window.electronAPI.getConfig();
+				serverUrl = config.serverUrl;
+				setBaseUrl(serverUrl);
 				setTerminalId(config.terminalId);
-				setCashierToken(config.cashierToken); // stored in Electron userData config.json, set once via ServerConfig UI
+				setCashierToken(config.cashierToken);
 			}
-			// Auto-test connection
+
+			// Step 1: try saved/default URL
+			const primaryOk = await (async () => {
+				try {
+					const res = await fetch(`${serverUrl.replace(/\/$/, "")}/health`);
+					const data = (await res.json()) as { ok?: boolean };
+					return data.ok === true;
+				} catch {
+					return false;
+				}
+			})();
+
+			if (primaryOk) {
+				if (!window.electronAPI) setBaseUrl("http://localhost:3000");
+				setConfigured(true);
+				return;
+			}
+
+			// Step 2: auto-discovery (Electron only)
+			if (!window.electronAPI) return;
+
+			setDiscovering(true);
 			try {
-				const serverUrl = window.electronAPI
-					? (await window.electronAPI.getConfig()).serverUrl
-					: "http://localhost:3000";
-				const res = await fetch(`${serverUrl.replace(/\/$/, "")}/health`);
-				const data = await res.json();
-				if (data.ok) {
-					if (!window.electronAPI) {
-						setBaseUrl("http://localhost:3000");
-					}
+				const discovered = await window.electronAPI.discoverServer();
+				if (discovered) {
+					setBaseUrl(discovered);
+					await window.electronAPI.saveConfig({ ...config, serverUrl: discovered });
 					setConfigured(true);
+					return;
 				}
 			} catch {
-				// Need manual config
+				// Discovery failed — fall through to manual config
+			} finally {
+				setDiscovering(false);
 			}
 		}
-		loadConfig();
+		init();
 	}, []);
+
+	if (discovering) {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-gray-50">
+				<div className="text-center">
+					<div className="inline-block w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+					<p className="text-gray-600 text-lg font-medium">Sunucu aranıyor...</p>
+					<p className="text-gray-400 text-sm mt-1">Ağ taranıyor, lütfen bekleyin</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (!configured) {
 		return <ServerConfig onConnected={() => setConfigured(true)} />;

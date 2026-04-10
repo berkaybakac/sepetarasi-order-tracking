@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, app, globalShortcut, ipcMain } from "electron";
+import { discoverServer } from "./discovery";
 
 interface KasaConfig {
 	serverUrl: string;
@@ -71,6 +72,7 @@ ipcMain.handle("save-config", (_event, config: KasaConfig) => {
 	saveConfig(config);
 	return true;
 });
+ipcMain.handle("discover-server", () => discoverServer(loadConfig().serverUrl));
 
 function toggleWindow() {
 	if (!mainWindow) return;
