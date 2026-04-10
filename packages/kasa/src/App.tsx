@@ -57,7 +57,9 @@ function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 							type="button"
 							onClick={onReconfigure}
 							className={`w-3 h-3 rounded-full cursor-pointer hover:opacity-70 transition-opacity ${connected ? "bg-green-500" : "bg-red-500 animate-pulse"}`}
-							title={connected ? "Bağlı — ayarları değiştir" : "Bağlantı kesildi — ayarları değiştir"}
+							title={
+								connected ? "Bağlı — ayarları değiştir" : "Bağlantı kesildi — ayarları değiştir"
+							}
 						/>
 					</div>
 				</div>

@@ -4,33 +4,9 @@ LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Pane
 
 ---
 
-## Mimari (SSOT)
-
-Bu proje bir **Monorepo** yapısındadır. Tüm paketler `packages/shared` üzerinden ortak tipleri, bileşenleri ve Tailwind temasını paylaşır.
-
-| Paket | Açıklama |
-| --- | --- |
-| `packages/kasa` | Electron tabanlı kasiyer arayüzü (Windows/macOS) |
-| `packages/web` | Yönetici paneli ve Müşteri takip ekranı (Vite/React) |
-| `packages/server` | Fastify tabanlı API ve WebSocket sunucusu |
-| `packages/shared` | **Single Source of Truth:** Ortak mantık ve tipler (React bağımlılığı yok) |
-
----
-
-## İlk Kurulum
-
-```bash
-npm install
-npm run build        # shared → web → kasa → server sırasıyla derler
-npm run db:migrate
-npm run db:seed
-```
-
----
-
 ## Geliştirme (Mac'te)
 
-Pi4'e gerek yok. Hot reload ile hızlı iteration — Mac'te geliştir, Pi4'e sadece sahaya çıkarken deploy et. Ses macOS'ta `afplay` ile çalışır.
+Pi4'e gerek yok. Hot reload ile hızlı iteration — Mac'te geliştir, Pi4'e sadece sahaya çıkarken deploy et.
 
 ```bash
 # Terminal 1 — Server
@@ -43,12 +19,29 @@ npm run dev:web
 cd packages/kasa && npm run dev
 ```
 
-| Arayüz | URL |
-| --- | --- |
-| Yönetici Paneli | `http://localhost:5173` |
-| Müşteri Ekranı | `http://localhost:5173/display` |
-| Admin | `http://localhost:5173/admin` |
-| API | `http://localhost:3000` |
+| Arayüz | Dev (Mac) | Pi4 |
+| --- | --- | --- |
+| Yönetici Paneli | `localhost:5173` | `sepetarasi.local:3000` |
+| Müşteri Ekranı | `localhost:5173/display` | `sepetarasi.local:3000/display` |
+| Admin | `localhost:5173/admin` | `sepetarasi.local:3000/admin` |
+| API | `localhost:3000` | `sepetarasi.local:3000` |
+| Kasa | Electron penceresi (`npm run dev`) | `.app` / `.exe` build |
+
+Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
+
+### Commit Öncesi
+
+```bash
+npm run ci              # lint + typecheck + test
+npm run lint:fix        # Biome otomatik düzeltme
+npm run test:coverage   # coverage raporu — dosya bazında % gösterir
+```
+
+Müşteriye gitmeden önce Pi4 üzerinde smoke test:
+
+```bash
+bash scripts/pi4-smoke-test.sh   # API + WS + ses
+```
 
 ---
 
@@ -74,14 +67,6 @@ ssh admin@sepetarasi.local "cat /etc/sepetarasi.env | grep CASHIER"
 
 `--init` Pi4 hostname'ini `sepetarasi` yapar → `sepetarasi.local:3000` ile erişim, IP değişse de çalışır.
 
-**Pi4'te neler açılır:**
-
-| Arayüz | URL |
-| --- | --- |
-| Yönetici Paneli | `http://sepetarasi.local:3000` |
-| Müşteri Ekranı | `http://sepetarasi.local:3000/display` |
-| Admin | `http://sepetarasi.local:3000/admin` |
-
 > **Windows 10/11:** `.local` hostname için Bonjour gerekebilir — iTunes ile gelir veya [Apple'dan](https://support.apple.com/downloads/bonjour-for-windows) ayrıca kurulur.
 
 **`--init` ne zaman tekrar gerekir?**
@@ -89,6 +74,40 @@ ssh admin@sepetarasi.local "cat /etc/sepetarasi.env | grep CASHIER"
 - Yeni Pi4 / yeni SD kart / OS reimage
 - `sepetarasi.service` silindiyse veya `mpg123` eksikse
 - Hostname veya audio route ayarları bozulduysa
+
+---
+
+## Pi4 Servis Yönetimi
+
+```bash
+# Pi4 üzerinde
+sudo systemctl status sepetarasi
+sudo systemctl restart sepetarasi
+journalctl -u sepetarasi -f
+
+# Mac'ten uzaktan
+ssh admin@sepetarasi.local "sudo journalctl -u sepetarasi -f"
+```
+
+---
+
+## Sorun Giderme
+
+**Port çakışması** — Server başlamıyor, Vite 5174/5175'e kaydı:
+
+```bash
+kill -9 $(lsof -t -i :3000) 2>/dev/null; true
+```
+
+Neden olur: Terminal kapatılırken Node.js tam sonlanmamış → port 3000 zombie'de kalmış. Ctrl+C ile durdurursan olmaz.
+
+**shared build eksik** — Ortak tipler bulunamıyor:
+
+```bash
+npm run build -w packages/shared
+```
+
+Neden olur: `npm install` sonrası ilk `npm run build` atlandıysa veya `packages/shared` değiştirilip build edilmediyse.
 
 ---
 
@@ -107,55 +126,27 @@ cd packages/kasa && npm run build:win
 
 ---
 
-## Pi4 Servis Yönetimi
+## İlk Kurulum
 
 ```bash
-# Pi4 üzerinde
-sudo systemctl status sepetarasi
-sudo systemctl restart sepetarasi
-journalctl -u sepetarasi -f
-
-# Mac'ten uzaktan
-ssh admin@sepetarasi.local "sudo journalctl -u sepetarasi -f"
+npm install
+npm run build        # shared → web → kasa → server sırasıyla derler
+npm run db:migrate
+npm run db:seed
+cp packages/server/.env.example packages/server/.env
+cp packages/kasa/.env.example packages/kasa/.env
 ```
 
 ---
 
-## Commit Öncesi Kalite Kontrolü
+## Özellik Eklerken Dikkat
 
-Startup sırasında terminal zaten hataları gösterir — CI'a gerek yok. CI **sadece commit/push öncesi**:
-
-```bash
-npm run ci              # lint + typecheck + test
-npm run lint:fix        # Biome otomatik düzeltme
-npm run test:coverage   # coverage ≥ %80 kontrolü
-```
-
-Müşteriye gitmeden önce Pi4 üzerinde smoke test:
-
-```bash
-bash scripts/pi4-smoke-test.sh   # API + WS + ses
-```
-
----
-
-## Sorun Giderme
-
-**Port çakışması** — Server başlamıyor, Vite 5174/5175'e kaydı:
-
-```bash
-kill -9 $(lsof -t -i :3000) 2>/dev/null; true
-```
-
-Neden olur: Terminal kapatılırken Node.js tam sonlanmamış → port 3000 zombie'de kalmış → Vite boşta port aradı. Zombie öldürülünce 5173 de serbest kalır.
-
-**shared build eksik** — Ortak tipler bulunamıyor:
-
-```bash
-npm run build -w packages/shared
-```
-
-Neden olur: `npm install` sonrası ilk `npm run build` atlandıysa.
+- **`packages/shared` değişince** → `npm run build -w packages/shared` çalıştır, diğer paketler build'i görür
+- **Yeni DB alanı eklenince** → migration oluştur ve `npm run db:migrate` çalıştır; atlanırsa prod crash eder
+- **Kasa renderer'ında Node API yok** → Electron'a sadece `window.electronAPI` (preload) üzerinden eriş
+- **Ses kodu iki yol** → Pi4'te `mpg123`/ALSA, Mac'te `afplay`; her ikisini de test et
+- **Stats sorguları timezone'a bağlı** → `STORE_TIMEZONE` olmadan testler yanlış sonuç verir
+- **WebSocket auth** → `WS_AUTH_KEY` ↔ `VITE_WS_AUTH_KEY` eşleşmezse WS bağlanır ama "Unauthorized" alır
 
 ---
 
@@ -164,32 +155,40 @@ Neden olur: `npm install` sonrası ilk `npm run build` atlandıysa.
 | Method | Endpoint | Açıklama |
 | --- | --- | --- |
 | POST | `/api/v1/orders` | Sipariş oluştur |
-| GET | `/api/v1/orders` | Günün siparişleri |
+| GET | `/api/v1/orders` | Günün siparişleri (opsiyonel: `?business_date=&status=`) |
+| GET | `/api/v1/orders/:id` | Tekil sipariş |
 | PATCH | `/api/v1/orders/:id/status` | Durum değiştir |
-| GET | `/api/v1/stats/today` | İstatistikler |
-| GET | `/api/v1/settings` | Tüm ayarlar |
+| DELETE | `/api/v1/orders/:id` | Sipariş sil (admin) |
+| GET | `/api/v1/stats/today` | Bugünün istatistikleri |
+| GET | `/api/v1/stats` | Dönem istatistikleri (`?period=daily\|weekly\|monthly`) |
+| GET | `/api/v1/settings` | Tüm ayarlar (admin) |
 | PATCH | `/api/v1/settings/:key` | Ayar güncelle |
-| WS | `/ws?channel=orders` | Canlı güncellemeler |
+| POST | `/api/v1/auth/logout` | Çıkış |
+| GET | `/api/v1/auth/me` | Oturum bilgisi |
+| GET | `/health` | Sunucu sağlık kontrolü |
+| WS | `/ws?channel=orders` | Canlı sipariş güncellemeleri |
 | WS | `/ws?channel=display` | Anons olayları |
 
 ---
 
 ## Ortam Değişkenleri (.env)
 
-```env
-PORT=3000
-DB_PATH=./data/sepetarasi.db
-STORE_TIMEZONE=Europe/Istanbul
-JWT_SECRET=replace-with-strong-secret          # production'da zorunlu
-COOKIE_SECRET=replace-with-strong-secret       # production'da zorunlu
-CASHIER_TOKEN=replace-with-strong-token        # production'da zorunlu
-ANNOUNCEMENTS_PATH=./packages/server/assets/announcements
-AUDIO_ALSA_DEVICE=hw:2,0                       # Pi4 3.5mm jack; alternatif: plughw:CARD=Headphones,DEV=0 — index için: aplay -l
-DISABLE_AUDIO=false
-ENABLE_TTS_FALLBACK=false
-WS_AUTH_KEY=replace-with-strong-key            # WebSocket için zorunlu; VITE_WS_AUTH_KEY ile eşleşmeli
-VITE_WS_AUTH_KEY=replace-with-strong-key
-```
+`packages/server/.env` ve `packages/kasa/.env` — örnek dosyalar `.env.example` olarak repo'da mevcut.
+
+`WS_AUTH_KEY` (server) ile `VITE_WS_AUTH_KEY` (kasa) her zaman aynı değer olmalı.
+
+---
+
+## Mimari (SSOT)
+
+Bu proje bir **Monorepo** yapısındadır. Tüm paketler `packages/shared` üzerinden ortak tipleri, bileşenleri ve Tailwind temasını paylaşır.
+
+| Paket | Açıklama |
+| --- | --- |
+| `packages/kasa` | Electron tabanlı kasiyer arayüzü (Windows/macOS) |
+| `packages/web` | Yönetici paneli ve Müşteri takip ekranı (Vite/React) |
+| `packages/server` | Fastify tabanlı API ve WebSocket sunucusu |
+| `packages/shared` | **Single Source of Truth:** Ortak mantık ve tipler (React bağımlılığı yok) |
 
 ---
 
