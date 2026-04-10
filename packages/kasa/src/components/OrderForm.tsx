@@ -1,4 +1,4 @@
-import type { CreateOrderItemInput } from "@sepetarasi/shared";
+import type { Order, OrderType } from "@sepetarasi/shared";
 import { useState } from "react";
 import { api } from "../lib/api";
 
@@ -6,66 +6,58 @@ interface OrderFormProps {
 	onCreated?: () => void;
 }
 
-interface OrderFormItem extends CreateOrderItemInput {
-	_id: number;
+const DEFAULT_ORDER_TYPE: OrderType = "Paket";
+
+function formatDisplayNo(displayNo: number) {
+	return String(displayNo).padStart(4, "0");
 }
 
-let _nextId = 0;
-const newItem = (): OrderFormItem => ({ _id: _nextId++, name: "", quantity: 1, unit_price: 0 });
-
 export function OrderForm({ onCreated }: OrderFormProps) {
-	const [items, setItems] = useState<OrderFormItem[]>([newItem()]);
+	const [customerName, setCustomerName] = useState("");
+	const [orderType, setOrderType] = useState<OrderType>(DEFAULT_ORDER_TYPE);
 	const [notes, setNotes] = useState("");
 	const [submitting, setSubmitting] = useState(false);
+	const [printing, setPrinting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [printError, setPrintError] = useState<string | null>(null);
+	const [lastPrintableOrder, setLastPrintableOrder] = useState<Order | null>(null);
 
-	const addItem = () => {
-		setItems([...items, newItem()]);
-	};
-
-	const removeItem = (index: number) => {
-		if (items.length <= 1) return;
-		setItems(items.filter((_, i) => i !== index));
-	};
-
-	const updateItem = (index: number, field: keyof CreateOrderItemInput, value: string | number) => {
-		const updated = [...items];
-		updated[index] = { ...updated[index], [field]: value };
-		setItems(updated);
+	const printOrder = async (order: Order) => {
+		if (!window.electronAPI) {
+			return { ok: true };
+		}
+		return window.electronAPI.printReceipt(order);
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setError(null);
+		setPrintError(null);
 
-		const validItems = items.filter((item) => item.name.trim() !== "");
-		if (validItems.length === 0) {
-			setError("En az bir ürün ekleyin");
+		if (!customerName.trim()) {
+			setError("Müşteri adı giriniz");
 			return;
 		}
-
-		const zeroPrice = validItems.find((item) => item.unit_price <= 0);
-		if (zeroPrice) {
-			setError(`"${zeroPrice.name}" için fiyat girilmedi`);
-			return;
-		}
-
-		// Convert TL to kuruş
-		const itemsWithKurus = validItems.map((item) => ({
-			...item,
-			name: item.name.trim(),
-			unit_price: Math.round(item.unit_price * 100),
-		}));
 
 		setSubmitting(true);
 		try {
-			await api.createOrder({
-				items: itemsWithKurus,
+			const order: Order = await api.createOrder({
+				customer_name: customerName.trim(),
+				order_type: orderType,
 				notes: notes.trim() || undefined,
+				items: [],
 			});
 
-			// Reset form
-			setItems([newItem()]);
+			setLastPrintableOrder(order);
+			const printResult = await printOrder(order);
+			if (!printResult.ok) {
+				setPrintError(
+					`Sipariş #${formatDisplayNo(order.display_no)} oluşturuldu fakat fiş yazdırılamadı: ${printResult.error ?? "Bilinmeyen hata"}`,
+				);
+			}
+
+			setCustomerName("");
+			setOrderType(DEFAULT_ORDER_TYPE);
 			setNotes("");
 			onCreated?.();
 		} catch (err) {
@@ -75,59 +67,59 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 		}
 	};
 
+	const handleRetryPrint = async () => {
+		if (!lastPrintableOrder) return;
+		setPrinting(true);
+		try {
+			const result = await printOrder(lastPrintableOrder);
+			if (result.ok) {
+				setPrintError(null);
+				return;
+			}
+			setPrintError(
+				`Sipariş #${formatDisplayNo(lastPrintableOrder.display_no)} için fiş yeniden yazdırılamadı: ${result.error ?? "Bilinmeyen hata"}`,
+			);
+		} finally {
+			setPrinting(false);
+		}
+	};
+
 	return (
 		<form onSubmit={handleSubmit} className="bg-white rounded-xl p-4 shadow-sm overflow-hidden">
 			<h2 className="text-xl font-bold mb-4">Yeni Sipariş</h2>
 
-			{items.map((item, index) => (
-				<div key={item._id} className="flex gap-2 mb-2 items-center min-w-0">
-					<input
-						type="text"
-						placeholder="Ürün adı"
-						value={item.name}
-						onChange={(e) => updateItem(index, "name", e.target.value)}
-						className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-lg"
-					/>
-					<input
-						type="number"
-						min="1"
-						value={item.quantity}
-						onChange={(e) => updateItem(index, "quantity", Number.parseInt(e.target.value) || 1)}
-						className="w-14 sm:w-16 shrink-0 border rounded-lg px-3 py-2 text-lg text-center"
-					/>
-					<div className="relative shrink-0">
-						<input
-							type="number"
-							min="0"
-							step="0.01"
-							placeholder="0.00"
-							value={item.unit_price || ""}
-							onChange={(e) =>
-								updateItem(index, "unit_price", Number.parseFloat(e.target.value) || 0)
-							}
-							className="w-24 sm:w-28 border rounded-lg px-3 py-2 text-lg pr-8"
-						/>
-						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">TL</span>
-					</div>
-					{items.length > 1 && (
-						<button
-							type="button"
-							onClick={() => removeItem(index)}
-							className="text-red-400 hover:text-red-600 text-xl px-2"
-						>
-							✕
-						</button>
-					)}
-				</div>
-			))}
+			<input
+				type="text"
+				placeholder="Müşteri adı"
+				value={customerName}
+				onChange={(e) => setCustomerName(e.target.value)}
+				className="w-full border rounded-lg px-3 py-2 text-lg mb-3"
+			/>
 
-			<button
-				type="button"
-				onClick={addItem}
-				className="text-blue-500 hover:text-blue-700 text-sm mb-3"
-			>
-				+ Ürün ekle
-			</button>
+			<div className="flex gap-2 mb-3">
+				<button
+					type="button"
+					onClick={() => setOrderType("Paket")}
+					className={`flex-1 py-2 rounded-lg font-semibold text-base border-2 transition-colors ${
+						orderType === "Paket"
+							? "bg-indigo-600 border-indigo-600 text-white"
+							: "bg-white border-gray-300 text-gray-600 hover:border-indigo-400"
+					}`}
+				>
+					Paket
+				</button>
+				<button
+					type="button"
+					onClick={() => setOrderType("Masada")}
+					className={`flex-1 py-2 rounded-lg font-semibold text-base border-2 transition-colors ${
+						orderType === "Masada"
+							? "bg-indigo-600 border-indigo-600 text-white"
+							: "bg-white border-gray-300 text-gray-600 hover:border-indigo-400"
+					}`}
+				>
+					Masada
+				</button>
+			</div>
 
 			<textarea
 				placeholder="Not (opsiyonel)"
@@ -139,9 +131,23 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 
 			{error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
+			{printError && lastPrintableOrder && (
+				<div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+					<p className="font-medium">{printError}</p>
+					<button
+						type="button"
+						onClick={handleRetryPrint}
+						disabled={printing}
+						className="mt-2 rounded-md border border-amber-500 px-3 py-1.5 font-semibold text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						{printing ? "Yazdırılıyor..." : "Tekrar Yazdır"}
+					</button>
+				</div>
+			)}
+
 			<button
 				type="submit"
-				disabled={submitting}
+				disabled={submitting || printing}
 				className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg text-lg
 					disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 			>

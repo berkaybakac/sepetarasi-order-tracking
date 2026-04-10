@@ -22,6 +22,13 @@ export enum TerminalType {
 	DISPLAY = "display",
 }
 
+export const ORDER_TYPES = ["Paket", "Masada"] as const;
+export type OrderType = (typeof ORDER_TYPES)[number];
+
+export function isOrderType(value: string): value is OrderType {
+	return ORDER_TYPES.includes(value as OrderType);
+}
+
 /** Valid status transitions: key = from, value = allowed targets */
 export const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 	[OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],

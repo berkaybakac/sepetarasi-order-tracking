@@ -178,7 +178,7 @@ fi
 # Siparis olustur
 if ! CREATE_RES=$(curl -sf -X POST "$BASE/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d '{"items":[{"name":"Doner","quantity":2,"unit_price":15000},{"name":"Ayran","quantity":2,"unit_price":3000}]}'); then
+  -d '{"customer_name":"Pi4 Test Musteri","order_type":"Paket","items":[]}'); then
   fail "POST /orders basarisiz"
   exit 1
 fi
@@ -195,7 +195,7 @@ fi
 # Ikinci siparis
 if ! CREATE_RES2=$(curl -sf -X POST "$BASE/api/v1/orders" \
   -H "Content-Type: application/json" \
-  -d '{"items":[{"name":"Lahmacun","quantity":1,"unit_price":12000}]}'); then
+  -d '{"customer_name":"Pi4 Test Masa","order_type":"Masada","items":[]}'); then
   fail "2. POST /orders basarisiz"
   exit 1
 fi

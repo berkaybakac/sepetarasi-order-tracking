@@ -6,7 +6,7 @@ import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { orders, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
+import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -28,10 +28,10 @@ async function createOrder() {
 		method: "POST",
 		url: API_ROUTES.V1.ORDERS,
 		headers: withCashierAuth(),
-		payload: {
+		payload: buildCreateOrderInput({
 			terminal_id: "t-1",
-			items: [{ name: "Lahmacun", quantity: 1, unit_price: 12000 }],
-		},
+			customer_name: "Silinecek Sipariş",
+		}),
 	});
 
 	expect(createRes.statusCode).toBe(201);

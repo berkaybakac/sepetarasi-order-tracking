@@ -3,6 +3,18 @@ import type { Order } from "@sepetarasi/shared";
 import { useEffect, useState } from "react";
 import { getOrderTimer } from "../../../utils/date";
 
+function formatOrderTimestamp(dateStr: string): string {
+	return new Intl.DateTimeFormat("tr-TR", {
+		timeZone: "Europe/Istanbul",
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	}).format(new Date(dateStr));
+}
+
 /**
  * TimerBadge — Siparişin kalan/geçen süresini gösteren canlı rozet.
  * Her 30 saniyede kendi kendini günceller.
@@ -138,6 +150,15 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 					#{order.display_no}
 				</span>
 				<TimerBadge createdAt={order.created_at} status={status} />
+			</div>
+
+			<div className="space-y-1 text-sm text-dark-muted">
+				<p className="text-base font-semibold text-dark-text">
+					{order.customer_name ?? "İsimsiz müşteri"}
+				</p>
+				<p>Tip: {order.order_type ?? "-"}</p>
+				<p>Saat: {formatOrderTimestamp(order.created_at)}</p>
+				{order.notes && <p className="italic text-brand-warning">Not: {order.notes}</p>}
 			</div>
 
 			{order.items && order.items.length > 0 && (

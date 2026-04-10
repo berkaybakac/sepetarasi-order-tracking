@@ -6,7 +6,7 @@ import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
+import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -29,10 +29,11 @@ describe("POST /api/v1/orders", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: {
+			payload: buildCreateOrderInput({
 				terminal_id: "t-1",
+				customer_name: "Ayşe",
 				items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-			},
+			}),
 		});
 
 		expect(res.statusCode).toBe(201);
@@ -41,18 +42,57 @@ describe("POST /api/v1/orders", () => {
 		expect(body.data.display_no).toBe(1);
 		expect(body.data.status).toBe("PREPARING");
 		expect(body.data.items).toHaveLength(1);
+		expect(body.data.customer_name).toBe("Ayşe");
+		expect(body.data.order_type).toBe("Paket");
+		expect(body.data.created_at).toEqual(expect.any(String));
 	});
 
-	it("should return 400 if no items provided", async () => {
+	it("should allow empty items when required order metadata is present", async () => {
 		const res = await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [] },
+			payload: buildCreateOrderInput({ customer_name: "Zeynep", items: [] }),
+		});
+
+		expect(res.statusCode).toBe(201);
+		expect(res.json().data.items).toEqual([]);
+	});
+
+	it("should return 400 when customer_name is missing", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: { order_type: "Paket", items: [] },
 		});
 
 		expect(res.statusCode).toBe(400);
-		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("VALIDATION_ERROR");
+	});
+
+	it("should return 400 when customer_name is blank after trimming", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: buildCreateOrderInput({ customer_name: "   " }),
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("INVALID_ORDER_INPUT");
+	});
+
+	it("should return 400 when order_type is invalid", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: { customer_name: "Ali", order_type: "TakeAway", items: [] },
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("VALIDATION_ERROR");
 	});
 
 	it("should auto-create missing terminal and still create order", async () => {
@@ -60,10 +100,11 @@ describe("POST /api/v1/orders", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: {
+			payload: buildCreateOrderInput({
 				terminal_id: "KASA-1",
+				customer_name: "Kemal",
 				items: [{ name: "Pizza", quantity: 1, unit_price: 20000 }],
-			},
+			}),
 		});
 
 		expect(res.statusCode).toBe(201);
@@ -82,13 +123,13 @@ describe("GET /api/v1/orders", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [{ name: "A", quantity: 1, unit_price: 1000 }] },
+			payload: buildCreateOrderInput({ customer_name: "Birinci", items: [] }),
 		});
 		await app.inject({
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [{ name: "B", quantity: 1, unit_price: 2000 }] },
+			payload: buildCreateOrderInput({ customer_name: "İkinci", order_type: "Masada", items: [] }),
 		});
 
 		const res = await app.inject({ method: "GET", url: "/api/v1/orders" });
@@ -105,7 +146,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
+			payload: buildCreateOrderInput({ customer_name: "Hazır Testi", items: [] }),
 		});
 		const orderId = createRes.json().data.id;
 
@@ -127,7 +168,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
+			payload: buildCreateOrderInput({ customer_name: "Broadcast Testi", items: [] }),
 		});
 		const orderId = createRes.json().data.id;
 
@@ -158,7 +199,7 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [{ name: "Doner", quantity: 1, unit_price: 15000 }] },
+			payload: buildCreateOrderInput({ customer_name: "Geçiş Testi", items: [] }),
 		});
 		const orderId = createRes.json().data.id;
 
@@ -191,7 +232,7 @@ describe("GET /api/v1/stats/today", () => {
 			method: "POST",
 			url: "/api/v1/orders",
 			headers: withCashierAuth(),
-			payload: { items: [{ name: "A", quantity: 1, unit_price: 1000 }] },
+			payload: buildCreateOrderInput({ customer_name: "Stats Testi", items: [] }),
 		});
 
 		const res = await app.inject({
@@ -214,17 +255,18 @@ describe("POST /api/v1/orders with new fields", () => {
 			headers: withCashierAuth(),
 			payload: {
 				customer_name: "Ali",
-				order_type: "paket",
+				order_type: "Paket",
 				target_minutes: 15,
-				items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+				items: [],
 			},
 		});
 
 		expect(res.statusCode).toBe(201);
 		const order = res.json().data;
 		expect(order.customer_name).toBe("Ali");
-		expect(order.order_type).toBe("paket");
+		expect(order.order_type).toBe("Paket");
 		expect(order.target_minutes).toBe(15);
+		expect(order.items).toEqual([]);
 	});
 });
 

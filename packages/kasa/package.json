@@ -13,12 +13,13 @@
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"test:unit": "vitest run tests/orderStore.test.ts tests/discovery.test.ts",
+		"test:unit": "vitest run tests/orderStore.test.ts tests/discovery.test.ts tests/orderForm.test.tsx tests/printer.test.ts",
 		"test:integration": "echo 'No integration tests for kasa yet' && exit 0"
 	},
 	"dependencies": {
 		"@sepetarasi/shared": "*",
 		"@tailwindcss/vite": "^4.2.2",
+		"iconv-lite": "^0.6.3",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
 		"tailwindcss": "^4.2.2",
@@ -30,6 +31,7 @@
 		"@vitejs/plugin-react": "^4.4.0",
 		"electron": "35.7.5",
 		"electron-builder": "^25.1.0",
+		"jsdom": "^27.0.1",
 		"typescript": "^5.7.0",
 		"vite": "^6.3.0",
 		"vite-plugin-electron": "^0.28.0",

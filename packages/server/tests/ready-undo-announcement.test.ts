@@ -6,6 +6,7 @@ import { announcementQueue, orders, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { AnnouncementService } from "../src/services/announcement.service.js";
 import { OrderService } from "../src/services/order.service.js";
+import { buildCreateOrderInput } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let orderService: OrderService;
@@ -29,7 +30,7 @@ function getAnnouncement(orderId: string) {
 describe("READY -> PREPARING undo: announcement queue behavior", () => {
 	it("should DELETE announcement when status is 'pending'", () => {
 		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			...buildCreateOrderInput({ customer_name: "Pending Testi" }),
 		});
 
 		// PREPARING -> READY: creates pending announcement
@@ -46,7 +47,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 
 	it("should NOT DELETE announcement when status is 'playing' (worker owns it)", () => {
 		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			...buildCreateOrderInput({ customer_name: "Playing Testi" }),
 		});
 
 		// PREPARING -> READY
@@ -66,7 +67,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 
 	it("should DELETE announcement when status is 'played' (already announced, cleanup)", () => {
 		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			...buildCreateOrderInput({ customer_name: "Played Testi" }),
 		});
 
 		// PREPARING -> READY
@@ -86,7 +87,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 
 	it("should DELETE announcement when status is 'failed'", () => {
 		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			...buildCreateOrderInput({ customer_name: "Failed Testi" }),
 		});
 
 		// PREPARING -> READY
@@ -105,7 +106,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 
 	it("should create NEW announcement when re-READY after undo (with pending deleted)", () => {
 		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			...buildCreateOrderInput({ customer_name: "Re-Ready Testi" }),
 		});
 
 		// READY -> creates announcement
@@ -127,7 +128,7 @@ describe("READY -> PREPARING undo: announcement queue behavior", () => {
 
 	it("should handle re-READY when playing announcement still exists (idempotent)", () => {
 		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			...buildCreateOrderInput({ customer_name: "Idempotent Testi" }),
 		});
 
 		// READY -> announcement created

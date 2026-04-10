@@ -5,7 +5,7 @@ import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
+import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -27,10 +27,10 @@ async function createOrder() {
 		method: "POST",
 		url: API_ROUTES.V1.ORDERS,
 		headers: withCashierAuth(),
-		payload: {
+		payload: buildCreateOrderInput({
 			terminal_id: "t-1",
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		},
+			customer_name: "Yetki Testi",
+		}),
 	});
 
 	expect(createRes.statusCode).toBe(201);
@@ -39,10 +39,10 @@ async function createOrder() {
 
 describe("Permission matrix", () => {
 	it("POST /api/v1/orders allows admin and cashier, rejects anonymous", async () => {
-		const payload = {
+		const payload = buildCreateOrderInput({
 			terminal_id: "t-1",
-			items: [{ name: "Ayran", quantity: 1, unit_price: 3000 }],
-		};
+			customer_name: "Müşteri Yetki",
+		});
 
 		const anonymousRes = await app.inject({
 			method: "POST",

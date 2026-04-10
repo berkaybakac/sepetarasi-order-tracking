@@ -5,11 +5,13 @@ import type { AppDatabase } from "../src/db/connection.js";
 import { announcementQueue, orderEvents, orders, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import {
+	InvalidOrderInputError,
 	InvalidTransitionError,
 	OrderNotFoundError,
 	OrderService,
 } from "../src/services/order.service.js";
 import { StatsService } from "../src/services/stats.service.js";
+import { buildCreateOrderInput } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let orderService: OrderService;
@@ -26,54 +28,61 @@ beforeEach(() => {
 
 describe("Order creation", () => {
 	it("should create an order with items and auto-increment display_no", () => {
-		const order1 = orderService.create({
-			terminal_id: "t-1",
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order1 = orderService.create(
+			buildCreateOrderInput({
+				terminal_id: "t-1",
+				items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			}),
+		);
 
 		expect(order1.display_no).toBe(1);
 		expect(order1.status).toBe(OrderStatus.PREPARING);
 		expect(order1.items).toHaveLength(1);
 		expect(order1.items?.[0].name).toBe("Doner");
 
-		const order2 = orderService.create({
-			items: [{ name: "Ayran", quantity: 2, unit_price: 3000 }],
-		});
+		const order2 = orderService.create(
+			buildCreateOrderInput({
+				customer_name: "Ayşe",
+				order_type: "Masada",
+				items: [{ name: "Ayran", quantity: 2, unit_price: 3000 }],
+			}),
+		);
 		expect(order2.display_no).toBe(2);
 
-		const order3 = orderService.create({
-			items: [{ name: "Lahmacun", quantity: 1, unit_price: 12000 }],
-		});
+		const order3 = orderService.create(
+			buildCreateOrderInput({
+				customer_name: "Fatma",
+				items: [{ name: "Lahmacun", quantity: 1, unit_price: 12000 }],
+			}),
+		);
 		expect(order3.display_no).toBe(3);
 	});
 
 	it("should store customer_name, order_type, target_minutes", () => {
 		const order = orderService.create({
 			customer_name: "Ali",
-			order_type: "paket",
+			order_type: "Paket",
 			target_minutes: 15,
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
+			items: [],
 		});
 
 		expect(order.customer_name).toBe("Ali");
-		expect(order.order_type).toBe("paket");
+		expect(order.order_type).toBe("Paket");
 		expect(order.target_minutes).toBe(15);
 	});
 
-	it("should default new fields to null when not provided", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+	it("should require customer_name and order_type", () => {
+		expect(() => {
+			orderService.create({ customer_name: "", order_type: "Paket", items: [] });
+		}).toThrow(InvalidOrderInputError);
 
-		expect(order.customer_name).toBeNull();
-		expect(order.order_type).toBeNull();
-		expect(order.target_minutes).toBeNull();
+		expect(() => {
+			orderService.create({ customer_name: "Ali", order_type: "TakeAway" as "Paket", items: [] });
+		}).toThrow(InvalidOrderInputError);
 	});
 
 	it("should create an order_event for creation", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Event Testi" }));
 
 		const events = db.select().from(orderEvents).where(eq(orderEvents.order_id, order.id)).all();
 		expect(events).toHaveLength(1);
@@ -82,10 +91,12 @@ describe("Order creation", () => {
 	});
 
 	it("should auto-create terminal when terminal_id does not exist", () => {
-		const order = orderService.create({
-			terminal_id: "KASA-1",
-			items: [{ name: "Pizza", quantity: 1, unit_price: 20000 }],
-		});
+		const order = orderService.create(
+			buildCreateOrderInput({
+				terminal_id: "KASA-1",
+				items: [{ name: "Pizza", quantity: 1, unit_price: 20000 }],
+			}),
+		);
 
 		expect(order.terminal_id).toBe("KASA-1");
 
@@ -98,8 +109,8 @@ describe("Order creation", () => {
 
 describe("Order listing", () => {
 	it("should list orders for today", () => {
-		orderService.create({ items: [{ name: "A", quantity: 1, unit_price: 1000 }] });
-		orderService.create({ items: [{ name: "B", quantity: 1, unit_price: 2000 }] });
+		orderService.create(buildCreateOrderInput({ customer_name: "Liste A" }));
+		orderService.create(buildCreateOrderInput({ customer_name: "Liste B", order_type: "Masada" }));
 
 		const list = orderService.list();
 		expect(list).toHaveLength(2);
@@ -110,6 +121,8 @@ describe("Order listing", () => {
 
 	it("should include items in listing", () => {
 		orderService.create({
+			customer_name: "İtemli Sipariş",
+			order_type: "Paket",
 			items: [
 				{ name: "A", quantity: 1, unit_price: 1000 },
 				{ name: "B", quantity: 2, unit_price: 2000 },
@@ -123,9 +136,7 @@ describe("Order listing", () => {
 
 describe("Status transitions - happy path", () => {
 	it("should transition PREPARING -> READY -> DELIVERED with correct timestamps", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Hazırlık Akışı" }));
 
 		// PREPARING -> READY
 		const ready = orderService.changeStatus(order.id, { status: OrderStatus.READY });
@@ -141,9 +152,7 @@ describe("Status transitions - happy path", () => {
 	});
 
 	it("should create order_events for each transition", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Event Akışı" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 		orderService.changeStatus(order.id, { status: OrderStatus.DELIVERED });
@@ -159,9 +168,7 @@ describe("Status transitions - happy path", () => {
 	});
 
 	it("should allow PREPARING -> CANCELLED", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "İptal Akışı" }));
 
 		const cancelled = orderService.changeStatus(order.id, { status: OrderStatus.CANCELLED });
 		expect(cancelled.status).toBe(OrderStatus.CANCELLED);
@@ -169,9 +176,7 @@ describe("Status transitions - happy path", () => {
 	});
 
 	it("should allow READY -> PREPARING (undo)", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Undo Akışı" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 		const undone = orderService.changeStatus(order.id, { status: OrderStatus.PREPARING });
@@ -182,9 +187,7 @@ describe("Status transitions - happy path", () => {
 
 describe("Status transitions - sad path", () => {
 	it("should reject PREPARING -> DELIVERED", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Sad Path 1" }));
 
 		expect(() => {
 			orderService.changeStatus(order.id, { status: OrderStatus.DELIVERED });
@@ -192,9 +195,7 @@ describe("Status transitions - sad path", () => {
 	});
 
 	it("should reject CANCELLED -> any status", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Sad Path 2" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.CANCELLED });
 
@@ -206,9 +207,7 @@ describe("Status transitions - sad path", () => {
 	});
 
 	it("should reject DELIVERED -> any status", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Sad Path 3" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 		orderService.changeStatus(order.id, { status: OrderStatus.DELIVERED });
@@ -229,9 +228,7 @@ describe("Status transitions - sad path", () => {
 
 describe("READY atomic transaction", () => {
 	it("should insert announcement_queue record when transitioning to READY", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Queue Testi" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 
@@ -244,9 +241,7 @@ describe("READY atomic transaction", () => {
 	});
 
 	it("should be idempotent: setting READY twice creates only one announcement", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Queue Undo" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 
@@ -260,9 +255,7 @@ describe("READY atomic transaction", () => {
 	});
 
 	it("should delete announcement_queue when undoing READY -> PREPARING", () => {
-		const order = orderService.create({
-			items: [{ name: "Doner", quantity: 1, unit_price: 15000 }],
-		});
+		const order = orderService.create(buildCreateOrderInput({ customer_name: "Queue Delete" }));
 
 		orderService.changeStatus(order.id, { status: OrderStatus.READY });
 		expect(db.select().from(announcementQueue).all()).toHaveLength(1);

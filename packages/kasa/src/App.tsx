@@ -94,7 +94,7 @@ export default function App() {
 				terminalId: "",
 				terminalName: "",
 				hotkey: "",
-				printerName: "",
+				printerIp: "",
 				cashierToken: "",
 			};
 

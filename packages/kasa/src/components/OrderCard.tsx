@@ -17,6 +17,18 @@ function timeSince(dateStr: string): string {
 	return `${Math.floor(mins / 60)} sa ${mins % 60} dk`;
 }
 
+function formatOrderTimestamp(dateStr: string): string {
+	return new Intl.DateTimeFormat("tr-TR", {
+		timeZone: "Europe/Istanbul",
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	}).format(new Date(dateStr));
+}
+
 interface OrderCardProps {
 	order: Order;
 }
@@ -37,8 +49,21 @@ export function OrderCard({ order }: OrderCardProps) {
 				<span className="text-sm text-gray-500">{timeSince(order.created_at)}</span>
 			</div>
 
+			<div className="mb-3 space-y-1 text-sm text-gray-600">
+				<p className="text-base font-semibold text-gray-800">
+					{order.customer_name ?? "İsimsiz müşteri"}
+				</p>
+				<p>
+					<span className="font-medium text-gray-700">Tip:</span> {order.order_type ?? "-"}
+				</p>
+				<p>
+					<span className="font-medium text-gray-700">Saat:</span>{" "}
+					{formatOrderTimestamp(order.created_at)}
+				</p>
+			</div>
+
 			{order.items && order.items.length > 0 && (
-				<div className="mb-3 text-sm text-gray-600">
+				<div className="mb-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
 					{order.items.map((item) => (
 						<div key={item.id} className="flex justify-between">
 							<span>
@@ -50,7 +75,11 @@ export function OrderCard({ order }: OrderCardProps) {
 				</div>
 			)}
 
-			{order.notes && <p className="text-sm text-gray-500 italic mb-3">{order.notes}</p>}
+			{order.notes && (
+				<p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm italic text-amber-900">
+					Not: {order.notes}
+				</p>
+			)}
 
 			{!isTerminal && (
 				<div className="flex gap-2 flex-wrap">

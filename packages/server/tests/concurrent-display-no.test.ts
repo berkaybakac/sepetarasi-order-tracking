@@ -4,7 +4,7 @@ import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { withCashierAuth } from "./auth-helpers.js";
+import { buildCreateOrderInput, withCashierAuth } from "./auth-helpers.js";
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -29,9 +29,10 @@ describe("Concurrent display_no generation", () => {
 				method: "POST",
 				url: "/api/v1/orders",
 				headers: withCashierAuth(),
-				payload: {
-					items: [{ name: `Item-${i}`, quantity: 1, unit_price: 1000 }],
-				},
+				payload: buildCreateOrderInput({
+					customer_name: `Müşteri-${i}`,
+					order_type: i % 2 === 0 ? "Paket" : "Masada",
+				}),
 			}),
 		);
 
@@ -59,9 +60,10 @@ describe("Concurrent display_no generation", () => {
 				method: "POST",
 				url: "/api/v1/orders",
 				headers: withCashierAuth(),
-				payload: {
-					items: [{ name: `Fast-${i}`, quantity: 1, unit_price: 500 }],
-				},
+				payload: buildCreateOrderInput({
+					customer_name: `Hızlı-${i}`,
+					order_type: i % 2 === 0 ? "Paket" : "Masada",
+				}),
 			});
 			expect(res.statusCode).toBe(201);
 			results.push(res.json().data.display_no);

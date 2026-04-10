@@ -1,4 +1,4 @@
-import { API_ROUTES } from "@sepetarasi/shared";
+import { API_ROUTES, type CreateOrderInput } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import { AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "../src/config/auth.js";
 
@@ -27,4 +27,13 @@ export async function loginAsAdmin(app: FastifyInstance, password = "admin123") 
 	}
 
 	return cookieHeader.split(";")[0];
+}
+
+export function buildCreateOrderInput(overrides: Partial<CreateOrderInput> = {}): CreateOrderInput {
+	return {
+		customer_name: "Test Müşteri",
+		order_type: "Paket",
+		items: [],
+		...overrides,
+	};
 }

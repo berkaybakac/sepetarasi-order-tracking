@@ -1,3 +1,4 @@
+import type { Order } from "@sepetarasi/shared";
 import { useEffect, useState } from "react";
 import {
 	getBaseUrl,
@@ -11,8 +12,13 @@ interface KasaConfig {
 	terminalId: string;
 	terminalName: string;
 	hotkey: string;
-	printerName: string;
+	printerIp: string;
 	cashierToken: string;
+}
+
+interface PrintReceiptResult {
+	ok: boolean;
+	error?: string;
 }
 
 declare global {
@@ -21,6 +27,7 @@ declare global {
 			getConfig: () => Promise<KasaConfig>;
 			saveConfig: (config: KasaConfig) => Promise<boolean>;
 			discoverServer: () => Promise<string | null>;
+			printReceipt: (order: Order) => Promise<PrintReceiptResult>;
 		};
 	}
 }
@@ -33,7 +40,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [url, setUrl] = useState(getBaseUrl());
 	const [terminalId, setTerminalId] = useState("KASA-1");
 	const [terminalName, setTerminalName] = useState("Kasa 1");
-	const [printerName, setPrinterName] = useState("");
+	const [printerIp, setPrinterIp] = useState("");
 	const [cashierToken, setCashierToken] = useState("local-dev-cashier-token");
 	const [testing, setTesting] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
@@ -47,7 +54,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				setUrl(config.serverUrl);
 				setTerminalId(config.terminalId);
 				setTerminalName(config.terminalName);
-				setPrinterName(config.printerName);
+				setPrinterIp(config.printerIp);
 				setCashierToken(config.cashierToken);
 			}
 		}
@@ -94,7 +101,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					terminalId,
 					terminalName,
 					hotkey: "Ctrl+Shift+O",
-					printerName,
+					printerIp,
 					cashierToken,
 				};
 				await window.electronAPI?.saveConfig(config);
@@ -171,17 +178,20 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					className="w-full border rounded-lg px-3 py-2 mb-3 font-mono text-sm"
 				/>
 
-				<label htmlFor="printer-name" className="block text-sm font-medium text-gray-700 mb-1">
-					Yazıcı Adı
+				<label htmlFor="printer-ip" className="block text-sm font-medium text-gray-700 mb-1">
+					Yazıcı IP Adresi
 				</label>
 				<input
-					id="printer-name"
+					id="printer-ip"
 					type="text"
-					value={printerName}
-					onChange={(e) => setPrinterName(e.target.value)}
-					placeholder="Boş bırakılabilir"
-					className="w-full border rounded-lg px-3 py-2 mb-3"
+					value={printerIp}
+					onChange={(e) => setPrinterIp(e.target.value)}
+					placeholder="192.168.1.12"
+					className="w-full border rounded-lg px-3 py-2 mb-1"
 				/>
+				<p className="text-xs text-gray-400 mb-3">
+					Ağ yazıcısı IP adresi (boş bırakılırsa yazdırma devre dışı)
+				</p>
 
 				<div className="bg-gray-50 rounded-lg px-3 py-2 mb-4 text-sm text-gray-500">
 					Kısayol:{" "}

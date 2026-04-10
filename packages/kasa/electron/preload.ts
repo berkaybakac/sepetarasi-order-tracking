@@ -5,12 +5,19 @@ interface KasaConfig {
 	terminalId: string;
 	terminalName: string;
 	hotkey: string;
-	printerName: string;
+	printerIp: string;
 	cashierToken: string;
+}
+
+interface PrintReceiptResult {
+	ok: boolean;
+	error?: string;
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	getConfig: () => ipcRenderer.invoke("get-config") as Promise<KasaConfig>,
 	saveConfig: (config: KasaConfig) => ipcRenderer.invoke("save-config", config),
 	discoverServer: () => ipcRenderer.invoke("discover-server") as Promise<string | null>,
+	printReceipt: (order: unknown) =>
+		ipcRenderer.invoke("print-receipt", order) as Promise<PrintReceiptResult>,
 });

@@ -1,11 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { OrderStatus, isValidTransition } from "@sepetarasi/shared";
+import { OrderStatus, isOrderType, isValidTransition } from "@sepetarasi/shared";
 import type { CreateOrderInput, UpdateStatusInput } from "@sepetarasi/shared";
 import { and, eq, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { announcementQueue, orderEvents, orderItems, orders, terminals } from "../db/schema.js";
 import { InvalidTransitionError, OrderNotFoundError } from "./order.errors.js";
 import { OrderQueryService } from "./order.query.service.js";
+
+export class InvalidOrderInputError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "InvalidOrderInputError";
+	}
+}
 
 export class OrderCommandService {
 	private query: OrderQueryService;
@@ -16,6 +23,7 @@ export class OrderCommandService {
 
 	/** Create a new order with items (atomic) */
 	create(input: CreateOrderInput) {
+		const normalizedInput = normalizeCreateOrderInput(input);
 		const now = new Date().toISOString();
 		const businessDate = this.query.getBusinessDate();
 		const orderId = randomUUID();
@@ -23,11 +31,11 @@ export class OrderCommandService {
 		// Everything inside one transaction: display_no read + insert = no race condition
 		this.db.transaction((tx) => {
 			// Ensure terminal exists when terminal_id is provided by kasa client
-			if (input.terminal_id) {
+			if (normalizedInput.terminal_id) {
 				tx.insert(terminals)
 					.values({
-						id: input.terminal_id,
-						name: input.terminal_id,
+						id: normalizedInput.terminal_id,
+						name: normalizedInput.terminal_id,
 						type: "kasa",
 						is_active: 1,
 						created_at: now,
@@ -50,17 +58,17 @@ export class OrderCommandService {
 					business_date: businessDate,
 					display_no: displayNo,
 					status: OrderStatus.PREPARING,
-					terminal_id: input.terminal_id ?? null,
-					customer_name: input.customer_name ?? null,
-					order_type: input.order_type ?? null,
-					target_minutes: input.target_minutes ?? null,
-					notes: input.notes ?? null,
+					terminal_id: normalizedInput.terminal_id ?? null,
+					customer_name: normalizedInput.customer_name,
+					order_type: normalizedInput.order_type,
+					target_minutes: normalizedInput.target_minutes ?? null,
+					notes: normalizedInput.notes ?? null,
 					created_at: now,
 					updated_at: now,
 				})
 				.run();
 
-			for (const item of input.items) {
+			for (const item of normalizedInput.items ?? []) {
 				tx.insert(orderItems)
 					.values({
 						id: randomUUID(),
@@ -80,7 +88,7 @@ export class OrderCommandService {
 					order_id: orderId,
 					from_status: null,
 					to_status: OrderStatus.PREPARING,
-					terminal_id: input.terminal_id ?? null,
+					terminal_id: normalizedInput.terminal_id ?? null,
 					created_at: now,
 				})
 				.run();
@@ -199,4 +207,25 @@ export class OrderCommandService {
 
 		return order;
 	}
+}
+
+function normalizeCreateOrderInput(input: CreateOrderInput): CreateOrderInput {
+	const customerName = input.customer_name?.trim() ?? "";
+	if (!customerName) {
+		throw new InvalidOrderInputError("Müşteri adı zorunludur");
+	}
+
+	if (!isOrderType(input.order_type)) {
+		throw new InvalidOrderInputError("Sipariş tipi Paket veya Masada olmalıdır");
+	}
+
+	const notes = input.notes?.trim();
+
+	return {
+		...input,
+		customer_name: customerName,
+		order_type: input.order_type,
+		notes: notes ? notes : undefined,
+		items: input.items ?? [],
+	};
 }

@@ -2,6 +2,7 @@ import type {
 	AnnouncementStatus,
 	AnnouncementType,
 	OrderStatus,
+	OrderType,
 	TerminalType,
 } from "./constants.js";
 
@@ -14,7 +15,7 @@ export interface Order {
 	status: OrderStatus;
 	terminal_id: string | null;
 	customer_name: string | null;
-	order_type: string | null;
+	order_type: OrderType | null;
 	target_minutes: number | null;
 	notes: string | null;
 	created_at: string;
@@ -92,11 +93,11 @@ export interface ApiError {
 
 export interface CreateOrderInput {
 	terminal_id?: string;
-	customer_name?: string;
-	order_type?: string;
+	customer_name: string;
+	order_type: OrderType;
 	target_minutes?: number;
 	notes?: string;
-	items: CreateOrderItemInput[];
+	items?: CreateOrderItemInput[];
 }
 
 export interface CreateOrderItemInput {

@@ -1,17 +1,17 @@
-import { OrderStatus } from "@sepetarasi/shared";
+import { ORDER_TYPES, OrderStatus } from "@sepetarasi/shared";
 
 export const createOrderBodySchema = {
 	type: "object",
-	required: ["items"],
+	required: ["customer_name", "order_type"],
 	properties: {
 		terminal_id: { type: "string" },
-		customer_name: { type: "string" },
-		order_type: { type: "string" },
+		customer_name: { type: "string", minLength: 1 },
+		order_type: { type: "string", enum: ORDER_TYPES },
 		target_minutes: { type: "integer", minimum: 1 },
 		notes: { type: "string" },
 		items: {
 			type: "array",
-			minItems: 1,
+			minItems: 0,
 			items: {
 				type: "object",
 				required: ["name", "quantity", "unit_price"],

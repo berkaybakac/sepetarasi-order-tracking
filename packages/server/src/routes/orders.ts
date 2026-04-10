@@ -3,6 +3,7 @@ import type { CreateOrderInput, UpdateStatusInput } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../db/connection.js";
 import { OrderCommandService } from "../services/order.command.service.js";
+import { InvalidOrderInputError } from "../services/order.command.service.js";
 import { InvalidTransitionError, OrderNotFoundError } from "../services/order.errors.js";
 import { OrderQueryService } from "../services/order.query.service.js";
 import { StatsService } from "../services/stats.service.js";
@@ -46,6 +47,12 @@ export function registerOrderRoutes(
 
 				return reply.status(201).send({ ok: true, data: order });
 			} catch (err: unknown) {
+				if (err instanceof InvalidOrderInputError) {
+					return reply.status(400).send({
+						ok: false,
+						error: { code: "INVALID_ORDER_INPUT", message: err.message },
+					});
+				}
 				if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
 					return reply.status(409).send({
 						ok: false,

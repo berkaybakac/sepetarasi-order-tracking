@@ -2,14 +2,19 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, app, globalShortcut, ipcMain } from "electron";
 import { discoverServer } from "./discovery";
+import { printReceipt } from "./printer";
 
 interface KasaConfig {
 	serverUrl: string;
 	terminalId: string;
 	terminalName: string;
 	hotkey: string;
-	printerName: string;
+	printerIp: string;
 	cashierToken: string;
+}
+
+interface StoredKasaConfig extends Partial<KasaConfig> {
+	printerName?: string;
 }
 
 const DEFAULT_CONFIG: KasaConfig = {
@@ -17,7 +22,7 @@ const DEFAULT_CONFIG: KasaConfig = {
 	terminalId: "KASA-1",
 	terminalName: "Kasa 1",
 	hotkey: "Ctrl+Shift+O",
-	printerName: "",
+	printerIp: "",
 	cashierToken: "local-dev-cashier-token",
 };
 
@@ -29,8 +34,12 @@ function loadConfig(): KasaConfig {
 	try {
 		const configPath = getConfigPath();
 		if (existsSync(configPath)) {
-			const saved = JSON.parse(readFileSync(configPath, "utf-8"));
-			return { ...DEFAULT_CONFIG, ...saved };
+			const saved = JSON.parse(readFileSync(configPath, "utf-8")) as StoredKasaConfig;
+			return {
+				...DEFAULT_CONFIG,
+				...saved,
+				printerIp: saved.printerIp ?? saved.printerName ?? DEFAULT_CONFIG.printerIp,
+			};
 		}
 	} catch (err) {
 		console.error("Failed to load config, using defaults:", err);
@@ -73,6 +82,17 @@ ipcMain.handle("save-config", (_event, config: KasaConfig) => {
 	return true;
 });
 ipcMain.handle("discover-server", () => discoverServer(loadConfig().serverUrl));
+ipcMain.handle("print-receipt", async (_event, order) => {
+	const { printerIp } = loadConfig();
+	if (!printerIp) return { ok: false, error: "Yazıcı IP adresi tanımlı değil" };
+	try {
+		await printReceipt(order, printerIp);
+		return { ok: true };
+	} catch (err) {
+		console.error("Print error:", err);
+		return { ok: false, error: (err as Error).message };
+	}
+});
 
 function toggleWindow() {
 	if (!mainWindow) return;
