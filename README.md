@@ -13,7 +13,7 @@ Bu proje bir **Monorepo** yapısındadır. Tüm paketler `packages/shared` üzer
 | `packages/kasa` | Electron tabanlı kasiyer arayüzü (Windows/macOS) |
 | `packages/web` | Yönetici paneli ve Müşteri takip ekranı (Vite/React) |
 | `packages/server` | Fastify tabanlı API ve WebSocket sunucusu |
-| `packages/shared` | **Single Source of Truth:** Ortak mantık, tipler ve ikonlar |
+| `packages/shared` | **Single Source of Truth:** Ortak mantık ve tipler (React bağımlılığı yok) |
 
 ---
 
@@ -30,7 +30,7 @@ npm run db:seed
 
 ## Geliştirme (Mac'te)
 
-Pi4'e gerek yok. Ses macOS'ta `afplay` ile çalışır.
+Pi4'e gerek yok. Hot reload ile hızlı iteration — Mac'te geliştir, Pi4'e sadece sahaya çıkarken deploy et. Ses macOS'ta `afplay` ile çalışır.
 
 ```bash
 # Terminal 1 — Server
@@ -146,7 +146,7 @@ kill -9 $(lsof -t -i :3000) 2>/dev/null; true
 
 Neden olur: Terminal kapatılırken Node.js tam sonlanmamış → port 3000 zombie'de kalmış → Vite boşta port aradı. Zombie öldürülünce 5173 de serbest kalır.
 
-**shared build eksik** — `BasketIcon` veya ortak bileşenler bulunamıyor:
+**shared build eksik** — Ortak tipler bulunamıyor:
 
 ```bash
 npm run build -w packages/shared
