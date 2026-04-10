@@ -19,7 +19,7 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 
 		if (!key) {
 			console.error(
-				"VITE_WS_AUTH_KEY is missing! WebSocket connection will likely fail for non-display channels.",
+				"VITE_WS_AUTH_KEY eksik! packages/kasa/.env dosyasına ekle: VITE_WS_AUTH_KEY=<server .env'deki WS_AUTH_KEY ile aynı değer>",
 			);
 		}
 

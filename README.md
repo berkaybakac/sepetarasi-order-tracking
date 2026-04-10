@@ -65,6 +65,9 @@ bash scripts/deploy.sh --init
 
 # Kod güncellemesi gönder
 bash scripts/deploy.sh
+
+# Kasa için Pi4 CASHIER_TOKEN'ı öğren (bir kez)
+ssh admin@sepetarasi.local "cat /etc/sepetarasi.env | grep CASHIER"
 ```
 
 `deploy.sh` sırasıyla: Mac'te build → rsync ile Pi4'e gönder → migration → servis restart → `/health` kontrolü.

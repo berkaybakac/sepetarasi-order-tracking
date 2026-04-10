@@ -8,7 +8,7 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
 
-function KasaApp() {
+function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 	const hydrate = useOrderStore((s) => s.hydrate);
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);
@@ -53,9 +53,11 @@ function KasaApp() {
 								{stats.averagePrepMinutes != null && <> | Ort: {stats.averagePrepMinutes} dk</>}
 							</span>
 						)}
-						<span
-							className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
-							title={connected ? "Bağlı" : "Bağlantı kesildi"}
+						<button
+							type="button"
+							onClick={onReconfigure}
+							className={`w-3 h-3 rounded-full cursor-pointer hover:opacity-70 transition-opacity ${connected ? "bg-green-500" : "bg-red-500 animate-pulse"}`}
+							title={connected ? "Bağlı — ayarları değiştir" : "Bağlantı kesildi — ayarları değiştir"}
 						/>
 					</div>
 				</div>
@@ -113,5 +115,5 @@ export default function App() {
 		return <ServerConfig onConnected={() => setConfigured(true)} />;
 	}
 
-	return <KasaApp />;
+	return <KasaApp onReconfigure={() => setConfigured(false)} />;
 }
