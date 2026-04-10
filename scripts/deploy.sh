@@ -75,7 +75,6 @@ if [ "$INIT" = "--init" ]; then
     CASHIER_TOKEN="$(openssl rand -hex 16)"
     JWT_SECRET="$(openssl rand -hex 32)"
     COOKIE_SECRET="$(openssl rand -hex 32)"
-    WS_AUTH_KEY="$(openssl rand -hex 16)"
     ssh "$TARGET" "cat > $APP_DIR/.env << ENVEOF
 NODE_ENV=production
 PORT=3000
@@ -86,7 +85,7 @@ AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0
 CASHIER_TOKEN=$CASHIER_TOKEN
 JWT_SECRET=$JWT_SECRET
 COOKIE_SECRET=$COOKIE_SECRET
-WS_AUTH_KEY=$WS_AUTH_KEY
+WS_AUTH_KEY=dev-ws-auth-key
 ENVEOF"
 
     ssh "$TARGET" "mkdir -p $APP_DIR/packages/server/assets/announcements"
