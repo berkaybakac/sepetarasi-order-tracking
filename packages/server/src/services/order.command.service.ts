@@ -96,7 +96,7 @@ export class OrderCommandService {
 	 * For READY->PREPARING (undo): deletes announcement_queue record.
 	 * Returns the updated order or throws on invalid transition.
 	 */
-	changeStatus(orderId: string, input: UpdateStatusInput) {
+	private changeStatusInternal(orderId: string, input: UpdateStatusInput) {
 		const order = this.db.select().from(orders).where(eq(orders.id, orderId)).get();
 		if (!order) {
 			throw new OrderNotFoundError(orderId);
@@ -174,7 +174,16 @@ export class OrderCommandService {
 		});
 
 		// biome-ignore lint/style/noNonNullAssertion: order was just updated in the transaction above
-		return this.query.getById(orderId)!;
+		const updatedOrder = this.query.getById(orderId)!;
+		return { order: updatedOrder, previousStatus: fromStatus };
+	}
+
+	changeStatus(orderId: string, input: UpdateStatusInput) {
+		return this.changeStatusInternal(orderId, input).order;
+	}
+
+	changeStatusWithMeta(orderId: string, input: UpdateStatusInput) {
+		return this.changeStatusInternal(orderId, input);
 	}
 
 	/** Delete an order completely */

@@ -92,7 +92,7 @@ export function registerOrderRoutes(
 			const { id } = request.params;
 
 			try {
-				const order = orderCommand.changeStatus(id, request.body);
+				const { order, previousStatus } = orderCommand.changeStatusWithMeta(id, request.body);
 
 				broadcaster.broadcast(
 					[WS_CHANNELS.ORDERS, WS_CHANNELS.DISPLAY],
@@ -101,7 +101,7 @@ export function registerOrderRoutes(
 						id: order.id,
 						display_no: order.display_no,
 						status: order.status,
-						previousStatus: request.body.status === order.status ? undefined : request.body.status,
+						previousStatus,
 						ready_at: order.ready_at,
 						delivered_at: order.delivered_at,
 						cancelled_at: order.cancelled_at,

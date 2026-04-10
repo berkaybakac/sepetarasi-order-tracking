@@ -1,5 +1,5 @@
 import type { OrderStatus } from "@sepetarasi/shared";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { orderEvents, orderItems, orders } from "../db/schema.js";
 
@@ -28,14 +28,31 @@ export class OrderQueryService {
 			.orderBy(desc(orders.display_no))
 			.all();
 
-		return orderRows.map((order) => {
-			const items = this.db
-				.select()
-				.from(orderItems)
-				.where(eq(orderItems.order_id, order.id))
-				.all();
-			return { ...order, items };
-		});
+		if (orderRows.length === 0) {
+			return [];
+		}
+
+		const orderIds = orderRows.map((order) => order.id);
+		const itemRows = this.db
+			.select()
+			.from(orderItems)
+			.where(inArray(orderItems.order_id, orderIds))
+			.all();
+
+		const itemsByOrderId = new Map<string, typeof itemRows>();
+		for (const item of itemRows) {
+			const bucket = itemsByOrderId.get(item.order_id);
+			if (bucket) {
+				bucket.push(item);
+			} else {
+				itemsByOrderId.set(item.order_id, [item]);
+			}
+		}
+
+		return orderRows.map((order) => ({
+			...order,
+			items: itemsByOrderId.get(order.id) ?? [],
+		}));
 	}
 
 	/** Get single order by ID with items and events */
