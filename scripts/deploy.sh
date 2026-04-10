@@ -72,12 +72,21 @@ if [ "$INIT" = "--init" ]; then
     ssh "$TARGET" "sudo mkdir -p $APP_DIR && sudo chown \$USER:\$USER $APP_DIR"
 
     echo "[init] .env dosyasi olusturuluyor..."
-    ssh "$TARGET" "cat > $APP_DIR/.env << 'ENVEOF'
+    CASHIER_TOKEN="$(openssl rand -hex 16)"
+    JWT_SECRET="$(openssl rand -hex 32)"
+    COOKIE_SECRET="$(openssl rand -hex 32)"
+    WS_AUTH_KEY="$(openssl rand -hex 16)"
+    ssh "$TARGET" "cat > $APP_DIR/.env << ENVEOF
+NODE_ENV=production
 PORT=3000
 DB_PATH=$APP_DIR/data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
 ANNOUNCEMENTS_PATH=$APP_DIR/packages/server/assets/announcements
 AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0
+CASHIER_TOKEN=$CASHIER_TOKEN
+JWT_SECRET=$JWT_SECRET
+COOKIE_SECRET=$COOKIE_SECRET
+WS_AUTH_KEY=$WS_AUTH_KEY
 ENVEOF"
 
     ssh "$TARGET" "mkdir -p $APP_DIR/packages/server/assets/announcements"
@@ -255,3 +264,12 @@ echo "=== Deploy tamamlandi! ==="
 echo "Yonetici paneli: http://$HOST:3000"
 echo "Musteri ekrani:  http://$HOST:3000/display"
 echo "Admin:           http://$HOST:3000/admin"
+
+if [ "$INIT" = "--init" ]; then
+    echo ""
+    echo "=========================================="
+    echo "  CASHIER_TOKEN: $CASHIER_TOKEN"
+    echo "=========================================="
+    echo "Bu token'i tum kasa uygulamalarinda (macOS/Windows) kullan."
+    echo "Unutursan: ssh $TARGET 'grep CASHIER $APP_DIR/.env'"
+fi
