@@ -6,7 +6,7 @@
 	"private": true,
 	"main": "dist-electron/main.js",
 	"scripts": {
-		"dev": "vite",
+		"dev": "env -u ELECTRON_RUN_AS_NODE vite",
 		"build": "tsc && vite build && electron-builder",
 		"build:win": "tsc && vite build && electron-builder --win --x64",
 		"build:mac": "tsc && vite build && electron-builder --mac",

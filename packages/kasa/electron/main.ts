@@ -18,12 +18,15 @@ const DEFAULT_CONFIG: KasaConfig = {
 	printerName: "",
 };
 
-const CONFIG_PATH = join(app.getPath("userData"), "config.json");
+function getConfigPath(): string {
+	return join(app.getPath("userData"), "config.json");
+}
 
 function loadConfig(): KasaConfig {
 	try {
-		if (existsSync(CONFIG_PATH)) {
-			const saved = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+		const configPath = getConfigPath();
+		if (existsSync(configPath)) {
+			const saved = JSON.parse(readFileSync(configPath, "utf-8"));
 			return { ...DEFAULT_CONFIG, ...saved };
 		}
 	} catch (err) {
@@ -33,7 +36,7 @@ function loadConfig(): KasaConfig {
 }
 
 function saveConfig(config: KasaConfig) {
-	writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+	writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
 }
 
 let mainWindow: BrowserWindow | null = null;
