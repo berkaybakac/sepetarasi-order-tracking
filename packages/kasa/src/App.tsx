@@ -5,7 +5,7 @@ import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
 import { ServerConfig } from "./components/ServerConfig";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { setBaseUrl, setTerminalId } from "./lib/api";
+import { setCashierToken, setBaseUrl, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
 
 function KasaApp() {
@@ -87,6 +87,7 @@ export default function App() {
 				const config = await window.electronAPI.getConfig();
 				setBaseUrl(config.serverUrl);
 				setTerminalId(config.terminalId);
+				setCashierToken(config.cashierToken); // stored in Electron userData config.json, set once via ServerConfig UI
 			}
 			// Auto-test connection
 			try {

@@ -8,6 +8,7 @@ interface KasaConfig {
 	terminalName: string;
 	hotkey: string;
 	printerName: string;
+	cashierToken: string;
 }
 
 const DEFAULT_CONFIG: KasaConfig = {
@@ -16,6 +17,7 @@ const DEFAULT_CONFIG: KasaConfig = {
 	terminalName: "Kasa 1",
 	hotkey: "Ctrl+Shift+O",
 	printerName: "",
+	cashierToken: "local-dev-cashier-token",
 };
 
 function getConfigPath(): string {

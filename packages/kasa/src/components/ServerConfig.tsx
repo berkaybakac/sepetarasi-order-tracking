@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getBaseUrl, setTerminalId as setApiTerminalId, setBaseUrl } from "../lib/api";
+import { setCashierToken as setApiCashierToken, getBaseUrl, setTerminalId as setApiTerminalId, setBaseUrl } from "../lib/api";
 
 interface KasaConfig {
 	serverUrl: string;
@@ -7,6 +7,7 @@ interface KasaConfig {
 	terminalName: string;
 	hotkey: string;
 	printerName: string;
+	cashierToken: string;
 }
 
 declare global {
@@ -27,6 +28,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [terminalId, setTerminalId] = useState("KASA-1");
 	const [terminalName, setTerminalName] = useState("Kasa 1");
 	const [printerName, setPrinterName] = useState("");
+	const [cashierToken, setCashierToken] = useState("local-dev-cashier-token");
 	const [testing, setTesting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				setTerminalId(config.terminalId);
 				setTerminalName(config.terminalName);
 				setPrinterName(config.printerName);
+				setCashierToken(config.cashierToken);
 			}
 		}
 		load();
@@ -53,12 +56,14 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 			if (data.ok) {
 				setBaseUrl(url);
 				setApiTerminalId(terminalId);
+				setApiCashierToken(cashierToken);
 				const config: KasaConfig = {
 					serverUrl: url,
 					terminalId,
 					terminalName,
 					hotkey: "Ctrl+Shift+O",
 					printerName,
+					cashierToken,
 				};
 				await window.electronAPI?.saveConfig(config);
 				onConnected();
@@ -121,6 +126,18 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						/>
 					</div>
 				</div>
+
+				<label htmlFor="cashier-token" className="block text-sm font-medium text-gray-700 mb-1">
+					Kasiyer Token
+				</label>
+				<input
+					id="cashier-token"
+					type="text"
+					value={cashierToken}
+					onChange={(e) => setCashierToken(e.target.value)}
+					placeholder="local-dev-cashier-token"
+					className="w-full border rounded-lg px-3 py-2 mb-3 font-mono text-sm"
+				/>
 
 				<label htmlFor="printer-name" className="block text-sm font-medium text-gray-700 mb-1">
 					Yazıcı Adı

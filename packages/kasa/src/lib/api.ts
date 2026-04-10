@@ -4,6 +4,7 @@ import type { CreateOrderInput, DayStats, Order, UpdateStatusInput } from "@sepe
 
 let baseUrl = "http://localhost:3000";
 let terminalId = "";
+let cashierToken = "local-dev-cashier-token";
 
 export function setBaseUrl(url: string) {
 	baseUrl = url.replace(/\/$/, "");
@@ -21,10 +22,17 @@ export function getTerminalId() {
 	return terminalId;
 }
 
+export function setCashierToken(token: string) {
+	cashierToken = token;
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
 	const res = await fetch(`${baseUrl}${path}`, {
 		method,
-		headers: body ? { "Content-Type": "application/json" } : undefined,
+		headers: {
+			...(body ? { "Content-Type": "application/json" } : {}),
+			...(cashierToken ? { "x-cashier-token": cashierToken } : {}),
+		},
 		body: body ? JSON.stringify(body) : undefined,
 	});
 
