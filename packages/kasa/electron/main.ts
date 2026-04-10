@@ -11,7 +11,7 @@ interface KasaConfig {
 }
 
 const DEFAULT_CONFIG: KasaConfig = {
-	serverUrl: "http://localhost:3000",
+	serverUrl: "http://sepetarasi.local:3000",
 	terminalId: "KASA-1",
 	terminalName: "Kasa 1",
 	hotkey: "Ctrl+Shift+O",

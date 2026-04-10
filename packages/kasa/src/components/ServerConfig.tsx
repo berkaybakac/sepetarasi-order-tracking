@@ -65,8 +65,10 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 			} else {
 				setError("Sunucu yanıt verdi ama sağlık kontrolü başarısız");
 			}
-		} catch {
-			setError("Sunucuya bağlanılamadı. IP ve port'u kontrol edin.");
+		} catch (err) {
+			// Dev note: .local hostnames require Bonjour on Windows (comes with iTunes or install separately from Apple)
+			console.error("Kasa connection failed:", err);
+			setError("Sunucuya bağlanılamadı. Adresi ve ağ bağlantısını kontrol edin.");
 		} finally {
 			setTesting(false);
 		}
@@ -86,7 +88,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					type="text"
 					value={url}
 					onChange={(e) => setUrl(e.target.value)}
-					placeholder="http://192.168.1.100:3000"
+					placeholder="http://sepetarasi.local:3000"
 					className="w-full border rounded-lg px-4 py-3 text-lg mb-3"
 					onKeyDown={(e) => e.key === "Enter" && handleTest()}
 				/>
