@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { setCashierToken as setApiCashierToken, getBaseUrl, setTerminalId as setApiTerminalId, setBaseUrl } from "../lib/api";
+import {
+	getBaseUrl,
+	setCashierToken as setApiCashierToken,
+	setTerminalId as setApiTerminalId,
+	setBaseUrl,
+} from "../lib/api";
 
 interface KasaConfig {
 	serverUrl: string;

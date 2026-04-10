@@ -5,7 +5,7 @@ import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
 import { ServerConfig } from "./components/ServerConfig";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { setCashierToken, setBaseUrl, setTerminalId } from "./lib/api";
+import { setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
 
 function KasaApp() {
