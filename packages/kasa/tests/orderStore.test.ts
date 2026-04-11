@@ -10,6 +10,17 @@ vi.mock("../src/lib/api", () => ({
 		listOrders: vi.fn(),
 		getStats: vi.fn(),
 	},
+	ApiError: class ApiError extends Error {
+		code: string;
+		statusCode: number;
+
+		constructor(code: string, message: string, statusCode: number) {
+			super(message);
+			this.name = "ApiError";
+			this.code = code;
+			this.statusCode = statusCode;
+		}
+	},
 	getBaseUrl: vi.fn(() => "http://localhost:3000"),
 }));
 

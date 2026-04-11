@@ -1,7 +1,7 @@
 import { type OrderStatus, applyOrderWsEvent } from "@sepetarasi/shared";
 import type { DayStats, Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
-import { api } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 
 interface OrderState {
 	orders: Map<string, Order>;
@@ -53,6 +53,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				attempt++;
 				const errorMsg = (err as Error).message;
 				console.error(`Failed to hydrate orders (attempt ${attempt}):`, errorMsg);
+
+				// Rate limit: retrying immediately makes things worse — bail out
+				if (err instanceof ApiError && err.statusCode === 429) {
+					set({ error: errorMsg, isHydrating: false });
+					if (!silent) set({ loading: false });
+					return;
+				}
 
 				if (attempt <= retries) {
 					const backoff = 1000 * 2 ** attempt;
