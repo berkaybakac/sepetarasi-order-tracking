@@ -196,7 +196,8 @@ export async function buildApp(opts: AppOptions) {
 	);
 
 	// Setup Rate Limiting, Cookie, JWT
-	await app.register(fastifyRateLimit, { max: 300, timeWindow: "1 minute" });
+	// Keep a sane default for all routes. Auth route applies its own tighter guard.
+	await app.register(fastifyRateLimit, { max: 100, timeWindow: "1 minute" });
 	await app.register(fastifyCookie, { secret: AUTH_CONFIG.cookieSecret });
 	await app.register(fastifyJwt, {
 		secret: AUTH_CONFIG.jwtSecret,

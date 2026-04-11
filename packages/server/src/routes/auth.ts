@@ -1,11 +1,18 @@
 import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG } from "../config/auth.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
 import { auditLog } from "../utils/audit-logger.js";
+
+function isHttpsRequest(request: FastifyRequest): boolean {
+	const forwardedProto = request.headers["x-forwarded-proto"];
+	const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+	const normalizedForwardedProto = proto?.split(",")[0]?.trim()?.toLowerCase();
+	return request.protocol === "https" || normalizedForwardedProto === "https";
+}
 
 async function getAdminHash(db: AppDatabase): Promise<string> {
 	const row = db
@@ -44,8 +51,8 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				},
 			},
 			config: {
-				// simple rate limit config could be applied here if @fastify/rate-limit is set globally
-				rateLimit: { max: 5, timeWindow: "1 minute" },
+				// Keep auth endpoint stricter than generic API routes.
+				rateLimit: { max: 100, timeWindow: "1 minute" },
 			},
 		},
 		async (request, reply) => {
@@ -61,6 +68,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			}
 
 			const token = app.jwt.sign({ role: "admin" }, { expiresIn: "7d" });
+			const secureCookie = AUTH_CONFIG.cookieSecure && isHttpsRequest(request);
 
 			auditLog("LOGIN_SUCCESS", `Admin logged in from ${request.ip}`);
 
@@ -68,7 +76,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			reply.setCookie(ADMIN_COOKIE_NAME, token, {
 				path: "/",
 				httpOnly: true,
-				secure: AUTH_CONFIG.isProduction,
+				secure: secureCookie,
 				sameSite: "strict",
 				maxAge: 60 * 60 * 24 * 7, // 7 days
 			});

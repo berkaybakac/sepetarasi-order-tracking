@@ -33,8 +33,24 @@ function getCashierToken() {
 	return "local-dev-cashier-token";
 }
 
+function parseBooleanEnv(name: string, defaultValue: boolean): boolean {
+	const raw = process.env[name];
+	if (raw === undefined) return defaultValue;
+
+	const normalized = raw.trim().toLowerCase();
+	if (["1", "true", "yes", "on"].includes(normalized)) return true;
+	if (["0", "false", "no", "off"].includes(normalized)) return false;
+
+	throw new Error(`${name} must be a boolean value (true/false)`);
+}
+
+// Allows HTTP deployments (e.g. Pi4 on local network) to disable Secure cookie flag.
+// Default: true in production (HTTPS), false in dev.
+const cookieSecure = parseBooleanEnv("COOKIE_SECURE", isProduction);
+
 export const AUTH_CONFIG = {
 	isProduction,
+	cookieSecure,
 	jwtSecret: getSecret("JWT_SECRET"),
 	cookieSecret: getSecret("COOKIE_SECRET"),
 	cashierToken: getCashierToken(),

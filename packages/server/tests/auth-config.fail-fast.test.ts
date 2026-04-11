@@ -11,6 +11,7 @@ function setProductionEnvWithAllSecrets() {
 	process.env.JWT_SECRET = "jwt-secret-for-test";
 	process.env.COOKIE_SECRET = "cookie-secret-for-test";
 	process.env.CASHIER_TOKEN = "cashier-token-for-test";
+	process.env.WS_AUTH_KEY = "ws-key-for-test";
 }
 
 function unsetEnv(name: string) {
@@ -66,5 +67,50 @@ describe("AUTH_CONFIG fail-fast behavior", () => {
 		expect(AUTH_CONFIG.jwtSecret).toContain("dev-jwt_secret-");
 		expect(AUTH_CONFIG.cookieSecret).toContain("dev-cookie_secret-");
 		expect(AUTH_CONFIG.cashierToken).toBe("local-dev-cashier-token");
+	});
+});
+
+describe("AUTH_CONFIG cookieSecure override", () => {
+	it("COOKIE_SECURE=false forces cookieSecure=false even in production", async () => {
+		setProductionEnvWithAllSecrets();
+		process.env.WS_AUTH_KEY = "ws-key-for-test";
+		process.env.COOKIE_SECURE = "false";
+
+		const { AUTH_CONFIG } = await importAuthConfigFresh();
+		expect(AUTH_CONFIG.cookieSecure).toBe(false);
+	});
+
+	it("COOKIE_SECURE=true forces cookieSecure=true even in dev", async () => {
+		process.env.NODE_ENV = "development";
+		process.env.COOKIE_SECURE = "true";
+
+		const { AUTH_CONFIG } = await importAuthConfigFresh();
+		expect(AUTH_CONFIG.cookieSecure).toBe(true);
+	});
+
+	it("when COOKIE_SECURE is unset, cookieSecure follows isProduction", async () => {
+		setProductionEnvWithAllSecrets();
+		unsetEnv("COOKIE_SECURE");
+
+		const { AUTH_CONFIG: prodConfig } = await importAuthConfigFresh();
+		expect(prodConfig.cookieSecure).toBe(true);
+
+		restoreEnv();
+		vi.resetModules();
+
+		process.env.NODE_ENV = "development";
+		unsetEnv("COOKIE_SECURE");
+
+		const { AUTH_CONFIG: devConfig } = await importAuthConfigFresh();
+		expect(devConfig.cookieSecure).toBe(false);
+	});
+
+	it("throws for invalid COOKIE_SECURE values", async () => {
+		setProductionEnvWithAllSecrets();
+		process.env.COOKIE_SECURE = "maybe";
+
+		await expect(importAuthConfigFresh()).rejects.toThrow(
+			"COOKIE_SECURE must be a boolean value (true/false)",
+		);
 	});
 });
