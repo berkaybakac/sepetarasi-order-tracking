@@ -1,4 +1,4 @@
-# Sepetarasi Order Tracking
+# SEPET ARASI Order Tracking
 
 LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Paneli ve Müşteri Ekranı.
 
@@ -21,11 +21,11 @@ cd packages/kasa && npm run dev
 
 | Arayüz | Dev (Mac) | Pi4 |
 | --- | --- | --- |
-| Yönetici Paneli | `localhost:5173` | `sepetarasi.local:3000` |
-| Müşteri Ekranı | `localhost:5173/display` | `sepetarasi.local:3000/display` |
-| Admin | `localhost:5173/admin` | `sepetarasi.local:3000/admin` |
-| API | `localhost:3000` | `sepetarasi.local:3000` |
-| Kasa | Electron penceresi (`npm run dev`) | `.app` / `.exe` build |
+| Yönetici Paneli | http://localhost:5173 | http://sepetarasi.local:3000 |
+| Müşteri Ekranı | http://localhost:5173/display | http://sepetarasi.local:3000/display |
+| Admin | http://localhost:5173/admin | http://sepetarasi.local:3000/admin |
+| API | http://localhost:3000 | http://sepetarasi.local:3000 |
+| Kasa | Electron penceresi | `.app` / `.exe` build |
 
 Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
 
@@ -116,7 +116,7 @@ Neden olur: `npm install` sonrası ilk `npm run build` atlandıysa veya `package
 ```bash
 # macOS .app
 cd packages/kasa && npm run build
-open "$PWD/release/mac-arm64/Sepetarasi Kasa.app"
+open "$PWD/release/mac-arm64/SEPET ARASI KASA.app"
 
 # Windows .exe (Mac üzerinde cross-compile)
 cd packages/kasa && npm run build:win
