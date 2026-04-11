@@ -5,24 +5,13 @@ export const createOrderBodySchema = {
 	required: ["customer_name", "order_type"],
 	properties: {
 		terminal_id: { type: "string" },
-		customer_name: { type: "string", minLength: 1 },
+		customer_name: { type: "string", minLength: 1, maxLength: 60 },
 		order_type: { type: "string", enum: ORDER_TYPES },
 		target_minutes: { type: "integer", minimum: 1 },
-		notes: { type: "string" },
-		items: {
-			type: "array",
-			minItems: 0,
-			items: {
-				type: "object",
-				required: ["name", "quantity", "unit_price"],
-				properties: {
-					name: { type: "string", minLength: 1 },
-					quantity: { type: "integer", minimum: 1 },
-					unit_price: { type: "integer", minimum: 0 },
-					notes: { type: "string" },
-				},
-			},
-		},
+		notes: { type: "string", maxLength: 300 },
+		// Legacy field: accepted for API compatibility, carries no business logic.
+		// Kasa sends []. Item-level validation removed — validating fields nobody writes is noise.
+		items: { type: "array" },
 	},
 } as const;
 

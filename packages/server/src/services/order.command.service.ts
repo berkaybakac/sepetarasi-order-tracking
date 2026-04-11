@@ -21,7 +21,7 @@ export class OrderCommandService {
 		this.query = new OrderQueryService(db);
 	}
 
-	/** Create a new order with items (atomic) */
+	/** Create a new order (customer_name + order_type required; items accepted for compatibility but carry no business logic) */
 	create(input: CreateOrderInput) {
 		const normalizedInput = normalizeCreateOrderInput(input);
 		const now = new Date().toISOString();

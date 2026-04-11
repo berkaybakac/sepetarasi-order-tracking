@@ -97,6 +97,36 @@ describe("OrderForm", () => {
 		expect(container.textContent).not.toContain("Tekrar Yazdır");
 	});
 
+	it("sends Masada order_type when toggled", async () => {
+		vi.mocked(api.createOrder).mockResolvedValueOnce(buildOrder({ order_type: "Masada" }));
+
+		await setInputValue(getCustomerInput(), "Ali");
+		await act(async () => {
+			getMasadaButton().click();
+		});
+		await submitForm();
+
+		expect(api.createOrder).toHaveBeenCalledWith(expect.objectContaining({ order_type: "Masada" }));
+	});
+
+	it("clears the retry button after a successful subsequent print", async () => {
+		// First order: print fails → retry button visible
+		vi.mocked(api.createOrder).mockResolvedValueOnce(buildOrder({ display_no: 10 }));
+		printReceipt.mockResolvedValueOnce({ ok: false, error: "Printer timeout" });
+
+		await setInputValue(getCustomerInput(), "Zeynep");
+		await submitForm();
+		expect(container.textContent).toContain("Tekrar Yazdır");
+
+		// Second order: print succeeds → retry button must disappear
+		vi.mocked(api.createOrder).mockResolvedValueOnce(buildOrder({ display_no: 11 }));
+		printReceipt.mockResolvedValueOnce({ ok: true });
+
+		await setInputValue(getCustomerInput(), "Fatma");
+		await submitForm();
+		expect(container.textContent).not.toContain("Tekrar Yazdır");
+	});
+
 	it("shows retry action when printing fails and retries the last receipt", async () => {
 		vi.mocked(api.createOrder).mockResolvedValueOnce(
 			buildOrder({ display_no: 15, customer_name: "Mehmet", notes: null }),
@@ -134,6 +164,16 @@ describe("OrderForm", () => {
 			throw new Error("Notes textarea not found");
 		}
 		return textarea;
+	}
+
+	function getMasadaButton() {
+		const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+			candidate.textContent?.includes("Masada"),
+		);
+		if (!(button instanceof HTMLButtonElement)) {
+			throw new Error("Masada button not found");
+		}
+		return button;
 	}
 
 	function getRetryButton() {

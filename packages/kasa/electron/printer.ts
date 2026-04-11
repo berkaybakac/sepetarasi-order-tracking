@@ -31,6 +31,11 @@ const CMD = {
 
 const RECEIPT_WIDTH = 32;
 const RECEIPT_TIMEZONE = "Europe/Istanbul";
+// How long to wait after writing before closing the socket.
+// Two-copy receipts on a slow network (RPi4) need more than 200ms.
+const PRINT_DRAIN_MS = 500;
+// Connection + write timeout. Allows for slow/sleeping printers on LAN.
+const SOCKET_TIMEOUT_MS = 10_000;
 
 function encode(text: string): Buffer {
 	return iconv.encode(text, "cp857");
@@ -131,7 +136,20 @@ export function buildReceiptDocument(order: PrintOrder): Buffer {
 	]);
 }
 
-export function printReceipt(order: PrintOrder, printerIp: string): Promise<void> {
+const RETRY_DELAYS_MS = [500, 1000, 2000];
+
+export async function printReceiptWithRetry(order: PrintOrder, printerIp: string): Promise<void> {
+	for (const delay of RETRY_DELAYS_MS) {
+		try {
+			return await printReceipt(order, printerIp);
+		} catch {
+			await new Promise((r) => setTimeout(r, delay));
+		}
+	}
+	return printReceipt(order, printerIp); // final attempt — let error propagate
+}
+
+function printReceipt(order: PrintOrder, printerIp: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const receipt = buildReceiptDocument(order);
 
@@ -146,11 +164,11 @@ export function printReceipt(order: PrintOrder, printerIp: string): Promise<void
 				setTimeout(() => {
 					socket.end();
 					resolve();
-				}, 200);
+				}, PRINT_DRAIN_MS);
 			});
 		});
 
-		socket.setTimeout(5000);
+		socket.setTimeout(SOCKET_TIMEOUT_MS);
 		socket.on("timeout", () => {
 			socket.destroy();
 			reject(new Error(`Printer timeout: ${printerIp}:9100`));

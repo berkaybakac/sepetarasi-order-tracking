@@ -1,8 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, app, globalShortcut, ipcMain } from "electron";
 import { discoverServer } from "./discovery";
-import { printReceipt } from "./printer";
+import { printReceiptWithRetry } from "./printer";
 
 interface KasaConfig {
 	serverUrl: string;
@@ -35,11 +35,16 @@ function loadConfig(): KasaConfig {
 		const configPath = getConfigPath();
 		if (existsSync(configPath)) {
 			const saved = JSON.parse(readFileSync(configPath, "utf-8")) as StoredKasaConfig;
-			return {
+			const config: KasaConfig = {
 				...DEFAULT_CONFIG,
 				...saved,
 				printerIp: saved.printerIp ?? saved.printerName ?? DEFAULT_CONFIG.printerIp,
 			};
+			// One-time migration: printerName → printerIp. Persist so the old field is gone.
+			if (saved.printerName && !saved.printerIp) {
+				saveConfig(config);
+			}
+			return config;
 		}
 	} catch (err) {
 		console.error("Failed to load config, using defaults:", err);
@@ -49,6 +54,34 @@ function loadConfig(): KasaConfig {
 
 function saveConfig(config: KasaConfig) {
 	writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
+}
+
+function logPrintError(orderId: string, printerIp: string, message: string) {
+	try {
+		const logDir = app.getPath("logs");
+		mkdirSync(logDir, { recursive: true });
+		const entry = `[${new Date().toISOString()}] order=${orderId} printer=${printerIp} error=${message}\n`;
+		appendFileSync(`${logDir}/print-errors.log`, entry);
+	} catch {
+		// ignore log write failures — don't mask the original error
+	}
+}
+
+// Maps low-level Node.js network errors to user-facing Turkish messages.
+// Technical detail stays in the log; kasiyer sees only actionable text.
+function friendlyPrintError(err: unknown): string {
+	const msg = err instanceof Error ? err.message : String(err);
+	if (msg.includes("ECONNREFUSED"))
+		return "Yazıcıya bağlanılamadı — yazıcının açık olduğunu kontrol edin";
+	if (msg.includes("timeout") || msg.includes("ETIMEDOUT"))
+		return "Yazıcı yanıt vermedi — tekrar deneyin";
+	if (msg.includes("ENOTFOUND") || msg.includes("EADDRNOTAVAIL"))
+		return "Yazıcı adresi bulunamadı — ayarları kontrol edin";
+	if (msg.includes("ENETUNREACH") || msg.includes("EHOSTUNREACH"))
+		return "Yazıcıya erişilemiyor — ağ bağlantısını kontrol edin";
+	if (msg.includes("EPIPE") || msg.includes("ECONNRESET"))
+		return "Yazıcı bağlantısı kesildi — tekrar deneyin";
+	return "Yazıcı hatası — tekrar deneyin";
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -84,13 +117,17 @@ ipcMain.handle("save-config", (_event, config: KasaConfig) => {
 ipcMain.handle("discover-server", () => discoverServer(loadConfig().serverUrl));
 ipcMain.handle("print-receipt", async (_event, order) => {
 	const { printerIp } = loadConfig();
-	if (!printerIp) return { ok: false, error: "Yazıcı IP adresi tanımlı değil" };
+	if (!printerIp) {
+		console.warn("Print attempted but printerIp is not configured");
+		return { ok: false, error: "Yazıcı ayarı yapılmamış — Ayarlar'dan IP adresini girin" };
+	}
 	try {
-		await printReceipt(order, printerIp);
+		await printReceiptWithRetry(order, printerIp);
 		return { ok: true };
 	} catch (err) {
-		console.error("Print error:", err);
-		return { ok: false, error: (err as Error).message };
+		const raw = (err as Error).message;
+		logPrintError(order.id ?? "unknown", printerIp, raw);
+		return { ok: false, error: friendlyPrintError(err) };
 	}
 });
 

@@ -31,6 +31,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (submitting) return;
 		setError(null);
 		setPrintError(null);
 
@@ -54,6 +55,8 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 				setPrintError(
 					`Sipariş #${formatDisplayNo(order.display_no)} oluşturuldu fakat fiş yazdırılamadı: ${printResult.error ?? "Bilinmeyen hata"}`,
 				);
+			} else {
+				setLastPrintableOrder(null);
 			}
 
 			setCustomerName("");
@@ -93,6 +96,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 				placeholder="Müşteri adı"
 				value={customerName}
 				onChange={(e) => setCustomerName(e.target.value)}
+				maxLength={60}
 				className="w-full border rounded-lg px-3 py-2 text-lg mb-3"
 			/>
 
@@ -125,6 +129,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 				placeholder="Not (opsiyonel)"
 				value={notes}
 				onChange={(e) => setNotes(e.target.value)}
+				maxLength={300}
 				className="w-full border rounded-lg px-3 py-2 mb-3 text-sm resize-none"
 				rows={2}
 			/>
