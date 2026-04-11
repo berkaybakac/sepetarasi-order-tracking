@@ -31,7 +31,7 @@ function useVisibleReadyOrders(readyOrders: Order[]): Order[] {
 
 function CountBadge({ count }: { count: number }) {
 	return (
-		<span className="ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white text-xs font-bold">
+		<span className="ml-2 inline-flex items-center justify-center w-[clamp(1rem,3vmin,2rem)] h-[clamp(1rem,3vmin,2rem)] rounded-full bg-white/20 text-white text-[clamp(0.5rem,2vmin,1rem)] font-bold">
 			{count}
 		</span>
 	);
@@ -40,7 +40,7 @@ function CountBadge({ count }: { count: number }) {
 function OrderNumber({ displayNo, highlight }: { displayNo: number; highlight?: boolean }) {
 	return (
 		<div
-			className={`rounded-xl px-6 py-4 text-center font-bold text-3xl transition-all duration-300
+			className={`rounded-xl px-[clamp(0.25rem,1.5vmin,1.5rem)] py-[clamp(0.125rem,1vmin,1rem)] text-center font-bold text-[clamp(1.25rem,8vmin,5rem)] transition-all duration-300
 				${
 					highlight
 						? "bg-green-500 text-white scale-110 shadow-lg shadow-green-500/30"
@@ -86,39 +86,41 @@ export function CustomerDisplay() {
 		<div className="min-h-screen bg-gray-950 text-white flex flex-col">
 			{/* Now Serving Banner */}
 			{nowPlaying && (
-				<div className="bg-green-600 text-center py-6 animate-pulse">
-					<p className="text-2xl font-medium">Simdi Servis</p>
-					<p className="text-7xl font-bold mt-2">#{nowPlaying.display_no}</p>
+				<div className="bg-green-600 text-center py-[clamp(0.5rem,3vmin,2rem)] animate-pulse">
+					<p className="text-[clamp(1rem,5vmin,2.5rem)] font-medium">Simdi Servis</p>
+					<p className="text-[clamp(2rem,18vmin,10rem)] font-bold mt-[clamp(0.125rem,1vmin,0.5rem)]">
+						#{nowPlaying.display_no}
+					</p>
 				</div>
 			)}
 
 			{/* Main Grid */}
 			<div className="flex-1 grid grid-cols-2 gap-0">
 				{/* Preparing Column */}
-				<div className="p-6 border-r border-gray-800">
-					<h2 className="text-xl font-bold text-yellow-400 mb-4 text-center uppercase tracking-wider flex items-center justify-center">
+				<div className="p-[clamp(0.25rem,2vmin,2rem)] border-r border-gray-800">
+					<h2 className="text-[clamp(0.875rem,4vmin,2rem)] font-bold text-yellow-400 mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center">
 						Hazirlaniyor
 						<CountBadge count={preparingOrders.length} />
 					</h2>
-					<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)]">
 						{preparingOrders.map((order) => (
 							<OrderNumber key={order.id} displayNo={order.display_no} />
 						))}
 					</div>
 					{preparingOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-lg mt-8">
+						<p className="text-gray-600 text-center text-[clamp(0.875rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)]">
 							{UI_LABELS.DISPLAY.NO_PREPARING_ORDERS}
 						</p>
 					)}
 				</div>
 
 				{/* Ready Column */}
-				<div className="p-6">
-					<h2 className="text-xl font-bold text-green-400 mb-4 text-center uppercase tracking-wider flex items-center justify-center">
+				<div className="p-[clamp(0.25rem,2vmin,2rem)]">
+					<h2 className="text-[clamp(0.875rem,4vmin,2rem)] font-bold text-green-400 mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center">
 						Hazir
 						<CountBadge count={readyOrders.length} />
 					</h2>
-					<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)]">
 						{readyOrders.map((order) => (
 							<OrderNumber
 								key={order.id}
@@ -128,7 +130,7 @@ export function CustomerDisplay() {
 						))}
 					</div>
 					{readyOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-lg mt-8">
+						<p className="text-gray-600 text-center text-[clamp(0.875rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)]">
 							{UI_LABELS.DISPLAY.NO_READY_ORDERS}
 						</p>
 					)}

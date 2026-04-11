@@ -48,3 +48,15 @@ Bu dosya, feature gelistirmeyi bloklamayan ama teknik borc birikimini kontrol al
   - Operasyon hizi vs guvenlik dengesi icin hedef metrik nedir? (429 orani, siparis olusturma gecikmesi, reconnect/hydrate suresi)
   - Bu karar yalnizca konfig degisikligi ile mi cozulur, yoksa orta olcekte refactor gerekir mi?
 - Release Gate: Prod oncesi zorunlu inceleme ve karar.
+
+### 5) SEPET ARASI Isim/Logo Icin Tam SSoT
+- Durum: Backlog (simdilik aksiyon yok)
+- Oncelik: P2
+- Kapsam:
+  - UI brand metinleri
+  - Electron window title
+  - `/packages/kasa/index.html` title
+  - `/packages/kasa/package.json` (`productName`, ilgili metadata)
+- Problem: Isim/logo birden fazla yerde elle yonetiliyor; degisiklikte drift riski var.
+- Hedef: Tek kaynaktan uretim (brand config/build step) ile UI + desktop metadata senkronu.
+- Not: Push/merge bloklayici degil; MVP akisini durdurmaz.

@@ -23,10 +23,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		credentials: "include", // Send auth cookies
 	});
 
+	if (res.status === 429) {
+		throw new Error("Çok fazla deneme. 1 dakika bekleyin.");
+	}
+
 	const json = await res.json();
 	if (!json.ok) {
-		// If authorization fails for admin paths, we can let the UI catch it or return standard error
-		throw new Error(json.error?.message || "An unknown error occurred");
+		throw new Error(json.error?.message || "Bilinmeyen bir hata oluştu.");
 	}
 	return json.data;
 }
