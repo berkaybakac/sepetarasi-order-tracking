@@ -92,7 +92,7 @@ function createWindow() {
 		height: 768,
 		minWidth: 800,
 		minHeight: 600,
-		title: "Sepetarasi Kasa",
+		title: "SEPET ARASI KASA",
 		webPreferences: {
 			preload: join(__dirname, "preload.js"),
 			contextIsolation: true,

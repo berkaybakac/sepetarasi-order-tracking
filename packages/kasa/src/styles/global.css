@@ -1,2 +1,86 @@
 @import "tailwindcss";
 @import "@sepetarasi/shared/theme.css";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+html,
+body {
+	font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+	background-color: #020617; /* slate-950 */
+	color: #fff;
+	/* Ambient glow — gives depth, prevents "pitch black" flatness */
+	background-image: radial-gradient(
+			ellipse at 15% 65%,
+			rgba(16, 185, 129, 0.07) 0%,
+			transparent 55%
+		), radial-gradient(ellipse at 85% 15%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
+}
+
+/* Slightly brighter placeholders for fast glance readability in kiosk lighting */
+input::placeholder,
+textarea::placeholder {
+	color: #94a3b8;
+	opacity: 1;
+}
+
+/* ── Touch-screen optimizations ──────────────────────────────── */
+
+/* Remove the blue/gray tap flash on Chromium/Electron touchscreens */
+* {
+	-webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"] {
+	/* Prevents 300ms tap delay and accidental double-tap zoom on buttons */
+	touch-action: manipulation;
+	/* Prevents text selection when cashier holds a button */
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Keyboard focus ring — visible only when navigating via keyboard (not mouse/touch) */
+button:focus-visible {
+	outline: 2px solid #10b981; /* emerald-500 */
+	outline-offset: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+
+/* --- Delay warning animations --- */
+
+@keyframes pulse-warn {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 0 0 0 rgba(245, 158, 11, 0);
+	}
+	50% {
+		box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.25), 0 0 18px rgba(245, 158, 11, 0.12);
+	}
+}
+
+@keyframes pulse-critical {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 0 0 0 rgba(239, 68, 68, 0);
+	}
+	50% {
+		box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.4), 0 0 24px rgba(239, 68, 68, 0.2);
+	}
+}
+
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: #0f172a; /* slate-900 */
+}
+
+::-webkit-scrollbar-thumb {
+	background: #334155; /* slate-700 */
+	border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #475569; /* slate-600 */
+}

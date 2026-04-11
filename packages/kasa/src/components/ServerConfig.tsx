@@ -36,12 +36,18 @@ interface ServerConfigProps {
 	onConnected: () => void;
 }
 
+const inputClass =
+	"w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors";
+
+const labelClass = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
+
 export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [url, setUrl] = useState(getBaseUrl());
 	const [terminalId, setTerminalId] = useState("KASA-1");
 	const [terminalName, setTerminalName] = useState("Kasa 1");
 	const [printerIp, setPrinterIp] = useState("");
 	const [cashierToken, setCashierToken] = useState("local-dev-cashier-token");
+	const [showCashierToken, setShowCashierToken] = useState(false);
 	const [testing, setTesting] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -119,27 +125,31 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-50">
-			<div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-				<h1 className="text-2xl font-bold mb-2">Sepetarası Kasa</h1>
-				<p className="text-gray-500 mb-6">Kasa ayarlarını yapılandırın</p>
+		<div className="min-h-screen flex items-center justify-center">
+			<div className="bg-slate-900/80 border border-white/[0.07] rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-black/40">
+				<h1 className="text-2xl font-bold text-white mb-1 tracking-wide">SEPET ARASI KASA</h1>
+				<p className="text-slate-400 mb-7">Kasa ayarlarını yapılandırın</p>
 
-				<label htmlFor="server-url" className="block text-sm font-medium text-gray-700 mb-1">
-					Sunucu Adresi
-				</label>
-				<input
-					id="server-url"
-					type="text"
-					value={url}
-					onChange={(e) => setUrl(e.target.value)}
-					placeholder="http://sepetarasi.local:3000"
-					className="w-full border rounded-lg px-4 py-3 text-lg mb-3"
-					onKeyDown={(e) => e.key === "Enter" && handleTest()}
-				/>
+				{/* Sunucu Adresi */}
+				<div className="mb-4">
+					<label htmlFor="server-url" className={labelClass}>
+						Sunucu Adresi
+					</label>
+					<input
+						id="server-url"
+						type="text"
+						value={url}
+						onChange={(e) => setUrl(e.target.value)}
+						placeholder="http://sepetarasi.local:3000"
+						className={inputClass}
+						onKeyDown={(e) => e.key === "Enter" && handleTest()}
+					/>
+				</div>
 
-				<div className="grid grid-cols-2 gap-3 mb-3">
+				{/* Terminal ID + Adı */}
+				<div className="grid grid-cols-2 gap-3 mb-4">
 					<div>
-						<label htmlFor="terminal-id" className="block text-sm font-medium text-gray-700 mb-1">
+						<label htmlFor="terminal-id" className={labelClass}>
 							Terminal ID
 						</label>
 						<input
@@ -148,11 +158,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 							value={terminalId}
 							onChange={(e) => setTerminalId(e.target.value)}
 							placeholder="KASA-1"
-							className="w-full border rounded-lg px-3 py-2"
+							className={inputClass}
 						/>
 					</div>
 					<div>
-						<label htmlFor="terminal-name" className="block text-sm font-medium text-gray-700 mb-1">
+						<label htmlFor="terminal-name" className={labelClass}>
 							Terminal Adı
 						</label>
 						<input
@@ -161,58 +171,82 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 							value={terminalName}
 							onChange={(e) => setTerminalName(e.target.value)}
 							placeholder="Kasa 1"
-							className="w-full border rounded-lg px-3 py-2"
+							className={inputClass}
 						/>
 					</div>
 				</div>
 
-				<label htmlFor="cashier-token" className="block text-sm font-medium text-gray-700 mb-1">
-					Kasiyer Token
-				</label>
-				<input
-					id="cashier-token"
-					type="text"
-					value={cashierToken}
-					onChange={(e) => setCashierToken(e.target.value)}
-					placeholder="local-dev-cashier-token"
-					className="w-full border rounded-lg px-3 py-2 mb-3 font-mono text-sm"
-				/>
-
-				<label htmlFor="printer-ip" className="block text-sm font-medium text-gray-700 mb-1">
-					Yazıcı IP Adresi
-				</label>
-				<input
-					id="printer-ip"
-					type="text"
-					value={printerIp}
-					onChange={(e) => setPrinterIp(e.target.value)}
-					placeholder="192.168.1.12"
-					className="w-full border rounded-lg px-3 py-2 mb-1"
-				/>
-				<p className="text-xs text-gray-400 mb-3">
-					Ağ yazıcısı IP adresi (boş bırakılırsa yazdırma devre dışı)
-				</p>
-
-				<div className="bg-gray-50 rounded-lg px-3 py-2 mb-4 text-sm text-gray-500">
-					Kısayol:{" "}
-					<kbd className="bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">Ctrl+Shift+O</kbd> —
-					Pencereyi göster/gizle
+				{/* Kasiyer Token */}
+				<div className="mb-4">
+					<label htmlFor="cashier-token" className={labelClass}>
+						Kasiyer Token
+					</label>
+					<div className="relative">
+						<input
+							id="cashier-token"
+							type={showCashierToken ? "text" : "password"}
+							value={cashierToken}
+							onChange={(e) => setCashierToken(e.target.value)}
+							placeholder="local-dev-cashier-token"
+							className={`${inputClass} pr-24 font-mono text-sm`}
+							autoComplete="off"
+							spellCheck={false}
+						/>
+						<button
+							type="button"
+							onClick={() => setShowCashierToken((prev) => !prev)}
+							className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-600 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-400 transition-colors"
+						>
+							{showCashierToken ? "Gizle" : "Göster"}
+						</button>
+					</div>
 				</div>
 
-				{error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+				{/* Yazıcı IP */}
+				<div className="mb-5">
+					<label htmlFor="printer-ip" className={labelClass}>
+						Yazıcı IP Adresi{" "}
+						<span className="text-slate-500 normal-case font-normal">(opsiyonel)</span>
+					</label>
+					<input
+						id="printer-ip"
+						type="text"
+						value={printerIp}
+						onChange={(e) => setPrinterIp(e.target.value)}
+						placeholder="192.168.1.12"
+						className={inputClass}
+					/>
+					<p className="text-xs text-slate-500 mt-1.5">
+						Boş bırakılırsa fiş yazdırma devre dışı kalır
+					</p>
+				</div>
+
+				{/* Kısayol bilgisi */}
+				<div className="bg-slate-800/60 border border-white/[0.05] rounded-lg px-3 py-2 mb-5 text-sm text-slate-400">
+					Kısayol:{" "}
+					<kbd className="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">
+						Ctrl+Shift+O
+					</kbd>{" "}
+					— Pencereyi göster/gizle
+				</div>
+
+				{error && (
+					<p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">
+						{error}
+					</p>
+				)}
 
 				<div className="flex gap-3">
 					<button
 						type="button"
 						onClick={handleDiscover}
 						disabled={testing || discovering || !window.electronAPI}
-						className="flex-1 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold py-3 rounded-lg text-base
-							disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+						className="flex-1 border border-slate-600 text-slate-300 hover:border-slate-500 hover:text-white hover:bg-slate-700/50 font-bold py-3 rounded-xl text-base disabled:opacity-40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
 					>
 						{discovering ? (
 							<>
-								<span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-								Sunucu aranıyor...
+								<span className="inline-block w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+								Aranıyor...
 							</>
 						) : (
 							"Otomatik Ara"
@@ -222,13 +256,17 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						type="button"
 						onClick={handleTest}
 						disabled={testing || discovering}
-						className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg text-base
-							disabled:opacity-50 transition-colors"
+						className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold py-3 rounded-xl text-base disabled:opacity-50 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(16,185,129,0.25)]"
 					>
 						{testing ? "Bağlanıyor..." : "Bağlan"}
 					</button>
 				</div>
-				{discoverHint && <p className="text-amber-600 text-sm mt-3">{discoverHint}</p>}
+
+				{discoverHint && (
+					<p className="text-amber-400 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mt-4">
+						{discoverHint}
+					</p>
+				)}
 			</div>
 		</div>
 	);

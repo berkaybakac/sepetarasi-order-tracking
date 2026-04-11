@@ -13,6 +13,9 @@ function formatDisplayNo(displayNo: number) {
 }
 
 export function OrderForm({ onCreated }: OrderFormProps) {
+	const customerInputId = "customer-name";
+	const notesTextareaId = "order-notes";
+
 	const [customerName, setCustomerName] = useState("");
 	const [orderType, setOrderType] = useState<OrderType>(DEFAULT_ORDER_TYPE);
 	const [notes, setNotes] = useState("");
@@ -29,7 +32,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 		return window.electronAPI.printReceipt(order);
 	};
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: { preventDefault(): void }) => {
 		e.preventDefault();
 		if (submitting) return;
 		setError(null);
@@ -46,7 +49,6 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 				customer_name: customerName.trim(),
 				order_type: orderType,
 				notes: notes.trim() || undefined,
-				items: [],
 			});
 
 			setLastPrintableOrder(order);
@@ -88,75 +90,107 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="bg-white rounded-xl p-4 shadow-sm overflow-hidden">
-			<h2 className="text-xl font-bold mb-4">Yeni Sipariş</h2>
+		<form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
+			<h2 className="text-base font-bold text-slate-400 uppercase tracking-widest">Yeni Sipariş</h2>
 
-			<input
-				type="text"
-				placeholder="Müşteri adı"
-				value={customerName}
-				onChange={(e) => setCustomerName(e.target.value)}
-				maxLength={60}
-				className="w-full border rounded-lg px-3 py-2 text-lg mb-3"
-			/>
-
-			<div className="flex gap-2 mb-3">
-				<button
-					type="button"
-					onClick={() => setOrderType("Paket")}
-					className={`flex-1 py-2 rounded-lg font-semibold text-base border-2 transition-colors ${
-						orderType === "Paket"
-							? "bg-indigo-600 border-indigo-600 text-white"
-							: "bg-white border-gray-300 text-gray-600 hover:border-indigo-400"
-					}`}
+			{/* Müşteri Adı */}
+			<div>
+				<label
+					htmlFor={customerInputId}
+					className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5"
 				>
-					Paket
-				</button>
-				<button
-					type="button"
-					onClick={() => setOrderType("Masada")}
-					className={`flex-1 py-2 rounded-lg font-semibold text-base border-2 transition-colors ${
-						orderType === "Masada"
-							? "bg-indigo-600 border-indigo-600 text-white"
-							: "bg-white border-gray-300 text-gray-600 hover:border-indigo-400"
-					}`}
-				>
-					Masada
-				</button>
+					Müşteri Adı
+				</label>
+				<input
+					id={customerInputId}
+					type="text"
+					placeholder="Adı giriniz"
+					value={customerName}
+					onChange={(e) => setCustomerName(e.target.value)}
+					maxLength={60}
+					className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+				/>
 			</div>
 
-			<textarea
-				placeholder="Not (opsiyonel)"
-				value={notes}
-				onChange={(e) => setNotes(e.target.value)}
-				maxLength={300}
-				className="w-full border rounded-lg px-3 py-2 mb-3 text-sm resize-none"
-				rows={2}
-			/>
+			{/* Sipariş Tipi */}
+			<fieldset>
+				<legend className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+					Sipariş Tipi
+				</legend>
+				<div className="flex gap-2">
+					<button
+						type="button"
+						onClick={() => setOrderType("Paket")}
+						className={`flex-1 py-3 rounded-lg font-bold text-base border-2 transition-all active:scale-95 ${
+							orderType === "Paket"
+								? "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.25)]"
+								: "bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white"
+						}`}
+					>
+						Paket
+					</button>
+					<button
+						type="button"
+						onClick={() => setOrderType("Masada")}
+						className={`flex-1 py-3 rounded-lg font-bold text-base border-2 transition-all active:scale-95 ${
+							orderType === "Masada"
+								? "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-500 text-white shadow-[0_0_16px_rgba(16,185,129,0.25)]"
+								: "bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white"
+						}`}
+					>
+						Masada
+					</button>
+				</div>
+			</fieldset>
 
-			{error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+			{/* Not */}
+			<div>
+				<label
+					htmlFor={notesTextareaId}
+					className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5"
+				>
+					Not <span className="text-slate-500 normal-case font-normal">(opsiyonel)</span>
+				</label>
+				<textarea
+					id={notesTextareaId}
+					placeholder="Özel istek, alerji bilgisi..."
+					value={notes}
+					onChange={(e) => setNotes(e.target.value)}
+					maxLength={300}
+					className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+					rows={2}
+				/>
+			</div>
 
+			{/* Hata mesajı */}
+			{error && (
+				<p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+					{error}
+				</p>
+			)}
+
+			{/* Fiş hatası */}
 			{printError && lastPrintableOrder && (
-				<div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+				<div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
 					<p className="font-medium">{printError}</p>
 					<button
 						type="button"
 						onClick={handleRetryPrint}
 						disabled={printing}
-						className="mt-2 rounded-md border border-amber-500 px-3 py-1.5 font-semibold text-amber-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+						className="mt-3 rounded-lg border border-amber-600/50 px-3 py-2 font-semibold text-amber-400 transition-colors hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						{printing ? "Yazdırılıyor..." : "Tekrar Yazdır"}
 					</button>
 				</div>
 			)}
 
+			{/* Submit */}
 			<button
 				type="submit"
 				disabled={submitting || printing}
-				className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg text-lg
-					disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+				className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:from-emerald-600 active:to-teal-600 text-white font-bold py-5 rounded-xl text-xl shadow-[0_0_28px_rgba(16,185,129,0.30)] hover:shadow-[0_0_36px_rgba(16,185,129,0.45)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.98]"
 			>
-				{submitting ? "Oluşturuluyor..." : "Sipariş Oluştur"}
+				{submitting ? "Oluşturuluyor..." : "Sipariş Ver"}
 			</button>
 		</form>
 	);

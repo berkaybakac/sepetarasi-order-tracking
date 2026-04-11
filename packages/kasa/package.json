@@ -1,7 +1,7 @@
 {
 	"name": "@sepetarasi/kasa",
 	"version": "0.1.0",
-	"description": "Sepetarasi Order Tracking Kasa Application",
+	"description": "SEPET ARASI Order Tracking Kasa Application",
 	"author": "Berkay Bakac",
 	"private": true,
 	"main": "dist-electron/main.js",
@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@sepetarasi/shared": "*",
 		"@tailwindcss/vite": "^4.2.2",
+		"framer-motion": "^12.38.0",
 		"iconv-lite": "^0.6.3",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
@@ -39,7 +40,7 @@
 	},
 	"build": {
 		"appId": "com.sepetarasi.kasa",
-		"productName": "Sepetarasi Kasa",
+		"productName": "SEPET ARASI KASA",
 		"directories": {
 			"output": "release"
 		},

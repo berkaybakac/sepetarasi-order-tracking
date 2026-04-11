@@ -84,7 +84,6 @@ describe("OrderForm", () => {
 			customer_name: "Ayşe",
 			order_type: "Paket",
 			notes: "Az acılı",
-			items: [],
 		});
 		expect(printReceipt).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -151,7 +150,7 @@ describe("OrderForm", () => {
 	});
 
 	function getCustomerInput() {
-		const input = container.querySelector('input[placeholder="Müşteri adı"]');
+		const input = container.querySelector("#customer-name");
 		if (!(input instanceof HTMLInputElement)) {
 			throw new Error("Customer input not found");
 		}
@@ -159,7 +158,7 @@ describe("OrderForm", () => {
 	}
 
 	function getNotesTextarea() {
-		const textarea = container.querySelector('textarea[placeholder="Not (opsiyonel)"]');
+		const textarea = container.querySelector("#order-notes");
 		if (!(textarea instanceof HTMLTextAreaElement)) {
 			throw new Error("Notes textarea not found");
 		}
