@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"test:unit": "vitest run tests/orderStore.test.ts",
+		"test:unit": "vitest run tests/orderStore.test.ts tests/display-config.test.ts",
 		"test:integration": "echo 'No integration tests for web yet' && exit 0"
 	},
 	"dependencies": {

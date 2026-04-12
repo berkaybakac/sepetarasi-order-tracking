@@ -3,6 +3,7 @@ import type { WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useState } from "react";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useOrderStore } from "../../stores/orderStore";
+import { DisplaySettingsCard } from "./DisplaySettingsCard";
 import { OrderColumns, StatCards } from "./OrderColumns";
 import { PeriodStats } from "./PeriodStats";
 import { VolumeControl } from "./VolumeControl";
@@ -58,9 +59,10 @@ export function AdminView() {
 
 				<main className="flex-1 p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
 					<StatCards />
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 						<PeriodStats wsTrigger={internalStatsTrigger} reconnectedAt={lastReconnectedAt} />
 						<VolumeControl />
+						<DisplaySettingsCard />
 					</div>
 					<OrderColumns />
 				</main>

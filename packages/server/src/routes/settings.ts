@@ -1,11 +1,21 @@
 import { API_ROUTES } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
-import { isEditableSettingKey, validateSettingValue } from "../config/settings.js";
+import {
+	isEditableSettingKey,
+	toPublicSettings,
+	validateSettingValue,
+} from "../config/settings.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
 
 export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
+	// GET /api/v1/settings/public - authentication gerektirmeyen, ekrana acik ayarlar
+	app.get(API_ROUTES.V1.SETTINGS_PUBLIC, async () => {
+		const rows = db.select().from(appSettings).all();
+		return { ok: true, data: toPublicSettings(rows) };
+	});
+
 	// GET /api/v1/settings - readonly, tum key-value ciftlerini doner
 	app.get(API_ROUTES.V1.SETTINGS, { preHandler: requireAdmin }, async () => {
 		const rows = db.select().from(appSettings).all();

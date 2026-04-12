@@ -60,6 +60,10 @@ export const WS_CHANNELS = {
 export const SETTING_KEYS = {
 	AUDIO_VOLUME: "audio_volume",
 	ADMIN_PASSWORD_HASH: "admin_password_hash",
+	DISPLAY_PROFILE: "display_profile",
+	DISPLAY_LAYOUT: "display_layout",
+	DISPLAY_MAX_VISIBLE: "display_max_visible",
+	DISPLAY_PAGE_SECONDS: "display_page_seconds",
 } as const;
 
 /** İstatistik Periyotları Seçenekleri (SSoT) */
@@ -75,6 +79,7 @@ export const API_ROUTES = {
 		STATS_TODAY: "/api/v1/stats/today",
 		STATS: "/api/v1/stats",
 		SETTINGS: "/api/v1/settings",
+		SETTINGS_PUBLIC: "/api/v1/settings/public",
 		SETTING_BY_KEY: (key: string) => `/api/v1/settings/${key}`,
 		AUTH: {
 			LOGIN: "/api/v1/auth/login",

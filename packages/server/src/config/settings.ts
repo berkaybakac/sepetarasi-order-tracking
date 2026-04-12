@@ -2,6 +2,10 @@ import { SETTING_KEYS } from "@sepetarasi/shared";
 
 const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
+	SETTING_KEYS.DISPLAY_PROFILE,
+	SETTING_KEYS.DISPLAY_LAYOUT,
+	SETTING_KEYS.DISPLAY_MAX_VISIBLE,
+	SETTING_KEYS.DISPLAY_PAGE_SECONDS,
 	"announcement_delay_ms",
 	"business_name",
 	"receipt_business_name",
@@ -11,10 +15,36 @@ const EDITABLE_SETTING_KEYS = [
 	"receipt_tax_office",
 ] as const;
 
+const DISPLAY_PROFILE_VALUES = new Set(["auto", "led_256x512", "tv_1080p"]);
+const DISPLAY_LAYOUT_VALUES = new Set(["auto", "split", "stack"]);
+
+const PUBLIC_SETTING_KEYS = new Set<string>([
+	SETTING_KEYS.DISPLAY_PROFILE,
+	SETTING_KEYS.DISPLAY_LAYOUT,
+	SETTING_KEYS.DISPLAY_MAX_VISIBLE,
+	SETTING_KEYS.DISPLAY_PAGE_SECONDS,
+]);
+
 const editableSettings = new Set<string>(EDITABLE_SETTING_KEYS);
 
 export function isEditableSettingKey(key: string): boolean {
 	return editableSettings.has(key);
+}
+
+export function isPublicSettingKey(key: string): boolean {
+	return PUBLIC_SETTING_KEYS.has(key);
+}
+
+export function toPublicSettings(
+	rows: Array<{ key: string; value: string }>,
+): Record<string, string> {
+	const settings: Record<string, string> = {};
+	for (const row of rows) {
+		if (isPublicSettingKey(row.key)) {
+			settings[row.key] = row.value;
+		}
+	}
+	return settings;
 }
 
 export function validateSettingValue(key: string, value: string): string | null {
@@ -23,6 +53,30 @@ export function validateSettingValue(key: string, value: string): string | null 
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < 0 || num > 100) {
 				return "audio_volume must be an integer between 0 and 100";
+			}
+			return null;
+		}
+		case SETTING_KEYS.DISPLAY_PROFILE:
+			if (!DISPLAY_PROFILE_VALUES.has(value)) {
+				return "display_profile must be one of: auto, led_256x512, tv_1080p";
+			}
+			return null;
+		case SETTING_KEYS.DISPLAY_LAYOUT:
+			if (!DISPLAY_LAYOUT_VALUES.has(value)) {
+				return "display_layout must be one of: auto, split, stack";
+			}
+			return null;
+		case SETTING_KEYS.DISPLAY_MAX_VISIBLE: {
+			const maxVisible = Number(value);
+			if (!Number.isInteger(maxVisible) || maxVisible < 1 || maxVisible > 120) {
+				return "display_max_visible must be an integer between 1 and 120";
+			}
+			return null;
+		}
+		case SETTING_KEYS.DISPLAY_PAGE_SECONDS: {
+			const pageSeconds = Number(value);
+			if (!Number.isInteger(pageSeconds) || pageSeconds < 3 || pageSeconds > 30) {
+				return "display_page_seconds must be an integer between 3 and 30";
 			}
 			return null;
 		}

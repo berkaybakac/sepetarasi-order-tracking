@@ -288,6 +288,30 @@ describe("GET /api/v1/settings", () => {
 	});
 });
 
+describe("GET /api/v1/settings/public", () => {
+	it("should return display settings without auth", async () => {
+		db.insert(appSettings).values({ key: "display_profile", value: "led_256x512" }).run();
+		db.insert(appSettings).values({ key: "display_layout", value: "stack" }).run();
+		db.insert(appSettings).values({ key: "display_max_visible", value: "6" }).run();
+		db.insert(appSettings).values({ key: "display_page_seconds", value: "7" }).run();
+		db.insert(appSettings).values({ key: "business_name", value: "Not Public" }).run();
+
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/settings/public",
+		});
+
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.ok).toBe(true);
+		expect(body.data.display_profile).toBe("led_256x512");
+		expect(body.data.display_layout).toBe("stack");
+		expect(body.data.display_max_visible).toBe("6");
+		expect(body.data.display_page_seconds).toBe("7");
+		expect(body.data.business_name).toBeUndefined();
+	});
+});
+
 describe("PATCH /api/v1/settings/:key", () => {
 	it("should upsert setting value", async () => {
 		const res = await app.inject({
@@ -339,6 +363,46 @@ describe("PATCH /api/v1/settings/:key", () => {
 		expect(res.statusCode).toBe(200);
 		const row = db.select().from(appSettings).where(eq(appSettings.key, "business_name")).get();
 		expect(row?.value).toBe("Test Cafe Updated");
+	});
+
+	it("should accept display settings", async () => {
+		const profileRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_profile",
+			headers: { cookie: adminCookie },
+			payload: { value: "tv_1080p" },
+		});
+		expect(profileRes.statusCode).toBe(200);
+
+		const pageRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_page_seconds",
+			headers: { cookie: adminCookie },
+			payload: { value: "9" },
+		});
+		expect(pageRes.statusCode).toBe(200);
+	});
+
+	it("should reject invalid display_profile", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_profile",
+			headers: { cookie: adminCookie },
+			payload: { value: "unknown-profile" },
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
+	});
+
+	it("should reject invalid display_page_seconds", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_page_seconds",
+			headers: { cookie: adminCookie },
+			payload: { value: "1" },
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
 	});
 });
 

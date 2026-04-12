@@ -118,6 +118,28 @@ describe("Permission matrix", () => {
 		expect(adminRes.statusCode).toBe(200);
 	});
 
+	it("GET /api/v1/settings/public allows anonymous, cashier, and admin", async () => {
+		const anonymousRes = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.SETTINGS_PUBLIC,
+		});
+		expect(anonymousRes.statusCode).toBe(200);
+
+		const cashierRes = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.SETTINGS_PUBLIC,
+			headers: withCashierAuth(),
+		});
+		expect(cashierRes.statusCode).toBe(200);
+
+		const adminRes = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.SETTINGS_PUBLIC,
+			headers: { cookie: adminCookie },
+		});
+		expect(adminRes.statusCode).toBe(200);
+	});
+
 	it("DELETE /api/v1/orders/:id allows only admin", async () => {
 		const orderId = await createOrder();
 

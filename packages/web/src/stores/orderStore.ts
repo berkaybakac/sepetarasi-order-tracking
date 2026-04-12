@@ -13,9 +13,9 @@ interface OrderState {
 	isHydrating: boolean;
 	lastReconnectedAt: number;
 
-	hydrate: (silent?: boolean) => Promise<void>;
+	hydrate: (silent?: boolean, includeStats?: boolean) => Promise<void>;
 	applyWsEvent: (msg: WsMessage) => void;
-	setConnected: (connected: boolean) => void;
+	setConnected: (connected: boolean, options?: { includeStatsOnReconnect?: boolean }) => void;
 }
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -30,7 +30,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 	lastReconnectedAt: 0,
 	nowPlaying: null,
 
-	hydrate: async (silent = false) => {
+	hydrate: async (silent = false, includeStats = true) => {
 		if (get().isHydrating) return;
 		set({ isHydrating: true });
 
@@ -41,7 +41,19 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 		while (attempt <= retries) {
 			try {
-				const [orderList, stats] = await Promise.all([api.listOrders(), api.getStats()]);
+				const orderList = await api.listOrders();
+				let stats = get().stats;
+
+				if (includeStats) {
+					try {
+						stats = await api.getStats();
+					} catch (statsErr) {
+						// Do not fail order hydration when stats endpoint is unauthorized/unavailable
+						// (e.g. public customer display route).
+						console.warn("Failed to hydrate stats:", statsErr);
+					}
+				}
+
 				const orders = new Map<string, Order>();
 				for (const order of orderList) {
 					orders.set(order.id, order);
@@ -78,7 +90,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 		}
 	},
 
-	setConnected: (connected: boolean) => {
+	setConnected: (connected: boolean, options?: { includeStatsOnReconnect?: boolean }) => {
 		const state = get();
 		if (state.connected === connected) return;
 
@@ -89,7 +101,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				// Re-connected after being disconnected!
 				set({ lastReconnectedAt: Date.now() });
 				// Silently re-hydrate the state with latest events
-				get().hydrate(true);
+				get().hydrate(true, options?.includeStatsOnReconnect ?? true);
 			} else {
 				// First time connection established
 				set({ hasConnectedOnce: true });

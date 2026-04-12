@@ -85,6 +85,44 @@ describe("Web orderStore", () => {
 		vi.useRealTimers();
 	});
 
+	it("should hydrate orders even when stats request fails", async () => {
+		const order = {
+			id: "o-1",
+			business_date: "2026-04-13",
+			display_no: 1,
+			status: OrderStatus.PREPARING,
+			terminal_id: null,
+			customer_name: "Test Musteri",
+			order_type: "Paket",
+			target_minutes: null,
+			notes: null,
+			created_at: "2026-04-13T10:00:00.000Z",
+			updated_at: "2026-04-13T10:00:00.000Z",
+			ready_at: null,
+			delivered_at: null,
+			cancelled_at: null,
+		} as Order;
+
+		vi.mocked(api.listOrders).mockResolvedValueOnce([order]);
+		vi.mocked(api.getStats).mockRejectedValueOnce(new Error("Unauthorized"));
+
+		await useOrderStore.getState().hydrate();
+
+		const state = useOrderStore.getState();
+		expect(state.orders.get(order.id)?.display_no).toBe(1);
+		expect(state.loading).toBe(false);
+		expect(state.isHydrating).toBe(false);
+	});
+
+	it("should skip stats request when hydrate is called with includeStats=false", async () => {
+		vi.mocked(api.listOrders).mockResolvedValueOnce([]);
+
+		await useOrderStore.getState().hydrate(false, false);
+
+		expect(api.listOrders).toHaveBeenCalledTimes(1);
+		expect(api.getStats).not.toHaveBeenCalled();
+	});
+
 	it("should update lastReconnectedAt when reconnecting", () => {
 		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(undefined);
 
@@ -100,6 +138,19 @@ describe("Web orderStore", () => {
 		useOrderStore.getState().setConnected(true);
 
 		expect(useOrderStore.getState().lastReconnectedAt).toBeGreaterThan(0);
-		expect(hydrateSpy).toHaveBeenCalledWith(true);
+		expect(hydrateSpy).toHaveBeenCalledWith(true, true);
+	});
+
+	it("should allow reconnect hydration without stats", () => {
+		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(undefined);
+
+		// First connect (no hydrate call)
+		useOrderStore.getState().setConnected(true, { includeStatsOnReconnect: false });
+		useOrderStore.getState().setConnected(false);
+
+		// Reconnect with display-like config
+		useOrderStore.getState().setConnected(true, { includeStatsOnReconnect: false });
+
+		expect(hydrateSpy).toHaveBeenCalledWith(true, false);
 	});
 });

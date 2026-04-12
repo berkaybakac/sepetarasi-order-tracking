@@ -17,6 +17,10 @@ const defaultSettings = [
 	{ key: "receipt_phone", value: "" },
 	{ key: "receipt_tax_id", value: "" },
 	{ key: "receipt_tax_office", value: "" },
+	{ key: "display_profile", value: "auto" },
+	{ key: "display_layout", value: "auto" },
+	{ key: "display_max_visible", value: "20" },
+	{ key: "display_page_seconds", value: "8" },
 ];
 
 for (const setting of defaultSettings) {
