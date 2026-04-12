@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { join } from "node:path";
 import { BrowserWindow, app, globalShortcut, ipcMain } from "electron";
 import { discoverServer } from "./discovery";
-import { printReceiptWithRetry } from "./printer";
+import { type PrinterEncodingWarning, printReceiptWithRetry } from "./printer";
 
 interface KasaConfig {
 	serverUrl: string;
@@ -10,11 +10,14 @@ interface KasaConfig {
 	terminalName: string;
 	hotkey: string;
 	printerIp: string;
+	printerCodePage: number;
+	printerEncoding: string;
 	cashierToken: string;
 }
 
 interface StoredKasaConfig extends Partial<KasaConfig> {
 	printerName?: string;
+	printerCodepage?: number;
 }
 
 const DEFAULT_CONFIG: KasaConfig = {
@@ -23,8 +26,22 @@ const DEFAULT_CONFIG: KasaConfig = {
 	terminalName: "Kasa 1",
 	hotkey: "Ctrl+Shift+O",
 	printerIp: "",
+	printerCodePage: 61,
+	printerEncoding: "cp857",
 	cashierToken: "local-dev-cashier-token",
 };
+
+function normalizePrinterCodePage(value: unknown): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_CONFIG.printerCodePage;
+	const n = Math.trunc(value);
+	return Math.max(0, Math.min(255, n));
+}
+
+function normalizePrinterEncoding(value: unknown): string {
+	if (typeof value !== "string") return DEFAULT_CONFIG.printerEncoding;
+	const normalized = value.trim().toLowerCase();
+	return normalized || DEFAULT_CONFIG.printerEncoding;
+}
 
 function getConfigPath(): string {
 	return join(app.getPath("userData"), "config.json");
@@ -35,13 +52,21 @@ function loadConfig(): KasaConfig {
 		const configPath = getConfigPath();
 		if (existsSync(configPath)) {
 			const saved = JSON.parse(readFileSync(configPath, "utf-8")) as StoredKasaConfig;
+			const savedCodePage = saved.printerCodePage ?? saved.printerCodepage;
 			const config: KasaConfig = {
 				...DEFAULT_CONFIG,
 				...saved,
 				printerIp: saved.printerIp ?? saved.printerName ?? DEFAULT_CONFIG.printerIp,
+				printerCodePage: normalizePrinterCodePage(savedCodePage),
+				printerEncoding: normalizePrinterEncoding(saved.printerEncoding),
 			};
 			// One-time migration: printerName → printerIp. Persist so the old field is gone.
-			if (saved.printerName && !saved.printerIp) {
+			if (
+				(saved.printerName && !saved.printerIp) ||
+				saved.printerCodepage !== undefined ||
+				saved.printerCodePage !== config.printerCodePage ||
+				saved.printerEncoding !== config.printerEncoding
+			) {
 				saveConfig(config);
 			}
 			return config;
@@ -67,6 +92,20 @@ function logPrintError(orderId: string, printerIp: string, message: string) {
 	}
 }
 
+function logPrintWarning(orderId: string, printerIp: string, warning: PrinterEncodingWarning) {
+	try {
+		const logDir = app.getPath("logs");
+		mkdirSync(logDir, { recursive: true });
+		const entry =
+			`[${new Date().toISOString()}] order=${orderId} printer=${printerIp} ` +
+			`warning=${warning.type} field=${warning.field} encoding=${warning.encoding} codePage=${warning.codePage} ` +
+			`original=${JSON.stringify(warning.original)} rendered=${JSON.stringify(warning.rendered)}\n`;
+		appendFileSync(`${logDir}/print-warnings.log`, entry);
+	} catch {
+		// ignore log write failures — warnings should never block printing
+	}
+}
+
 // Maps low-level Node.js network errors to user-facing Turkish messages.
 // Technical detail stays in the log; kasiyer sees only actionable text.
 function friendlyPrintError(err: unknown): string {
@@ -81,6 +120,8 @@ function friendlyPrintError(err: unknown): string {
 		return "Yazıcıya erişilemiyor — ağ bağlantısını kontrol edin";
 	if (msg.includes("EPIPE") || msg.includes("ECONNRESET"))
 		return "Yazıcı bağlantısı kesildi — tekrar deneyin";
+	if (msg.includes("Unsupported printer encoding"))
+		return "Yazıcı karakter seti ayarı geçersiz — Ayarlar'dan kontrol edin";
 	return "Yazıcı hatası — tekrar deneyin";
 }
 
@@ -116,13 +157,22 @@ ipcMain.handle("save-config", (_event, config: KasaConfig) => {
 });
 ipcMain.handle("discover-server", () => discoverServer(loadConfig().serverUrl));
 ipcMain.handle("print-receipt", async (_event, order) => {
-	const { printerIp } = loadConfig();
+	const { printerIp, printerCodePage, printerEncoding } = loadConfig();
 	if (!printerIp) {
 		console.warn("Print attempted but printerIp is not configured");
 		return { ok: false, error: "Yazıcı ayarı yapılmamış — Ayarlar'dan IP adresini girin" };
 	}
 	try {
-		await printReceiptWithRetry(order, printerIp);
+		await printReceiptWithRetry(order, printerIp, {
+			codePage: printerCodePage,
+			encoding: printerEncoding,
+			onWarning: (warning) => {
+				logPrintWarning(order.id ?? "unknown", printerIp, warning);
+				console.warn(
+					`[printer][charset-warning] order=${order.id ?? "unknown"} field=${warning.field} encoding=${warning.encoding} codePage=${warning.codePage}`,
+				);
+			},
+		});
 		return { ok: true };
 	} catch (err) {
 		const raw = (err as Error).message;

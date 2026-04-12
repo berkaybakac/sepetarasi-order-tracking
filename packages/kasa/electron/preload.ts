@@ -6,6 +6,8 @@ interface KasaConfig {
 	terminalName: string;
 	hotkey: string;
 	printerIp: string;
+	printerCodePage: number;
+	printerEncoding: string;
 	cashierToken: string;
 }
 

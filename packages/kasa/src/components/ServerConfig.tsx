@@ -13,6 +13,8 @@ interface KasaConfig {
 	terminalName: string;
 	hotkey: string;
 	printerIp: string;
+	printerCodePage: number;
+	printerEncoding: string;
 	cashierToken: string;
 }
 
@@ -46,6 +48,8 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [terminalId, setTerminalId] = useState("KASA-1");
 	const [terminalName, setTerminalName] = useState("Kasa 1");
 	const [printerIp, setPrinterIp] = useState("");
+	const [printerCodePage, setPrinterCodePage] = useState("61");
+	const [printerEncoding, setPrinterEncoding] = useState("cp857");
 	const [cashierToken, setCashierToken] = useState("local-dev-cashier-token");
 	const [showCashierToken, setShowCashierToken] = useState(false);
 	const [testing, setTesting] = useState(false);
@@ -61,6 +65,8 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				setTerminalId(config.terminalId);
 				setTerminalName(config.terminalName);
 				setPrinterIp(config.printerIp);
+				setPrinterCodePage(String(config.printerCodePage));
+				setPrinterEncoding(config.printerEncoding);
 				setCashierToken(config.cashierToken);
 			}
 		}
@@ -95,6 +101,13 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 		setTesting(true);
 		setError(null);
 
+		const parsedCodePage = Number.parseInt(printerCodePage, 10);
+		if (Number.isNaN(parsedCodePage) || parsedCodePage < 0 || parsedCodePage > 255) {
+			setError("Yazıcı Code Page değeri 0 ile 255 arasında olmalı");
+			setTesting(false);
+			return;
+		}
+
 		try {
 			const res = await fetch(`${url.replace(/\/$/, "")}/health`);
 			const data = await res.json();
@@ -108,6 +121,8 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					terminalName,
 					hotkey: "Ctrl+Shift+O",
 					printerIp,
+					printerCodePage: parsedCodePage,
+					printerEncoding: printerEncoding.trim().toLowerCase() || "cp857",
 					cashierToken,
 				};
 				await window.electronAPI?.saveConfig(config);
@@ -220,6 +235,41 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						Boş bırakılırsa fiş yazdırma devre dışı kalır
 					</p>
 				</div>
+
+				<div className="grid grid-cols-2 gap-3 mb-5">
+					<div>
+						<label htmlFor="printer-code-page" className={labelClass}>
+							Code Page
+						</label>
+						<input
+							id="printer-code-page"
+							type="number"
+							min={0}
+							max={255}
+							value={printerCodePage}
+							onChange={(e) => setPrinterCodePage(e.target.value)}
+							placeholder="61"
+							className={inputClass}
+						/>
+					</div>
+					<div>
+						<label htmlFor="printer-encoding" className={labelClass}>
+							Encoding
+						</label>
+						<input
+							id="printer-encoding"
+							type="text"
+							value={printerEncoding}
+							onChange={(e) => setPrinterEncoding(e.target.value)}
+							placeholder="cp857"
+							className={`${inputClass} font-mono text-sm`}
+						/>
+					</div>
+				</div>
+				<p className="text-xs text-slate-500 -mt-3 mb-5">
+					Varsayılan: <code>cp857</code> + <code>61</code>. Türkçe karakter bozuksa alternatif
+					olarak <code>cp1254</code> + <code>24</code> deneyin.
+				</p>
 
 				{/* Kısayol bilgisi */}
 				<div className="bg-slate-800/60 border border-white/[0.05] rounded-lg px-3 py-2 mb-5 text-sm text-slate-400">

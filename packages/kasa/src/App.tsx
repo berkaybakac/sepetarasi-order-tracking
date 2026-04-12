@@ -115,6 +115,8 @@ export default function App() {
 				terminalName: "",
 				hotkey: "",
 				printerIp: "",
+				printerCodePage: 61,
+				printerEncoding: "cp857",
 				cashierToken: "",
 			};
 
