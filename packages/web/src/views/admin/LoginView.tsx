@@ -1,5 +1,4 @@
-import type React from "react";
-import { useState } from "react";
+import { type SubmitEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BasketIcon } from "../../components/BasketIcon";
 import { api } from "../../lib/api";
@@ -13,7 +12,7 @@ export function LoginView() {
 	const navigate = useNavigate();
 	const { setAuthStatus } = useAuthStore();
 
-	const handleLogin = async (e: React.FormEvent) => {
+	const handleLogin = async (e: SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError(null);
 		setIsLoading(true);

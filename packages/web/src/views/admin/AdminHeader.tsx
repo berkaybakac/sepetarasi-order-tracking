@@ -1,5 +1,4 @@
-import type React from "react";
-import { useState } from "react";
+import { type SubmitEvent, useState } from "react";
 import { BasketIcon } from "../../components/BasketIcon";
 import { UI_LABELS } from "../../constants/labels";
 import { api } from "../../lib/api";
@@ -23,7 +22,7 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 		logout();
 	};
 
-	const handleChangePassword = async (e: React.FormEvent) => {
+	const handleChangePassword = async (e: SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setMessage(null);
 
