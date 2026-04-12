@@ -68,15 +68,15 @@ export function validateSettingValue(key: string, value: string): string | null 
 			return null;
 		case SETTING_KEYS.DISPLAY_MAX_VISIBLE: {
 			const maxVisible = Number(value);
-			if (!Number.isInteger(maxVisible) || maxVisible < 1 || maxVisible > 120) {
-				return "display_max_visible must be an integer between 1 and 120";
+			if (!Number.isInteger(maxVisible) || maxVisible < 1) {
+				return "display_max_visible must be an integer >= 1";
 			}
 			return null;
 		}
 		case SETTING_KEYS.DISPLAY_PAGE_SECONDS: {
 			const pageSeconds = Number(value);
-			if (!Number.isInteger(pageSeconds) || pageSeconds < 3 || pageSeconds > 30) {
-				return "display_page_seconds must be an integer between 3 and 30";
+			if (!Number.isInteger(pageSeconds) || pageSeconds < 1) {
+				return "display_page_seconds must be an integer >= 1";
 			}
 			return null;
 		}

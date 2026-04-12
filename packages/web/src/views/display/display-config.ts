@@ -54,13 +54,10 @@ export function parseDisplaySettings(settings: Record<string, string>): DisplayC
 			: defaults.layoutPreference;
 
 	const maxVisible = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_MAX_VISIBLE]);
-	const maxVisiblePerColumn = Math.max(
-		1,
-		Math.min(120, maxVisible ?? defaults.maxVisiblePerColumn),
-	);
+	const maxVisiblePerColumn = Math.max(1, maxVisible ?? defaults.maxVisiblePerColumn);
 
 	const pageSecondsRaw = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_PAGE_SECONDS]);
-	const pageSeconds = Math.max(3, Math.min(30, pageSecondsRaw ?? defaults.pageSeconds));
+	const pageSeconds = Math.max(1, pageSecondsRaw ?? defaults.pageSeconds);
 
 	return {
 		profile: baseProfile,
@@ -86,17 +83,8 @@ export function resolveLayoutMode(
 	return width < 840 || height > width ? "stack" : "split";
 }
 
-export function resolveMaxVisiblePerColumn(
-	config: DisplayConfig,
-	layoutMode: DisplayLayoutMode,
-): number {
-	if (config.profile !== "auto") {
-		return config.maxVisiblePerColumn;
-	}
-
-	// In auto mode, stack layout needs fewer items to keep numbers readable.
-	const autoDefault = layoutMode === "stack" ? 8 : 20;
-	return Math.max(1, Math.min(config.maxVisiblePerColumn, autoDefault));
+export function resolveMaxVisiblePerColumn(config: DisplayConfig): number {
+	return Math.max(1, config.maxVisiblePerColumn);
 }
 
 export function getPageCount(totalItems: number, pageSize: number): number {

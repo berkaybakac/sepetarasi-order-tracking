@@ -399,7 +399,7 @@ describe("PATCH /api/v1/settings/:key", () => {
 			method: "PATCH",
 			url: "/api/v1/settings/display_page_seconds",
 			headers: { cookie: adminCookie },
-			payload: { value: "1" },
+			payload: { value: "0" },
 		});
 		expect(res.statusCode).toBe(400);
 		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");

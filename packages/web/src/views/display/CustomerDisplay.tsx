@@ -117,8 +117,8 @@ export function CustomerDisplay() {
 	const layoutMode = useDisplayLayoutMode(displayConfig.profile, displayConfig.layoutPreference);
 	const isStackLayout = layoutMode === "stack";
 	const maxVisiblePerColumn = useMemo(
-		() => resolveMaxVisiblePerColumn(displayConfig, layoutMode),
-		[displayConfig, layoutMode],
+		() => resolveMaxVisiblePerColumn(displayConfig),
+		[displayConfig],
 	);
 	const preparingPageCount = useMemo(
 		() => getPageCount(preparingOrders.length, maxVisiblePerColumn),
@@ -187,7 +187,9 @@ export function CustomerDisplay() {
 			{/* Now Serving Banner */}
 			{nowPlaying && (
 				<div className="bg-green-600 text-center py-[clamp(0.5rem,3vmin,2rem)] animate-pulse">
-					<p className="text-[clamp(1.125rem,5vmin,2.5rem)] font-medium">Simdi Servis</p>
+					<p className="text-[clamp(1.125rem,5vmin,2.5rem)] font-medium">
+						{UI_LABELS.DISPLAY.NOW_SERVING}
+					</p>
 					<p className="text-[clamp(2rem,18vmin,10rem)] font-bold mt-[clamp(0.125rem,1vmin,0.5rem)]">
 						#{nowPlaying.display_no}
 					</p>
@@ -203,7 +205,7 @@ export function CustomerDisplay() {
 					className={`p-[clamp(0.25rem,2vmin,2rem)] ${isStackLayout ? "border-b" : "border-r"} border-gray-800`}
 				>
 					<h2 className="text-[clamp(1.125rem,4vmin,2rem)] font-bold text-yellow-400 mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center">
-						Hazirlaniyor
+						{UI_LABELS.DISPLAY.PREPARING_TITLE}
 						<CountBadge count={preparingOrders.length} />
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
@@ -221,7 +223,7 @@ export function CustomerDisplay() {
 				{/* Ready Column */}
 				<div className="p-[clamp(0.25rem,2vmin,2rem)]">
 					<h2 className="text-[clamp(1.125rem,4vmin,2rem)] font-bold text-green-400 mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center">
-						Hazir
+						{UI_LABELS.DISPLAY.READY_TITLE}
 						<CountBadge count={readyOrders.length} />
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
@@ -243,7 +245,7 @@ export function CustomerDisplay() {
 			</div>
 			{cyclePageCount > 1 && (
 				<div className="text-center text-[clamp(0.75rem,2vmin,1rem)] text-gray-500 py-2">
-					Sayfa {currentCyclePage + 1} / {cyclePageCount}
+					{UI_LABELS.DISPLAY.PAGE} {currentCyclePage + 1} / {cyclePageCount}
 				</div>
 			)}
 		</div>

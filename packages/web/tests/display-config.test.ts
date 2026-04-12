@@ -56,21 +56,18 @@ describe("display-config (sad path)", () => {
 			display_page_seconds: "999",
 		});
 
-		expect(config.maxVisiblePerColumn).toBe(120);
-		expect(config.pageSeconds).toBe(30);
+		expect(config.maxVisiblePerColumn).toBe(999);
+		expect(config.pageSeconds).toBe(999);
 	});
 });
 
 describe("display-config (critical behavior)", () => {
-	it("keeps stack mode less dense in auto profile", () => {
-		const maxVisible = resolveMaxVisiblePerColumn(
-			{
-				...DEFAULT_DISPLAY_CONFIG,
-				maxVisiblePerColumn: 20,
-			},
-			"stack",
-		);
-		expect(maxVisible).toBe(8);
+	it("uses configured max in auto profile without hidden cap", () => {
+		const maxVisible = resolveMaxVisiblePerColumn({
+			...DEFAULT_DISPLAY_CONFIG,
+			maxVisiblePerColumn: 20,
+		});
+		expect(maxVisible).toBe(20);
 	});
 
 	it("paginates and wraps page index safely", () => {

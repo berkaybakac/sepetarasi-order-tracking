@@ -23,8 +23,30 @@ export const UI_LABELS = {
 
 	// Müşteri Ekranı (Display) Spesiﬁk Metinler
 	DISPLAY: {
-		NO_PREPARING_ORDERS: "Hazırlanıyor sipariş yok",
+		NOW_SERVING: "Şimdi Servis",
+		PREPARING_TITLE: "Hazırlanıyor",
+		READY_TITLE: "Hazır",
+		PAGE: "Sayfa",
+		NO_PREPARING_ORDERS: "Hazırlanan sipariş yok",
 		NO_READY_ORDERS: "Hazır sipariş yok",
+	},
+
+	// Admin > Müşteri Ekranı Ayarları
+	DISPLAY_SETTINGS: {
+		TITLE: "Müşteri Ekranı Ayarları",
+		DESCRIPTION: "Profil, düzen ve sayfalama ayarları tüm müşteri ekranlarına uygulanır.",
+		PROFILE_LABEL: "Profil",
+		LAYOUT_LABEL: "Düzen",
+		MAX_PER_COLUMN_LABEL: "Maksimum Sipariş / Kolon",
+		PAGE_SECONDS_LABEL: "Sayfa Süresi (sn)",
+		RESET_DEFAULTS: "Varsayılanlara Dön",
+		AUTO_OPTION: "Otomatik",
+		LAYOUT_SPLIT: "Yan Yana",
+		LAYOUT_STACK: "Altlı Üstlü",
+		LOAD_ERROR: "Ayarlar yüklenemedi. Lütfen bağlantıyı kontrol edin.",
+		SAVE_ERROR: "Ayarlar kaydedilemedi. Lütfen tekrar deneyin.",
+		DECREASE: "Azalt",
+		INCREASE: "Artır",
 	},
 
 	// Sipariş Kolonu Genel Metinler
