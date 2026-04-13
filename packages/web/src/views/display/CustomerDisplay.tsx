@@ -1,7 +1,7 @@
 import { OrderStatus, WS_CHANNELS } from "@sepetarasi/shared";
 import type { Order, WsMessage } from "@sepetarasi/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { api } from "../../lib/api";
@@ -70,7 +70,7 @@ function ClockText({ className }: { className: string }) {
 function CountBadge({ count }: { count: number }) {
 	if (count === 0) return null;
 	return (
-		<span className="ml-2 inline-flex items-center justify-center w-[clamp(1.25rem,3vmin,2rem)] h-[clamp(1.25rem,3vmin,2rem)] rounded-full bg-white/20 text-[clamp(0.75rem,2vmin,1rem)] font-bold">
+		<span className="ml-[0.4em] inline-flex items-center justify-center min-w-[1.1em] h-[1.1em] px-[0.2em] rounded-full bg-current/20 text-[0.52em] font-bold tabular-nums leading-none">
 			{count}
 		</span>
 	);
@@ -112,9 +112,9 @@ function OrderNumber({
 			initial={{ opacity: 0, scale: 0.75, y: 24 }}
 			exit={{ opacity: 0, scale: 0.6, y: -16, transition: { duration: 0.2 } }}
 			transition={{ type: "spring", stiffness: 300, damping: 25 }}
-			className={`rounded-xl px-[clamp(0.25rem,1.5vmin,1.5rem)] py-[clamp(0.125rem,1vmin,1rem)] text-center font-bold ${textClass} ${highlight ? highlightClass : badgeClass}`}
+			className={`aspect-square max-w-[clamp(3rem,16vmin,9rem)] w-full mx-auto rounded-full flex items-center justify-center font-bold ${textClass} ${highlight ? highlightClass : badgeClass}`}
 		>
-			#{displayNo}
+			{displayNo}
 		</motion.div>
 	);
 }
@@ -148,15 +148,22 @@ export function CustomerDisplay() {
 		[maxVisiblePerColumn, readyOrders.length],
 	);
 	const cyclePageCount = Math.max(preparingPageCount, readyPageCount);
-	const [pageTick, setPageTick] = useState(0);
-	const currentCyclePage = pageTick % cyclePageCount;
+	const [currentPage, setCurrentPage] = useState(0);
+	const cyclePageCountRef = useRef(cyclePageCount);
+
+	// Keep ref current and clamp page if cyclePageCount shrinks (e.g. an order moves state)
+	useEffect(() => {
+		cyclePageCountRef.current = cyclePageCount;
+		setCurrentPage((p) => (p >= cyclePageCount ? cyclePageCount - 1 : p));
+	}, [cyclePageCount]);
+
 	const visiblePreparingOrders = useMemo(
-		() => getPageSlice(preparingOrders, maxVisiblePerColumn, currentCyclePage % preparingPageCount),
-		[currentCyclePage, maxVisiblePerColumn, preparingOrders, preparingPageCount],
+		() => getPageSlice(preparingOrders, maxVisiblePerColumn, currentPage % preparingPageCount),
+		[currentPage, maxVisiblePerColumn, preparingOrders, preparingPageCount],
 	);
 	const visibleReadyOrders = useMemo(
-		() => getPageSlice(readyOrders, maxVisiblePerColumn, currentCyclePage % readyPageCount),
-		[currentCyclePage, maxVisiblePerColumn, readyOrders, readyPageCount],
+		() => getPageSlice(readyOrders, maxVisiblePerColumn, currentPage % readyPageCount),
+		[currentPage, maxVisiblePerColumn, readyOrders, readyPageCount],
 	);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
@@ -190,11 +197,24 @@ export function CustomerDisplay() {
 		return () => clearInterval(interval);
 	}, []);
 
+	// Auto-advance — uses ref so cyclePageCount changes don't restart the timer
 	useEffect(() => {
-		setPageTick(0);
-		const interval = setInterval(() => setPageTick((n) => n + 1), displayConfig.pageSeconds * 1000);
+		const interval = setInterval(
+			() => setCurrentPage((p) => (p + 1) % cyclePageCountRef.current),
+			displayConfig.pageSeconds * 1000,
+		);
 		return () => clearInterval(interval);
 	}, [displayConfig.pageSeconds]);
+
+	// When a new order is announced, jump the ready column to the page that contains it
+	const nowPlayingId = nowPlaying?.order_id;
+	useEffect(() => {
+		if (!nowPlayingId) return;
+		const idx = readyOrders.findIndex((o) => o.id === nowPlayingId);
+		if (idx < 0) return;
+		const targetPage = Math.floor(idx / maxVisiblePerColumn);
+		if (targetPage < cyclePageCountRef.current) setCurrentPage(targetPage);
+	}, [nowPlayingId, readyOrders, maxVisiblePerColumn]);
 
 	return (
 		<div className={`min-h-screen flex flex-col ${theme.root}`}>
@@ -245,7 +265,7 @@ export function CustomerDisplay() {
 									key={order.id}
 									displayNo={order.display_no}
 									textClass={orderTextClass}
-									badgeClass={theme.orderBadge}
+									badgeClass={theme.preparingOrderBadge}
 									highlightClass={theme.orderHighlight}
 								/>
 							))}
@@ -276,7 +296,7 @@ export function CustomerDisplay() {
 									displayNo={order.display_no}
 									highlight={nowPlaying?.order_id === order.id}
 									textClass={orderTextClass}
-									badgeClass={theme.orderBadge}
+									badgeClass={theme.readyOrderBadge}
 									highlightClass={theme.orderHighlight}
 								/>
 							))}
@@ -296,7 +316,7 @@ export function CustomerDisplay() {
 				<div
 					className={`text-center text-[clamp(0.75rem,2vmin,1rem)] py-2 shrink-0 ${theme.pageIndicator}`}
 				>
-					{UI_LABELS.DISPLAY.PAGE} {currentCyclePage + 1} / {cyclePageCount}
+					{UI_LABELS.DISPLAY.PAGE} {currentPage + 1} / {cyclePageCount}
 				</div>
 			)}
 		</div>

@@ -40,6 +40,7 @@ export const UI_LABELS = {
 		MAX_PER_COLUMN_LABEL: "Maksimum Sipariş / Kolon",
 		PAGE_SECONDS_LABEL: "Sayfa Süresi (sn)",
 		RESET_DEFAULTS: "Varsayılanlara Dön",
+		OPEN_DISPLAY: "Müşteri Ekranını Aç",
 		AUTO_OPTION: "Otomatik",
 		LAYOUT_SPLIT: "Yan Yana",
 		LAYOUT_STACK: "Altlı Üstlü",

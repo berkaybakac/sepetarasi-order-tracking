@@ -334,6 +334,14 @@ export function DisplaySettingsCard() {
 			)}
 
 			<div className="relative z-10 flex items-center justify-end gap-3 h-10">
+				<a
+					href="/display"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-900/60 hover:bg-slate-800/80 text-slate-100 border border-slate-600/40 transition-all"
+				>
+					{UI_LABELS.DISPLAY_SETTINGS.OPEN_DISPLAY}
+				</a>
 				<button
 					type="button"
 					onClick={handleResetDefaults}

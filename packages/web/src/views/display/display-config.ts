@@ -65,7 +65,8 @@ export interface ThemeClasses {
 	readyTitle: string;
 	preparingEmpty: string;
 	readyEmpty: string;
-	orderBadge: string;
+	preparingOrderBadge: string;
+	readyOrderBadge: string;
 	orderHighlight: string;
 	pageIndicator: string;
 }
@@ -83,7 +84,8 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		readyTitle: "text-green-400",
 		preparingEmpty: "text-amber-300/80",
 		readyEmpty: "text-emerald-300/80",
-		orderBadge: "bg-gray-800 text-white",
+		preparingOrderBadge: "bg-amber-900/50 text-amber-100 border border-amber-700/50",
+		readyOrderBadge: "bg-green-900/50 text-green-100 border border-green-700/50",
 		orderHighlight: "bg-green-500 text-white shadow-lg shadow-green-500/50",
 		pageIndicator: "text-gray-500",
 	},
@@ -100,7 +102,8 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		readyTitle: "text-emerald-700",
 		preparingEmpty: "text-amber-600/80",
 		readyEmpty: "text-emerald-600/80",
-		orderBadge: "bg-amber-100 text-amber-900 shadow-sm shadow-amber-200",
+		preparingOrderBadge: "bg-amber-100 text-amber-900 border border-amber-300 shadow-sm",
+		readyOrderBadge: "bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-sm",
 		orderHighlight: "bg-emerald-500 text-white shadow-lg shadow-emerald-500/40",
 		pageIndicator: "text-gray-400",
 	},
@@ -117,7 +120,8 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		readyTitle: "text-teal-300",
 		preparingEmpty: "text-orange-400/60",
 		readyEmpty: "text-teal-400/60",
-		orderBadge: "bg-zinc-800 text-white border border-zinc-700",
+		preparingOrderBadge: "bg-orange-500/15 text-orange-100 border border-orange-500/40",
+		readyOrderBadge: "bg-teal-500/15 text-teal-100 border border-teal-500/40",
 		orderHighlight: "bg-teal-400 text-zinc-950 shadow-lg shadow-teal-400/50",
 		pageIndicator: "text-zinc-500",
 	},
@@ -134,7 +138,8 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		readyTitle: "text-green-400",
 		preparingEmpty: "text-yellow-700/80",
 		readyEmpty: "text-green-700/80",
-		orderBadge: "bg-green-950 text-green-300 border border-green-800",
+		preparingOrderBadge: "bg-yellow-950 text-yellow-400 border border-yellow-800",
+		readyOrderBadge: "bg-green-950 text-green-400 border border-green-800",
 		orderHighlight: "bg-green-500 text-black shadow-lg shadow-green-500/60",
 		pageIndicator: "text-green-900",
 	},

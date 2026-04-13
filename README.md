@@ -29,6 +29,13 @@ cd packages/kasa && npm run dev
 
 Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
 
+### Kasa Bağlantı Bilgileri
+
+| Ortam | Sunucu Adresi | Kasiyer Token |
+| --- | --- | --- |
+| Mac (lokal dev) | `http://localhost:3000` | `local-dev-cashier-token` |
+| Pi4 (production) | `http://sepetarasi.local:3000` | `grep CASHIER_TOKEN /opt/sepetarasi/.env` |
+
 ### Commit Öncesi
 
 ```bash
