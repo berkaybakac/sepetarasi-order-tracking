@@ -71,28 +71,34 @@ function ColumnKpiHeader({
 	title,
 	count,
 	railClass,
+	titleSizeClass,
 	titleClass,
+	kpiCardSizeClass,
 	kpiCardClass,
+	kpiNumberClass,
 }: {
 	title: string;
 	count: number;
 	railClass: string;
+	titleSizeClass: string;
 	titleClass: string;
+	kpiCardSizeClass: string;
 	kpiCardClass: string;
+	kpiNumberClass: string;
 }) {
 	return (
 		<div
-			className={`mb-[clamp(0.5rem,2.2vmin,1.6rem)] h-[clamp(5.5rem,11vmin,6.5rem)] rounded-[clamp(0.75rem,2vmin,1rem)] px-[clamp(0.7rem,2.2vmin,1.5rem)] py-[clamp(0.45rem,1.2vmin,0.85rem)] flex items-center justify-between gap-[clamp(0.75rem,2.5vmin,1.75rem)] ${railClass}`}
+			className={`mb-[clamp(0.5rem,2.2vmin,1.6rem)] h-[clamp(5.5rem,11vmin,6.5rem)] rounded-[clamp(0.45rem,1.15vmin,0.7rem)] px-[clamp(0.7rem,2.2vmin,1.5rem)] py-[clamp(0.45rem,1.2vmin,0.85rem)] flex items-center justify-between gap-[clamp(0.75rem,2.5vmin,1.75rem)] ${railClass}`}
 		>
 			<h2
-				className={`text-[clamp(2rem,5.2vw,3.5rem)] font-bold ${titleClass} tracking-[0.02em] leading-[1] -translate-y-[0.03em]`}
+				className={`${titleSizeClass} font-bold ${titleClass} tracking-[0.02em] leading-[1] -translate-y-[0.03em] min-w-0`}
 			>
 				{title}
 			</h2>
 			<div
-				className={`shrink-0 inline-flex items-center justify-center min-w-[clamp(6.5rem,16vmin,9rem)] h-[clamp(3.25rem,7.6vmin,4rem)] rounded-[clamp(0.875rem,2vmin,1rem)] px-[clamp(0.85rem,2.4vmin,1.4rem)] shadow-lg shadow-black/20 ${kpiCardClass}`}
+				className={`shrink-0 inline-flex items-center justify-center rounded-[clamp(0.65rem,1.45vmin,0.85rem)] shadow-lg shadow-black/20 ${kpiCardSizeClass} ${kpiCardClass}`}
 			>
-				<span className="font-extrabold tabular-nums text-[clamp(1.5rem,3.9vw,2.6rem)] leading-none">
+				<span className={`font-extrabold tabular-nums leading-none ${kpiNumberClass}`}>
 					{count}
 				</span>
 			</div>
@@ -158,6 +164,9 @@ export function CustomerDisplay() {
 	const theme = THEMES[displayConfig.theme];
 	const scale = TEXT_SCALES[displayConfig.textScale];
 	const orderTextClass = isStackLayout ? scale.orderNumberStack : scale.orderNumberSplit;
+	const railTitleClass = isStackLayout ? scale.railTitleStack : scale.railTitleSplit;
+	const railKpiCardSizeClass = scale.railKpiCard;
+	const railKpiNumberClass = scale.railKpiNumber;
 
 	const maxVisiblePerColumn = useMemo(
 		() => resolveMaxVisiblePerColumn(displayConfig),
@@ -171,23 +180,30 @@ export function CustomerDisplay() {
 		() => getPageCount(readyOrders.length, maxVisiblePerColumn),
 		[maxVisiblePerColumn, readyOrders.length],
 	);
-	const cyclePageCount = Math.max(preparingPageCount, readyPageCount);
-	const [currentPage, setCurrentPage] = useState(0);
-	const cyclePageCountRef = useRef(cyclePageCount);
+	const [preparingPage, setPreparingPage] = useState(0);
+	const [readyPage, setReadyPage] = useState(0);
+	const preparingPageCountRef = useRef(preparingPageCount);
+	const readyPageCountRef = useRef(readyPageCount);
+	const previousReadyIdsRef = useRef<Set<string>>(new Set());
+	const hasReadySnapshotRef = useRef(false);
 
-	// Keep ref current and clamp page if cyclePageCount shrinks (e.g. an order moves state)
 	useEffect(() => {
-		cyclePageCountRef.current = cyclePageCount;
-		setCurrentPage((p) => (p >= cyclePageCount ? cyclePageCount - 1 : p));
-	}, [cyclePageCount]);
+		preparingPageCountRef.current = preparingPageCount;
+		setPreparingPage((p) => (p >= preparingPageCount ? preparingPageCount - 1 : p));
+	}, [preparingPageCount]);
+
+	useEffect(() => {
+		readyPageCountRef.current = readyPageCount;
+		setReadyPage((p) => (p >= readyPageCount ? readyPageCount - 1 : p));
+	}, [readyPageCount]);
 
 	const visiblePreparingOrders = useMemo(
-		() => getPageSlice(preparingOrders, maxVisiblePerColumn, currentPage % preparingPageCount),
-		[currentPage, maxVisiblePerColumn, preparingOrders, preparingPageCount],
+		() => getPageSlice(preparingOrders, maxVisiblePerColumn, preparingPage % preparingPageCount),
+		[maxVisiblePerColumn, preparingOrders, preparingPage, preparingPageCount],
 	);
 	const visibleReadyOrders = useMemo(
-		() => getPageSlice(readyOrders, maxVisiblePerColumn, currentPage % readyPageCount),
-		[currentPage, maxVisiblePerColumn, readyOrders, readyPageCount],
+		() => getPageSlice(readyOrders, maxVisiblePerColumn, readyPage % readyPageCount),
+		[maxVisiblePerColumn, readyOrders, readyPage, readyPageCount],
 	);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
@@ -221,14 +237,55 @@ export function CustomerDisplay() {
 		return () => clearInterval(interval);
 	}, []);
 
-	// Auto-advance — uses ref so cyclePageCount changes don't restart the timer
+	// Auto-advance both columns independently so one column jump does not disturb the other.
 	useEffect(() => {
-		const interval = setInterval(
-			() => setCurrentPage((p) => (p + 1) % cyclePageCountRef.current),
-			displayConfig.pageSeconds * 1000,
-		);
+		const interval = setInterval(() => {
+			setPreparingPage((p) => (p + 1) % preparingPageCountRef.current);
+			setReadyPage((p) => (p + 1) % readyPageCountRef.current);
+		}, displayConfig.pageSeconds * 1000);
 		return () => clearInterval(interval);
 	}, [displayConfig.pageSeconds]);
+
+	// When ready list gains new items (without announcement), jump ready column to the newest ready order page.
+	useEffect(() => {
+		const currentReadyIds = new Set(readyOrders.map((order) => order.id));
+
+		if (!hasReadySnapshotRef.current) {
+			hasReadySnapshotRef.current = true;
+			previousReadyIdsRef.current = currentReadyIds;
+			return;
+		}
+
+		const previousReadyIds = previousReadyIdsRef.current;
+		let newestReadyOrder: Order | null = null;
+
+		for (const order of readyOrders) {
+			if (previousReadyIds.has(order.id)) continue;
+
+			if (!newestReadyOrder) {
+				newestReadyOrder = order;
+				continue;
+			}
+
+			const currentReadyAt = order.ready_at ?? "";
+			const latestReadyAt = newestReadyOrder.ready_at ?? "";
+			if (
+				currentReadyAt > latestReadyAt ||
+				(currentReadyAt === latestReadyAt && order.display_no > newestReadyOrder.display_no)
+			) {
+				newestReadyOrder = order;
+			}
+		}
+
+		previousReadyIdsRef.current = currentReadyIds;
+		if (!newestReadyOrder) return;
+
+		const idx = readyOrders.findIndex((order) => order.id === newestReadyOrder.id);
+		if (idx < 0) return;
+
+		const targetPage = Math.floor(idx / maxVisiblePerColumn);
+		if (targetPage < readyPageCountRef.current) setReadyPage(targetPage);
+	}, [readyOrders, maxVisiblePerColumn]);
 
 	// When a new order is announced, jump the ready column to the page that contains it
 	const nowPlayingId = nowPlaying?.order_id;
@@ -237,7 +294,7 @@ export function CustomerDisplay() {
 		const idx = readyOrders.findIndex((o) => o.id === nowPlayingId);
 		if (idx < 0) return;
 		const targetPage = Math.floor(idx / maxVisiblePerColumn);
-		if (targetPage < cyclePageCountRef.current) setCurrentPage(targetPage);
+		if (targetPage < readyPageCountRef.current) setReadyPage(targetPage);
 	}, [nowPlayingId, readyOrders, maxVisiblePerColumn]);
 
 	return (
@@ -280,8 +337,11 @@ export function CustomerDisplay() {
 						title={UI_LABELS.DISPLAY.PREPARING_TITLE}
 						count={preparingOrders.length}
 						railClass={theme.preparingRail}
+						titleSizeClass={railTitleClass}
 						titleClass={theme.preparingTitle}
+						kpiCardSizeClass={railKpiCardSizeClass}
 						kpiCardClass={theme.preparingKpiCard}
+						kpiNumberClass={railKpiNumberClass}
 					/>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
 						<AnimatePresence mode="popLayout">
@@ -311,8 +371,11 @@ export function CustomerDisplay() {
 						title={UI_LABELS.DISPLAY.READY_TITLE}
 						count={readyOrders.length}
 						railClass={theme.readyRail}
+						titleSizeClass={railTitleClass}
 						titleClass={theme.readyTitle}
+						kpiCardSizeClass={railKpiCardSizeClass}
 						kpiCardClass={theme.readyKpiCard}
+						kpiNumberClass={railKpiNumberClass}
 					/>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
 						<AnimatePresence mode="popLayout">
@@ -338,11 +401,12 @@ export function CustomerDisplay() {
 				</div>
 			</div>
 
-			{cyclePageCount > 1 && (
+			{(preparingPageCount > 1 || readyPageCount > 1) && (
 				<div
-					className={`text-center text-[clamp(0.75rem,2vmin,1rem)] py-2 shrink-0 ${theme.pageIndicator}`}
+					className={`text-center text-[clamp(0.75rem,2vmin,1rem)] py-2 shrink-0 tabular-nums ${theme.pageIndicator}`}
 				>
-					{UI_LABELS.DISPLAY.PAGE} {currentPage + 1} / {cyclePageCount}
+					{UI_LABELS.DISPLAY.PREPARING_TITLE} {preparingPage + 1} / {preparingPageCount} •{" "}
+					{UI_LABELS.DISPLAY.READY_TITLE} {readyPage + 1} / {readyPageCount}
 				</div>
 			)}
 		</div>

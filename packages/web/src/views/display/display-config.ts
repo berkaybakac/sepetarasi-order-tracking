@@ -147,19 +147,23 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		headerBorder: "border-green-900",
 		restaurantText: "text-green-300",
 		clockText: "text-green-500",
-		preparingCol: "bg-yellow-950/20",
-		preparingDivider: "border-yellow-700/40",
-		readyCol: "bg-green-950/30",
-		preparingRail: "bg-yellow-950 border border-yellow-700",
-		readyRail: "bg-green-950 border border-green-700",
-		preparingTitle: "text-yellow-400",
-		readyTitle: "text-green-400",
-		preparingKpiCard: "bg-yellow-950 border border-yellow-600 text-yellow-300",
-		readyKpiCard: "bg-green-950 border border-green-500 text-green-300",
-		preparingEmpty: "text-yellow-700/80",
-		readyEmpty: "text-green-700/80",
-		preparingOrderBadge: "bg-yellow-950 text-yellow-400 border border-yellow-800",
-		readyOrderBadge: "bg-green-950 text-green-400 border border-green-800",
+		preparingCol: "bg-yellow-950/10",
+		preparingDivider: "border-yellow-500/50",
+		readyCol: "bg-green-950/20",
+		preparingRail:
+			"bg-yellow-900/30 border-2 border-yellow-500/85 shadow-[0_0_0_1px_rgba(0,0,0,0.65),0_0_18px_rgba(234,179,8,0.15)]",
+		readyRail:
+			"bg-green-900/30 border-2 border-green-500/85 shadow-[0_0_0_1px_rgba(0,0,0,0.65),0_0_18px_rgba(34,197,94,0.15)]",
+		preparingTitle: "text-yellow-300",
+		readyTitle: "text-green-300",
+		preparingKpiCard:
+			"bg-yellow-900/45 border-2 border-yellow-400/80 text-yellow-100 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]",
+		readyKpiCard:
+			"bg-green-900/45 border-2 border-green-400/80 text-green-100 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]",
+		preparingEmpty: "text-yellow-500/85",
+		readyEmpty: "text-green-500/85",
+		preparingOrderBadge: "bg-yellow-900/45 text-yellow-200 border border-yellow-600/70",
+		readyOrderBadge: "bg-green-900/45 text-green-200 border border-green-600/70",
 		orderHighlight: "bg-green-500 text-black shadow-lg shadow-green-500/60",
 		pageIndicator: "text-green-900",
 	},
@@ -172,7 +176,10 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 export interface TextScaleClasses {
 	orderNumberStack: string;
 	orderNumberSplit: string;
-	columnHeader: string;
+	railTitleStack: string;
+	railTitleSplit: string;
+	railKpiCard: string;
+	railKpiNumber: string;
 }
 
 // S → LED 256x512 gibi dar/küçük ekranlar için. vmin tabanlı ölçek dar ekranda
@@ -183,17 +190,29 @@ export const TEXT_SCALES: Record<DisplayTextScale, TextScaleClasses> = {
 	s: {
 		orderNumberStack: "text-[clamp(1rem,9vmin,3.5rem)]",
 		orderNumberSplit: "text-[clamp(0.75rem,6vmin,2.5rem)]",
-		columnHeader: "text-[clamp(0.875rem,5vmin,1.75rem)]",
+		railTitleStack: "text-[clamp(1.65rem,7.4vmin,2.5rem)]",
+		railTitleSplit: "text-[clamp(1.55rem,4.1vw,2.2rem)]",
+		railKpiCard:
+			"min-w-[clamp(5.25rem,13.5vmin,7rem)] h-[clamp(2.75rem,6.5vmin,3.25rem)] px-[clamp(0.65rem,2vmin,1.1rem)]",
+		railKpiNumber: "text-[clamp(1.25rem,3.2vw,1.9rem)]",
 	},
 	m: {
 		orderNumberStack: "text-[clamp(2rem,11vmin,6.75rem)]",
 		orderNumberSplit: "text-[clamp(1.375rem,8.75vmin,5.5rem)]",
-		columnHeader: "text-[clamp(1.625rem,6.2vmin,3.1rem)]",
+		railTitleStack: "text-[clamp(2rem,6.2vw,3.5rem)]",
+		railTitleSplit: "text-[clamp(1.9rem,4.9vw,3.15rem)]",
+		railKpiCard:
+			"min-w-[clamp(6.25rem,15.5vmin,8.6rem)] h-[clamp(3.15rem,7.4vmin,3.95rem)] px-[clamp(0.8rem,2.25vmin,1.35rem)]",
+		railKpiNumber: "text-[clamp(1.5rem,3.9vw,2.6rem)]",
 	},
 	l: {
 		orderNumberStack: "text-[clamp(2.5rem,15vmin,9rem)]",
 		orderNumberSplit: "text-[clamp(1.75rem,11vmin,7rem)]",
-		columnHeader: "text-[clamp(2rem,7.5vmin,4rem)]",
+		railTitleStack: "text-[clamp(2.25rem,7.2vw,4.25rem)]",
+		railTitleSplit: "text-[clamp(2.05rem,5.25vw,3.45rem)]",
+		railKpiCard:
+			"min-w-[clamp(6.7rem,16.3vmin,9.1rem)] h-[clamp(3.3rem,7.9vmin,4.15rem)] px-[clamp(0.9rem,2.35vmin,1.45rem)]",
+		railKpiNumber: "text-[clamp(1.6rem,4.15vw,2.7rem)]",
 	},
 };
 
