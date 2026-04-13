@@ -506,7 +506,11 @@ describe("PATCH /api/v1/settings/bulk", () => {
 			.from(appSettings)
 			.where(eq(appSettings.key, "restaurant_name"))
 			.get();
-		const profile = db.select().from(appSettings).where(eq(appSettings.key, "display_profile")).get();
+		const profile = db
+			.select()
+			.from(appSettings)
+			.where(eq(appSettings.key, "display_profile"))
+			.get();
 		const theme = db.select().from(appSettings).where(eq(appSettings.key, "display_theme")).get();
 
 		expect(restaurant?.value).toBe("Yeni Restoran");

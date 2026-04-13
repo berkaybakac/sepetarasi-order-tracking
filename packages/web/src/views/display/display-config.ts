@@ -3,11 +3,11 @@ import {
 	DISPLAY_PROFILES,
 	DISPLAY_TEXT_SCALES,
 	DISPLAY_THEMES,
-	SETTING_KEYS,
 	type DisplayLayoutPreference,
 	type DisplayProfile,
 	type DisplayTextScale,
 	type DisplayTheme,
+	SETTING_KEYS,
 } from "@sepetarasi/shared";
 
 export type DisplayLayoutMode = "split" | "stack";

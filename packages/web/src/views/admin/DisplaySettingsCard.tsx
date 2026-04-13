@@ -3,11 +3,11 @@ import {
 	DISPLAY_PROFILES,
 	DISPLAY_TEXT_SCALES,
 	DISPLAY_THEMES,
-	SETTING_KEYS,
 	type DisplayLayoutPreference,
 	type DisplayProfile,
 	type DisplayTextScale,
 	type DisplayTheme,
+	SETTING_KEYS,
 } from "@sepetarasi/shared";
 import { useEffect, useRef, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
@@ -44,41 +44,41 @@ function NumberStepperField({
 }: NumberStepperFieldProps) {
 	const apply = (next: number) => onChange(clampInt(next, min, max));
 
-		return (
-			<label className="text-sm text-slate-300">
-				<span className="block mb-1">{label}</span>
-				<div className="flex items-stretch rounded-xl bg-slate-950/50 border border-slate-700 overflow-hidden">
-					<button
-						type="button"
-						onClick={() => apply(value - 1)}
-						aria-label={`${label} ${decreaseLabel}`}
-						className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						-
-					</button>
-					<input
-						type="number"
-						min={min}
+	return (
+		<label className="text-sm text-slate-300">
+			<span className="block mb-1">{label}</span>
+			<div className="flex items-stretch rounded-xl bg-slate-950/50 border border-slate-700 overflow-hidden">
+				<button
+					type="button"
+					onClick={() => apply(value - 1)}
+					aria-label={`${label} ${decreaseLabel}`}
+					className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					-
+				</button>
+				<input
+					type="number"
+					min={min}
 					max={max}
 					step={1}
 					value={value}
-						onChange={(e) => {
-							const parsed = Number.parseInt(e.target.value, 10);
-							apply(Number.isNaN(parsed) ? min : parsed);
-						}}
-						className="number-input-no-spinner w-full px-3 py-2 bg-transparent text-white text-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-					/>
-					<button
-						type="button"
-						onClick={() => apply(value + 1)}
-						aria-label={`${label} ${increaseLabel}`}
-						className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						+
-					</button>
-				</div>
-			</label>
-		);
+					onChange={(e) => {
+						const parsed = Number.parseInt(e.target.value, 10);
+						apply(Number.isNaN(parsed) ? min : parsed);
+					}}
+					className="number-input-no-spinner w-full px-3 py-2 bg-transparent text-white text-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+				/>
+				<button
+					type="button"
+					onClick={() => apply(value + 1)}
+					aria-label={`${label} ${increaseLabel}`}
+					className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				>
+					+
+				</button>
+			</div>
+		</label>
+	);
 }
 
 function areConfigsEqual(a: DisplayConfig, b: DisplayConfig): boolean {

@@ -8,8 +8,8 @@ import { api } from "../../lib/api";
 import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 import {
 	DEFAULT_DISPLAY_CONFIG,
-	READY_HIGHLIGHT_ANIMATION_SECONDS,
 	type DisplayConfig,
+	READY_HIGHLIGHT_ANIMATION_SECONDS,
 	TEXT_SCALES,
 	THEMES,
 	getPageCount,
