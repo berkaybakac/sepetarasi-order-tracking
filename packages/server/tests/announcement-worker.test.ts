@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDatabase } from "../src/db/connection.js";
 import { announcementQueue, orders } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -261,5 +261,27 @@ describe("AnnouncementWorker", () => {
 	it("should do nothing when queue is empty", async () => {
 		// Should not throw
 		await worker.processOne();
+	});
+
+	it("should not crash and should reset processing flag when poll throws", async () => {
+		seedOrder("o-1", 1);
+		seedAnnouncement("aq-1", "o-1", 1);
+
+		vi.spyOn(announcementService, "markPlaying").mockImplementationOnce(() => {
+			throw new Error("DB connection lost");
+		});
+
+		// Worker catch bloğu hatayı yutmalı, fırlatmamalı
+		await expect(worker.processOne()).resolves.toBeUndefined();
+
+		// processing flag gerçekten sıfırlandıysa ikinci çağrı kuyruğu işler ve kayıt "played" olur.
+		// Flag sıfırlanmamış olsaydı poll() erken return ederdi ve kayıt hâlâ "pending" kalırdı.
+		await worker.processOne();
+		const item = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-1"))
+			.get()!;
+		expect(item.status).toBe("played");
 	});
 });

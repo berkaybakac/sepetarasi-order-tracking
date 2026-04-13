@@ -81,6 +81,24 @@ describe("Order creation", () => {
 		}).toThrow(InvalidOrderInputError);
 	});
 
+	it("should reject customer_name that is only whitespace", () => {
+		expect(() => {
+			orderService.create({ customer_name: "   ", order_type: "Paket", items: [] });
+		}).toThrow(InvalidOrderInputError);
+	});
+
+	it("should trim notes and omit when blank after trimming", () => {
+		const withSpacesNotes = orderService.create(
+			buildCreateOrderInput({ customer_name: "Ali", notes: "  extra not  " }),
+		);
+		expect(withSpacesNotes.notes).toBe("extra not");
+
+		const withBlankNotes = orderService.create(
+			buildCreateOrderInput({ customer_name: "Veli", notes: "   " }),
+		);
+		expect(withBlankNotes.notes).toBeNull();
+	});
+
 	it("should create an order_event for creation", () => {
 		const order = orderService.create(buildCreateOrderInput({ customer_name: "Event Testi" }));
 

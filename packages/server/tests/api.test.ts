@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
+import { OrderCommandService } from "../src/services/order.command.service.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -93,6 +94,22 @@ describe("POST /api/v1/orders", () => {
 
 		expect(res.statusCode).toBe(400);
 		expect(res.json().error.code).toBe("VALIDATION_ERROR");
+	});
+
+	it("should return 409 when a UNIQUE constraint violation occurs", async () => {
+		vi.spyOn(OrderCommandService.prototype, "create").mockImplementationOnce(() => {
+			throw new Error("UNIQUE constraint failed: orders.business_date, orders.display_no");
+		});
+
+		const res = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: buildCreateOrderInput({ customer_name: "Duplicate" }),
+		});
+
+		expect(res.statusCode).toBe(409);
+		expect(res.json().error.code).toBe("DUPLICATE_ORDER");
 	});
 
 	it("should auto-create missing terminal and still create order", async () => {
