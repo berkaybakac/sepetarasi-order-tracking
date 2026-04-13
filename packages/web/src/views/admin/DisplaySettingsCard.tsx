@@ -1,14 +1,20 @@
-import { SETTING_KEYS } from "@sepetarasi/shared";
+import {
+	DISPLAY_LAYOUT_PREFERENCES,
+	DISPLAY_PROFILES,
+	DISPLAY_TEXT_SCALES,
+	DISPLAY_THEMES,
+	SETTING_KEYS,
+	type DisplayLayoutPreference,
+	type DisplayProfile,
+	type DisplayTextScale,
+	type DisplayTheme,
+} from "@sepetarasi/shared";
 import { useEffect, useRef, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
 import { api } from "../../lib/api";
 import {
 	DEFAULT_DISPLAY_CONFIG,
 	type DisplayConfig,
-	type DisplayLayoutPreference,
-	type DisplayProfile,
-	type DisplayTextScale,
-	type DisplayTheme,
 	parseDisplaySettings,
 } from "../display/display-config";
 
@@ -38,41 +44,41 @@ function NumberStepperField({
 }: NumberStepperFieldProps) {
 	const apply = (next: number) => onChange(clampInt(next, min, max));
 
-	return (
-		<label className="text-sm text-slate-300">
-			<span className="block mb-1">{label}</span>
-			<div className="flex items-stretch rounded-xl bg-slate-950/50 border border-slate-700 overflow-hidden">
-				<button
-					type="button"
-					onClick={() => apply(value - 1)}
-					aria-label={`${label} ${decreaseLabel}`}
-					className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors"
-				>
-					-
-				</button>
-				<input
-					type="number"
-					min={min}
+		return (
+			<label className="text-sm text-slate-300">
+				<span className="block mb-1">{label}</span>
+				<div className="flex items-stretch rounded-xl bg-slate-950/50 border border-slate-700 overflow-hidden">
+					<button
+						type="button"
+						onClick={() => apply(value - 1)}
+						aria-label={`${label} ${decreaseLabel}`}
+						className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					>
+						-
+					</button>
+					<input
+						type="number"
+						min={min}
 					max={max}
 					step={1}
 					value={value}
-					onChange={(e) => {
-						const parsed = Number.parseInt(e.target.value, 10);
-						apply(Number.isNaN(parsed) ? min : parsed);
-					}}
-					className="number-input-no-spinner w-full px-3 py-2 bg-transparent text-white text-center focus:outline-none"
-				/>
-				<button
-					type="button"
-					onClick={() => apply(value + 1)}
-					aria-label={`${label} ${increaseLabel}`}
-					className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors"
-				>
-					+
-				</button>
-			</div>
-		</label>
-	);
+						onChange={(e) => {
+							const parsed = Number.parseInt(e.target.value, 10);
+							apply(Number.isNaN(parsed) ? min : parsed);
+						}}
+						className="number-input-no-spinner w-full px-3 py-2 bg-transparent text-white text-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+					/>
+					<button
+						type="button"
+						onClick={() => apply(value + 1)}
+						aria-label={`${label} ${increaseLabel}`}
+						className="w-10 text-lg font-semibold text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+					>
+						+
+					</button>
+				</div>
+			</label>
+		);
 }
 
 function areConfigsEqual(a: DisplayConfig, b: DisplayConfig): boolean {
@@ -86,6 +92,44 @@ function areConfigsEqual(a: DisplayConfig, b: DisplayConfig): boolean {
 		a.textScale === b.textScale &&
 		a.theme === b.theme
 	);
+}
+
+const PROFILE_LABELS: Record<DisplayProfile, string> = {
+	auto: UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION,
+	led_256x512: "LED 256x512",
+	tv_1080p: "TV 1080p",
+};
+
+const LAYOUT_LABELS: Record<DisplayLayoutPreference, string> = {
+	auto: UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION,
+	split: UI_LABELS.DISPLAY_SETTINGS.LAYOUT_SPLIT,
+	stack: UI_LABELS.DISPLAY_SETTINGS.LAYOUT_STACK,
+};
+
+const TEXT_SCALE_LABELS: Record<DisplayTextScale, string> = {
+	s: UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_S,
+	m: UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_M,
+	l: UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_L,
+};
+
+const THEME_LABELS: Record<DisplayTheme, string> = {
+	dark: UI_LABELS.DISPLAY_SETTINGS.THEME_DARK,
+	light: UI_LABELS.DISPLAY_SETTINGS.THEME_LIGHT,
+	vivid: UI_LABELS.DISPLAY_SETTINGS.THEME_VIVID,
+	retro: UI_LABELS.DISPLAY_SETTINGS.THEME_RETRO,
+};
+
+function buildDisplaySettingsPayload(config: DisplayConfig): Record<string, string> {
+	return {
+		[SETTING_KEYS.RESTAURANT_NAME]: config.restaurantName,
+		[SETTING_KEYS.DISPLAY_PROFILE]: config.profile,
+		[SETTING_KEYS.DISPLAY_LAYOUT]: config.layoutPreference,
+		[SETTING_KEYS.DISPLAY_MAX_VISIBLE]: String(config.maxVisiblePerColumn),
+		[SETTING_KEYS.DISPLAY_PAGE_SECONDS]: String(config.pageSeconds),
+		[SETTING_KEYS.DISPLAY_READY_MINUTES]: String(config.readyDisplayMinutes),
+		[SETTING_KEYS.DISPLAY_TEXT_SCALE]: config.textScale,
+		[SETTING_KEYS.DISPLAY_THEME]: config.theme,
+	};
 }
 
 export function DisplaySettingsCard() {
@@ -123,16 +167,8 @@ export function DisplaySettingsCard() {
 	const handleSave = () => {
 		setSaving(true);
 		setErrorMessage(null);
-		Promise.all([
-			api.updateSetting(SETTING_KEYS.RESTAURANT_NAME, config.restaurantName),
-			api.updateSetting(SETTING_KEYS.DISPLAY_PROFILE, config.profile),
-			api.updateSetting(SETTING_KEYS.DISPLAY_LAYOUT, config.layoutPreference),
-			api.updateSetting(SETTING_KEYS.DISPLAY_MAX_VISIBLE, String(config.maxVisiblePerColumn)),
-			api.updateSetting(SETTING_KEYS.DISPLAY_PAGE_SECONDS, String(config.pageSeconds)),
-			api.updateSetting(SETTING_KEYS.DISPLAY_READY_MINUTES, String(config.readyDisplayMinutes)),
-			api.updateSetting(SETTING_KEYS.DISPLAY_TEXT_SCALE, config.textScale),
-			api.updateSetting(SETTING_KEYS.DISPLAY_THEME, config.theme),
-		])
+		api
+			.updateSettingsBulk(buildDisplaySettingsPayload(config))
 			.then(() => {
 				setSavedConfig(config);
 				setSaveLabel("saved");
@@ -169,7 +205,7 @@ export function DisplaySettingsCard() {
 					<div className="w-6 h-6 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
 				</div>
 			) : (
-				<div className="relative z-10 grid grid-cols-1 gap-4">
+				<fieldset disabled={saving} className="relative z-10 grid grid-cols-1 gap-4">
 					<label className="text-sm text-slate-300">
 						<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.RESTAURANT_NAME_LABEL}</span>
 						<input
@@ -177,7 +213,7 @@ export function DisplaySettingsCard() {
 							maxLength={60}
 							value={config.restaurantName}
 							onChange={(e) => setConfig((prev) => ({ ...prev, restaurantName: e.target.value }))}
-							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-600 focus:outline-none focus:border-slate-500"
+							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-600 focus:outline-none focus:border-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
 							placeholder={UI_LABELS.DISPLAY_SETTINGS.RESTAURANT_NAME_PLACEHOLDER}
 						/>
 					</label>
@@ -185,7 +221,7 @@ export function DisplaySettingsCard() {
 					<label className="text-sm text-slate-300">
 						<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.PROFILE_LABEL}</span>
 						<select
-							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white"
+							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
 							value={config.profile}
 							onChange={(e) =>
 								setConfig((prev) => ({
@@ -194,16 +230,18 @@ export function DisplaySettingsCard() {
 								}))
 							}
 						>
-							<option value="auto">{UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION}</option>
-							<option value="led_256x512">LED 256x512</option>
-							<option value="tv_1080p">TV 1080p</option>
+							{DISPLAY_PROFILES.map((profile) => (
+								<option key={profile} value={profile}>
+									{PROFILE_LABELS[profile]}
+								</option>
+							))}
 						</select>
 					</label>
 
 					<label className="text-sm text-slate-300">
 						<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.LAYOUT_LABEL}</span>
 						<select
-							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white"
+							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
 							value={config.layoutPreference}
 							onChange={(e) =>
 								setConfig((prev) => ({
@@ -212,9 +250,11 @@ export function DisplaySettingsCard() {
 								}))
 							}
 						>
-							<option value="auto">{UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION}</option>
-							<option value="split">{UI_LABELS.DISPLAY_SETTINGS.LAYOUT_SPLIT}</option>
-							<option value="stack">{UI_LABELS.DISPLAY_SETTINGS.LAYOUT_STACK}</option>
+							{DISPLAY_LAYOUT_PREFERENCES.map((layoutPreference) => (
+								<option key={layoutPreference} value={layoutPreference}>
+									{LAYOUT_LABELS[layoutPreference]}
+								</option>
+							))}
 						</select>
 					</label>
 
@@ -254,31 +294,34 @@ export function DisplaySettingsCard() {
 						<label className="text-sm text-slate-300">
 							<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_LABEL}</span>
 							<select
-								className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white"
+								className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
 								value={config.textScale}
 								onChange={(e) =>
 									setConfig((prev) => ({ ...prev, textScale: e.target.value as DisplayTextScale }))
 								}
 							>
-								<option value="s">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_S}</option>
-								<option value="m">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_M}</option>
-								<option value="l">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_L}</option>
+								{DISPLAY_TEXT_SCALES.map((textScale) => (
+									<option key={textScale} value={textScale}>
+										{TEXT_SCALE_LABELS[textScale]}
+									</option>
+								))}
 							</select>
 						</label>
 
 						<label className="text-sm text-slate-300">
 							<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.THEME_LABEL}</span>
 							<select
-								className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white"
+								className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
 								value={config.theme}
 								onChange={(e) =>
 									setConfig((prev) => ({ ...prev, theme: e.target.value as DisplayTheme }))
 								}
 							>
-								<option value="dark">{UI_LABELS.DISPLAY_SETTINGS.THEME_DARK}</option>
-								<option value="light">{UI_LABELS.DISPLAY_SETTINGS.THEME_LIGHT}</option>
-								<option value="vivid">{UI_LABELS.DISPLAY_SETTINGS.THEME_VIVID}</option>
-								<option value="retro">{UI_LABELS.DISPLAY_SETTINGS.THEME_RETRO}</option>
+								{DISPLAY_THEMES.map((theme) => (
+									<option key={theme} value={theme}>
+										{THEME_LABELS[theme]}
+									</option>
+								))}
 							</select>
 						</label>
 					</div>
@@ -287,7 +330,7 @@ export function DisplaySettingsCard() {
 							{errorMessage}
 						</p>
 					)}
-				</div>
+				</fieldset>
 			)}
 
 			<div className="relative z-10 flex items-center justify-end gap-3 h-10">

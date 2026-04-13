@@ -1,4 +1,10 @@
-import { SETTING_KEYS } from "@sepetarasi/shared";
+import {
+	DISPLAY_LAYOUT_PREFERENCES,
+	DISPLAY_PROFILES,
+	DISPLAY_TEXT_SCALES,
+	DISPLAY_THEMES,
+	SETTING_KEYS,
+} from "@sepetarasi/shared";
 
 const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
@@ -19,10 +25,10 @@ const EDITABLE_SETTING_KEYS = [
 	"receipt_tax_office",
 ] as const;
 
-const DISPLAY_PROFILE_VALUES = new Set(["auto", "led_256x512", "tv_1080p"]);
-const DISPLAY_LAYOUT_VALUES = new Set(["auto", "split", "stack"]);
-const DISPLAY_TEXT_SCALE_VALUES = new Set(["s", "m", "l"]);
-const DISPLAY_THEME_VALUES = new Set(["dark", "light", "vivid", "retro"]);
+const DISPLAY_PROFILE_VALUES = new Set<string>(DISPLAY_PROFILES);
+const DISPLAY_LAYOUT_VALUES = new Set<string>(DISPLAY_LAYOUT_PREFERENCES);
+const DISPLAY_TEXT_SCALE_VALUES = new Set<string>(DISPLAY_TEXT_SCALES);
+const DISPLAY_THEME_VALUES = new Set<string>(DISPLAY_THEMES);
 
 const PUBLIC_SETTING_KEYS = new Set<string>([
 	SETTING_KEYS.RESTAURANT_NAME,
@@ -36,6 +42,10 @@ const PUBLIC_SETTING_KEYS = new Set<string>([
 ]);
 
 const editableSettings = new Set<string>(EDITABLE_SETTING_KEYS);
+
+function formatAllowed(values: readonly string[]): string {
+	return values.join(", ");
+}
 
 export function isEditableSettingKey(key: string): boolean {
 	return editableSettings.has(key);
@@ -73,12 +83,12 @@ export function validateSettingValue(key: string, value: string): string | null 
 			return null;
 		case SETTING_KEYS.DISPLAY_PROFILE:
 			if (!DISPLAY_PROFILE_VALUES.has(value)) {
-				return "display_profile must be one of: auto, led_256x512, tv_1080p";
+				return `display_profile must be one of: ${formatAllowed(DISPLAY_PROFILES)}`;
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_LAYOUT:
 			if (!DISPLAY_LAYOUT_VALUES.has(value)) {
-				return "display_layout must be one of: auto, split, stack";
+				return `display_layout must be one of: ${formatAllowed(DISPLAY_LAYOUT_PREFERENCES)}`;
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_MAX_VISIBLE: {
@@ -104,12 +114,12 @@ export function validateSettingValue(key: string, value: string): string | null 
 		}
 		case SETTING_KEYS.DISPLAY_TEXT_SCALE:
 			if (!DISPLAY_TEXT_SCALE_VALUES.has(value)) {
-				return "display_text_scale must be one of: s, m, l";
+				return `display_text_scale must be one of: ${formatAllowed(DISPLAY_TEXT_SCALES)}`;
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_THEME:
 			if (!DISPLAY_THEME_VALUES.has(value)) {
-				return "display_theme must be one of: dark, light, vivid, retro";
+				return `display_theme must be one of: ${formatAllowed(DISPLAY_THEMES)}`;
 			}
 			return null;
 		case "announcement_delay_ms": {

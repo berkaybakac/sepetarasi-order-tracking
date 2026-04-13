@@ -26,6 +26,62 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 		return { ok: true, data: settings };
 	});
 
+	// PATCH /api/v1/settings/bulk - ayarlari atomik sekilde toplu guncelle
+	app.patch<{ Body: { settings: Record<string, string> } }>(
+		API_ROUTES.V1.SETTINGS_BULK,
+		{
+			preHandler: requireAdmin,
+			schema: {
+				body: {
+					type: "object",
+					properties: {
+						settings: {
+							type: "object",
+							minProperties: 1,
+							additionalProperties: { type: "string" },
+						},
+					},
+					required: ["settings"],
+				},
+			},
+		},
+		async (request, reply) => {
+			const entries = Object.entries(request.body.settings);
+
+			for (const [key, value] of entries) {
+				if (!isEditableSettingKey(key)) {
+					return reply.code(400).send({
+						ok: false,
+						error: {
+							code: "INVALID_SETTING_KEY",
+							message: `Unknown or non-editable setting key: ${key}`,
+						},
+					});
+				}
+
+				const validationError = validateSettingValue(key, value);
+				if (validationError) {
+					return reply.code(400).send({
+						ok: false,
+						error: { code: "INVALID_SETTING_VALUE", message: `${key}: ${validationError}` },
+					});
+				}
+			}
+
+			const now = new Date().toISOString();
+			db.transaction((tx) => {
+				for (const [key, value] of entries) {
+					tx.insert(appSettings)
+						.values({ key, value, updated_at: now })
+						.onConflictDoUpdate({ target: appSettings.key, set: { value, updated_at: now } })
+						.run();
+				}
+			});
+
+			return { ok: true, data: null };
+		},
+	);
+
 	// PATCH /api/v1/settings/:key - bir ayari guncelle (veya ekle)
 	app.patch<{ Params: { key: string }; Body: { value: string } }>(
 		API_ROUTES.V1.SETTING_BY_KEY(":key"),

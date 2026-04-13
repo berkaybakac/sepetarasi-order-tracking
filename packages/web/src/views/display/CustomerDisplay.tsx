@@ -1,6 +1,6 @@
 import { OrderStatus, WS_CHANNELS } from "@sepetarasi/shared";
 import type { Order, WsMessage } from "@sepetarasi/shared";
-import { AnimatePresence, motion, useAnimation } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -8,6 +8,7 @@ import { api } from "../../lib/api";
 import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 import {
 	DEFAULT_DISPLAY_CONFIG,
+	READY_HIGHLIGHT_ANIMATION_SECONDS,
 	type DisplayConfig,
 	TEXT_SCALES,
 	THEMES,
@@ -88,22 +89,26 @@ function OrderNumber({
 	badgeClass: string;
 	highlightClass: string;
 }) {
-	const controls = useAnimation();
-
-	useEffect(() => {
-		if (highlight) {
-			controls.start({
-				scale: [1, 1.45, 1.1, 1.0],
-				transition: { duration: 0.55, ease: "easeInOut" },
-			});
-		}
-	}, [highlight, controls]);
-
 	return (
 		<motion.div
 			layout
 			layoutId={`order-${displayNo}`}
-			animate={controls}
+			// Assumes `nowPlaying` transitions true -> false between announcements.
+			// If future WS flow can emit repeated true for the same order without reset,
+			// switch to imperative controls.start() to force re-trigger.
+			animate={
+				highlight
+					? {
+							opacity: 1,
+							y: 0,
+							scale: [1, 1.45, 1.1, 1.0],
+							transition: {
+								duration: READY_HIGHLIGHT_ANIMATION_SECONDS,
+								ease: "easeInOut",
+							},
+						}
+					: { opacity: 1, y: 0, scale: 1 }
+			}
 			initial={{ opacity: 0, scale: 0.75, y: 24 }}
 			exit={{ opacity: 0, scale: 0.6, y: -16, transition: { duration: 0.2 } }}
 			transition={{ type: "spring", stiffness: 300, damping: 25 }}

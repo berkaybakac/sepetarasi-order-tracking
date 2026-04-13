@@ -479,6 +479,73 @@ describe("PATCH /api/v1/settings/:key", () => {
 	});
 });
 
+describe("PATCH /api/v1/settings/bulk", () => {
+	it("should update multiple settings atomically", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/bulk",
+			headers: { cookie: adminCookie },
+			payload: {
+				settings: {
+					restaurant_name: "Yeni Restoran",
+					display_profile: "tv_1080p",
+					display_layout: "split",
+					display_page_seconds: "10",
+					display_ready_minutes: "7",
+					display_text_scale: "l",
+					display_theme: "retro",
+				},
+			},
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+
+		const restaurant = db
+			.select()
+			.from(appSettings)
+			.where(eq(appSettings.key, "restaurant_name"))
+			.get();
+		const profile = db.select().from(appSettings).where(eq(appSettings.key, "display_profile")).get();
+		const theme = db.select().from(appSettings).where(eq(appSettings.key, "display_theme")).get();
+
+		expect(restaurant?.value).toBe("Yeni Restoran");
+		expect(profile?.value).toBe("tv_1080p");
+		expect(theme?.value).toBe("retro");
+	});
+
+	it("should reject invalid payload without partial writes", async () => {
+		db.insert(appSettings).values({ key: "restaurant_name", value: "Eski Ad" }).run();
+		db.insert(appSettings).values({ key: "display_theme", value: "dark" }).run();
+
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/bulk",
+			headers: { cookie: adminCookie },
+			payload: {
+				settings: {
+					restaurant_name: "Yeni Ad",
+					display_theme: "neon",
+				},
+			},
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
+
+		const restaurant = db
+			.select()
+			.from(appSettings)
+			.where(eq(appSettings.key, "restaurant_name"))
+			.get();
+		const theme = db.select().from(appSettings).where(eq(appSettings.key, "display_theme")).get();
+
+		expect(restaurant?.value).toBe("Eski Ad");
+		expect(theme?.value).toBe("dark");
+	});
+});
+
 describe("GET /api/v1/stats", () => {
 	it("returns daily stats by default", async () => {
 		const res = await app.inject({

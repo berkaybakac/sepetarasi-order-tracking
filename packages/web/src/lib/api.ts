@@ -44,6 +44,8 @@ export const api = {
 		request<DayStats>("GET", `${API_ROUTES.V1.STATS}?period=${period}`),
 	getSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS),
 	getPublicSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS_PUBLIC),
+	updateSettingsBulk: (settings: Record<string, string>) =>
+		request<null>("PATCH", API_ROUTES.V1.SETTINGS_BULK, { settings }),
 	updateSetting: (key: string, value: string) =>
 		request<null>("PATCH", API_ROUTES.V1.SETTING_BY_KEY(key), { value }),
 	deleteOrder: (id: string) => request<null>("DELETE", `${API_ROUTES.V1.ORDERS}/${id}`),

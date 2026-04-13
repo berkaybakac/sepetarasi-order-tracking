@@ -1,10 +1,16 @@
-import { SETTING_KEYS } from "@sepetarasi/shared";
+import {
+	DISPLAY_LAYOUT_PREFERENCES,
+	DISPLAY_PROFILES,
+	DISPLAY_TEXT_SCALES,
+	DISPLAY_THEMES,
+	SETTING_KEYS,
+	type DisplayLayoutPreference,
+	type DisplayProfile,
+	type DisplayTextScale,
+	type DisplayTheme,
+} from "@sepetarasi/shared";
 
-export type DisplayProfile = "auto" | "led_256x512" | "tv_1080p";
-export type DisplayLayoutPreference = "auto" | "split" | "stack";
 export type DisplayLayoutMode = "split" | "stack";
-export type DisplayTextScale = "s" | "m" | "l";
-export type DisplayTheme = "dark" | "light" | "vivid" | "retro";
 
 export interface DisplayConfig {
 	profile: DisplayProfile;
@@ -16,6 +22,11 @@ export interface DisplayConfig {
 	textScale: DisplayTextScale;
 	theme: DisplayTheme;
 }
+
+const DISPLAY_PROFILE_SET = new Set<DisplayProfile>(DISPLAY_PROFILES);
+const DISPLAY_LAYOUT_SET = new Set<DisplayLayoutPreference>(DISPLAY_LAYOUT_PREFERENCES);
+const DISPLAY_TEXT_SCALE_SET = new Set<DisplayTextScale>(DISPLAY_TEXT_SCALES);
+const DISPLAY_THEME_SET = new Set<DisplayTheme>(DISPLAY_THEMES);
 
 const PROFILE_DEFAULTS: Record<
 	DisplayProfile,
@@ -34,6 +45,9 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
 	textScale: "m",
 	theme: "dark",
 };
+
+/** "Şimdi Servis" sırasında hazır numara vurgu animasyonu süresi (saniye) */
+export const READY_HIGHLIGHT_ANIMATION_SECONDS = 1;
 
 // ---------------------------------------------------------------------------
 // Tema tanımları
@@ -170,15 +184,17 @@ function parsePositiveInt(raw: string | undefined): number | null {
 }
 
 export function parseDisplaySettings(settings: Record<string, string>): DisplayConfig {
-	const profile = (settings[SETTING_KEYS.DISPLAY_PROFILE] as DisplayProfile | undefined) ?? "auto";
+	const profileRaw = settings[SETTING_KEYS.DISPLAY_PROFILE];
 	const baseProfile: DisplayProfile =
-		profile === "auto" || profile === "led_256x512" || profile === "tv_1080p" ? profile : "auto";
+		profileRaw && DISPLAY_PROFILE_SET.has(profileRaw as DisplayProfile)
+			? (profileRaw as DisplayProfile)
+			: "auto";
 
 	const defaults = PROFILE_DEFAULTS[baseProfile];
 	const layoutRaw = settings[SETTING_KEYS.DISPLAY_LAYOUT];
 	const layoutPreference: DisplayLayoutPreference =
-		layoutRaw === "auto" || layoutRaw === "split" || layoutRaw === "stack"
-			? layoutRaw
+		layoutRaw && DISPLAY_LAYOUT_SET.has(layoutRaw as DisplayLayoutPreference)
+			? (layoutRaw as DisplayLayoutPreference)
 			: defaults.layoutPreference;
 
 	const maxVisible = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_MAX_VISIBLE]);
@@ -194,12 +210,14 @@ export function parseDisplaySettings(settings: Record<string, string>): DisplayC
 
 	const scaleRaw = settings[SETTING_KEYS.DISPLAY_TEXT_SCALE];
 	const textScale: DisplayTextScale =
-		scaleRaw === "s" || scaleRaw === "m" || scaleRaw === "l" ? scaleRaw : "m";
+		scaleRaw && DISPLAY_TEXT_SCALE_SET.has(scaleRaw as DisplayTextScale)
+			? (scaleRaw as DisplayTextScale)
+			: "m";
 
 	const themeRaw = settings[SETTING_KEYS.DISPLAY_THEME];
 	const theme: DisplayTheme =
-		themeRaw === "dark" || themeRaw === "light" || themeRaw === "vivid" || themeRaw === "retro"
-			? themeRaw
+		themeRaw && DISPLAY_THEME_SET.has(themeRaw as DisplayTheme)
+			? (themeRaw as DisplayTheme)
 			: "dark";
 
 	return {

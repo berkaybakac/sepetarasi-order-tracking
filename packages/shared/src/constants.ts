@@ -29,6 +29,18 @@ export function isOrderType(value: string): value is OrderType {
 	return ORDER_TYPES.includes(value as OrderType);
 }
 
+export const DISPLAY_PROFILES = ["auto", "led_256x512", "tv_1080p"] as const;
+export type DisplayProfile = (typeof DISPLAY_PROFILES)[number];
+
+export const DISPLAY_LAYOUT_PREFERENCES = ["auto", "split", "stack"] as const;
+export type DisplayLayoutPreference = (typeof DISPLAY_LAYOUT_PREFERENCES)[number];
+
+export const DISPLAY_TEXT_SCALES = ["s", "m", "l"] as const;
+export type DisplayTextScale = (typeof DISPLAY_TEXT_SCALES)[number];
+
+export const DISPLAY_THEMES = ["dark", "light", "vivid", "retro"] as const;
+export type DisplayTheme = (typeof DISPLAY_THEMES)[number];
+
 /** Valid status transitions: key = from, value = allowed targets */
 export const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 	[OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
@@ -83,6 +95,7 @@ export const API_ROUTES = {
 		STATS_TODAY: "/api/v1/stats/today",
 		STATS: "/api/v1/stats",
 		SETTINGS: "/api/v1/settings",
+		SETTINGS_BULK: "/api/v1/settings/bulk",
 		SETTINGS_PUBLIC: "/api/v1/settings/public",
 		SETTING_BY_KEY: (key: string) => `/api/v1/settings/${key}`,
 		AUTH: {

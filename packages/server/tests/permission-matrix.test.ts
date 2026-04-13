@@ -118,6 +118,33 @@ describe("Permission matrix", () => {
 		expect(adminRes.statusCode).toBe(200);
 	});
 
+	it("PATCH /api/v1/settings/bulk allows only admin", async () => {
+		const payload = { settings: { display_theme: "dark" } };
+
+		const anonymousRes = await app.inject({
+			method: "PATCH",
+			url: API_ROUTES.V1.SETTINGS_BULK,
+			payload,
+		});
+		expect(anonymousRes.statusCode).toBe(401);
+
+		const cashierRes = await app.inject({
+			method: "PATCH",
+			url: API_ROUTES.V1.SETTINGS_BULK,
+			headers: withCashierAuth(),
+			payload,
+		});
+		expect(cashierRes.statusCode).toBe(401);
+
+		const adminRes = await app.inject({
+			method: "PATCH",
+			url: API_ROUTES.V1.SETTINGS_BULK,
+			headers: { cookie: adminCookie },
+			payload,
+		});
+		expect(adminRes.statusCode).toBe(200);
+	});
+
 	it("GET /api/v1/settings/public allows anonymous, cashier, and admin", async () => {
 		const anonymousRes = await app.inject({
 			method: "GET",
