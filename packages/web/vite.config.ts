@@ -2,13 +2,16 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+const apiUrl = process.env.API_URL ?? "http://localhost:3000";
+const wsUrl = apiUrl.replace(/^http/, "ws");
+
 export default defineConfig({
 	plugins: [react(), tailwindcss()],
 	server: {
 		proxy: {
-			"/api": "http://localhost:3000",
+			"/api": apiUrl,
 			"/ws": {
-				target: "ws://localhost:3000",
+				target: wsUrl,
 				ws: true,
 			},
 		},

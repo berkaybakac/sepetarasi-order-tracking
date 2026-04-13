@@ -50,7 +50,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [printerIp, setPrinterIp] = useState("");
 	const [printerCodePage, setPrinterCodePage] = useState("61");
 	const [printerEncoding, setPrinterEncoding] = useState("cp857");
-	const [cashierToken, setCashierToken] = useState("local-dev-cashier-token");
+	const [cashierToken, setCashierToken] = useState("");
 	const [showCashierToken, setShowCashierToken] = useState(false);
 	const [testing, setTesting] = useState(false);
 	const [discovering, setDiscovering] = useState(false);

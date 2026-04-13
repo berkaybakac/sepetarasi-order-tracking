@@ -6,7 +6,10 @@ LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Pane
 
 ## Geliştirme (Mac'te)
 
-Pi4'e gerek yok. Hot reload ile hızlı iteration — Mac'te geliştir, Pi4'e sadece sahaya çıkarken deploy et.
+İki mod var — hangisini kullanacağın o anki işe göre seçilir:
+
+**Mod 1 — Tamamen lokal (UI geliştirme, birim testler):**
+Pi4 gerekmez. Mac'te local server + local DB ile çalışır.
 
 ```bash
 # Terminal 1 — Server
@@ -19,13 +22,27 @@ npm run dev:web
 cd packages/kasa && npm run dev
 ```
 
-| Arayüz | Dev (Mac) | Pi4 |
-| --- | --- | --- |
-| Yönetici Paneli | http://localhost:5173 | http://sepetarasi.local:3000 |
-| Müşteri Ekranı | http://localhost:5173/display | http://sepetarasi.local:3000/display |
-| Admin | http://localhost:5173/admin | http://sepetarasi.local:3000/admin |
-| API | http://localhost:3000 | http://sepetarasi.local:3000 |
-| Kasa | Electron penceresi | `.app` / `.exe` build |
+**Mod 2 — Pi4 verisiyle geliştirme (gerçek sipariş akışı, entegrasyon):**
+Pi4 çalışıyor olmalı. Hot reload Mac'te, data Pi4'ten gelir. Lokal server açma.
+
+```bash
+# Terminal 1 — Web UI (admin panel, display)
+npm run dev:web:pi4
+
+# Terminal 2 — Kasa Electron
+cd packages/kasa && npm run dev
+```
+
+> Kasa ilk açılışta config ekranında server URL'yi `http://sepetarasi.local:3000` yap ve kaydet — bir daha sormaz.
+> **İstisna:** `packages/server` kodunu değiştirdiysen hot reload olmaz — değişiklik Pi4'e ancak `bash scripts/deploy.sh` ile gider. O durumda Mod 1'e geç.
+
+| Arayüz | Lokal Dev | Pi4 Dev (`dev:web:pi4`) | Pi4 Production |
+| --- | --- | --- | --- |
+| Yönetici Paneli | http://localhost:5173 | http://localhost:5173 | http://sepetarasi.local:3000 |
+| Müşteri Ekranı | http://localhost:5173/display | http://localhost:5173/display | http://sepetarasi.local:3000/display |
+| Admin | http://localhost:5173/admin | http://localhost:5173/admin | http://sepetarasi.local:3000/admin |
+| API | http://localhost:3000 | http://sepetarasi.local:3000 | http://sepetarasi.local:3000 |
+| Kasa | Electron penceresi | — | `.app` / `.exe` build |
 
 Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
 
@@ -35,6 +52,8 @@ Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkl
 | --- | --- | --- |
 | Mac (lokal dev) | `http://localhost:3000` | `local-dev-cashier-token` |
 | Pi4 (production) | `http://sepetarasi.local:3000` | `grep CASHIER_TOKEN /opt/sepetarasi/.env` |
+
+Kasa Electron uygulaması bu bilgileri `config.json`'a kaydeder — deploy sonrası tekrar girilmesine gerek yok.
 
 ### Commit Öncesi
 
@@ -49,6 +68,27 @@ Müşteriye gitmeden önce Pi4 üzerinde smoke test:
 ```bash
 bash scripts/pi4-smoke-test.sh   # API + WS + ses
 ```
+
+---
+
+## Deploy & Release Sırası
+
+```bash
+# 1. CI geç
+npm run ci
+
+# 2. Pi4'e deploy et (server güncellenir)
+bash scripts/deploy.sh
+
+# 3. macOS kasa build (çıktı: packages/kasa/release/mac-arm64/*.app)
+cd packages/kasa && npm run build:mac
+
+# 4. Windows kasa build — Mac'ten cross-compile (çıktı: packages/kasa/release/*.exe)
+cd packages/kasa && npm run build:win
+```
+
+> Kasa build'leri Pi4 deploy'undan sonra yapılır — server güncellenmeden kasa dağıtılırsa API uyumsuzluğu olabilir.
+> Windows cross-compile için Mac'te `wine` gerekebilir: `brew install --cask wine-stable`
 
 ---
 
@@ -99,6 +139,10 @@ ssh admin@sepetarasi.local "sudo journalctl -u sepetarasi -f"
 ---
 
 ## Sorun Giderme
+
+**Siparişler karışıyor / lokal ve Pi4 verisi çakışıyor:**
+Lokal `dev:server` açıkken aynı anda Pi4'e de bağlanırsan iki ayrı DB olur — siparişler birbirinde görünmez, numara sayacı çakışır.
+Kural: **Ya lokal server çalışır ya Pi4.** Pi4 verisiyle geliştirmek için `dev:web:pi4` kullan, lokal server açma.
 
 **Port çakışması** — Server başlamıyor, Vite 5174/5175'e kaydı:
 
