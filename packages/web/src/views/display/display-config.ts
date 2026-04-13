@@ -61,8 +61,12 @@ export interface ThemeClasses {
 	preparingCol: string;
 	preparingDivider: string;
 	readyCol: string;
+	preparingRail: string;
+	readyRail: string;
 	preparingTitle: string;
 	readyTitle: string;
+	preparingKpiCard: string;
+	readyKpiCard: string;
 	preparingEmpty: string;
 	readyEmpty: string;
 	preparingOrderBadge: string;
@@ -80,8 +84,12 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		preparingCol: "bg-amber-950/20",
 		preparingDivider: "border-amber-900/40",
 		readyCol: "bg-green-950/20",
+		preparingRail: "bg-amber-900/20 border border-amber-700/40",
+		readyRail: "bg-emerald-900/20 border border-emerald-700/40",
 		preparingTitle: "text-yellow-400",
 		readyTitle: "text-green-400",
+		preparingKpiCard: "bg-amber-500/15 border border-amber-400/45 text-amber-100",
+		readyKpiCard: "bg-emerald-500/15 border border-emerald-400/45 text-emerald-100",
 		preparingEmpty: "text-amber-300/80",
 		readyEmpty: "text-emerald-300/80",
 		preparingOrderBadge: "bg-amber-900/50 text-amber-100 border border-amber-700/50",
@@ -98,8 +106,12 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		preparingCol: "bg-amber-50",
 		preparingDivider: "border-amber-400",
 		readyCol: "bg-emerald-50",
+		preparingRail: "bg-white/95 border border-amber-200 shadow-sm",
+		readyRail: "bg-white/95 border border-emerald-200 shadow-sm",
 		preparingTitle: "text-amber-700",
 		readyTitle: "text-emerald-700",
+		preparingKpiCard: "bg-white border border-amber-300 text-amber-900 shadow-sm",
+		readyKpiCard: "bg-white border border-emerald-300 text-emerald-900 shadow-sm",
 		preparingEmpty: "text-amber-600/80",
 		readyEmpty: "text-emerald-600/80",
 		preparingOrderBadge: "bg-amber-100 text-amber-900 border border-amber-300 shadow-sm",
@@ -116,8 +128,12 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		preparingCol: "bg-orange-500/10",
 		preparingDivider: "border-orange-500/40",
 		readyCol: "bg-teal-500/10",
+		preparingRail: "bg-orange-500/15 border border-orange-300/45",
+		readyRail: "bg-teal-500/15 border border-teal-300/45",
 		preparingTitle: "text-orange-400",
 		readyTitle: "text-teal-300",
+		preparingKpiCard: "bg-orange-500/20 border border-orange-300/60 text-orange-100",
+		readyKpiCard: "bg-teal-500/20 border border-teal-300/60 text-teal-100",
 		preparingEmpty: "text-orange-400/60",
 		readyEmpty: "text-teal-400/60",
 		preparingOrderBadge: "bg-orange-500/15 text-orange-100 border border-orange-500/40",
@@ -134,8 +150,12 @@ export const THEMES: Record<DisplayTheme, ThemeClasses> = {
 		preparingCol: "bg-yellow-950/20",
 		preparingDivider: "border-yellow-700/40",
 		readyCol: "bg-green-950/30",
+		preparingRail: "bg-yellow-950 border border-yellow-700",
+		readyRail: "bg-green-950 border border-green-700",
 		preparingTitle: "text-yellow-400",
 		readyTitle: "text-green-400",
+		preparingKpiCard: "bg-yellow-950 border border-yellow-600 text-yellow-300",
+		readyKpiCard: "bg-green-950 border border-green-500 text-green-300",
 		preparingEmpty: "text-yellow-700/80",
 		readyEmpty: "text-green-700/80",
 		preparingOrderBadge: "bg-yellow-950 text-yellow-400 border border-yellow-800",

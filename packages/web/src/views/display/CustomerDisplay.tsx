@@ -67,12 +67,36 @@ function ClockText({ className }: { className: string }) {
 	);
 }
 
-function CountBadge({ count }: { count: number }) {
-	if (count === 0) return null;
+function ColumnKpiHeader({
+	title,
+	count,
+	railClass,
+	titleClass,
+	kpiCardClass,
+}: {
+	title: string;
+	count: number;
+	railClass: string;
+	titleClass: string;
+	kpiCardClass: string;
+}) {
 	return (
-		<span className="ml-[0.4em] inline-flex items-center justify-center min-w-[1.1em] h-[1.1em] px-[0.2em] rounded-full bg-current/20 text-[0.52em] font-bold tabular-nums leading-none">
-			{count}
-		</span>
+		<div
+			className={`mb-[clamp(0.5rem,2.2vmin,1.6rem)] h-[clamp(5.5rem,11vmin,6.5rem)] rounded-[clamp(0.75rem,2vmin,1rem)] px-[clamp(0.7rem,2.2vmin,1.5rem)] py-[clamp(0.45rem,1.2vmin,0.85rem)] flex items-center justify-between gap-[clamp(0.75rem,2.5vmin,1.75rem)] ${railClass}`}
+		>
+			<h2
+				className={`text-[clamp(2rem,5.2vw,3.5rem)] font-bold ${titleClass} tracking-[0.02em] leading-[1] -translate-y-[0.03em]`}
+			>
+				{title}
+			</h2>
+			<div
+				className={`shrink-0 inline-flex items-center justify-center min-w-[clamp(6.5rem,16vmin,9rem)] h-[clamp(3.25rem,7.6vmin,4rem)] rounded-[clamp(0.875rem,2vmin,1rem)] px-[clamp(0.85rem,2.4vmin,1.4rem)] shadow-lg shadow-black/20 ${kpiCardClass}`}
+			>
+				<span className="font-extrabold tabular-nums text-[clamp(1.5rem,3.9vw,2.6rem)] leading-none">
+					{count}
+				</span>
+			</div>
+		</div>
 	);
 }
 
@@ -112,7 +136,7 @@ function OrderNumber({
 			initial={{ opacity: 0, scale: 0.75, y: 24 }}
 			exit={{ opacity: 0, scale: 0.6, y: -16, transition: { duration: 0.2 } }}
 			transition={{ type: "spring", stiffness: 300, damping: 25 }}
-			className={`aspect-square max-w-[clamp(3rem,16vmin,9rem)] w-full mx-auto rounded-full flex items-center justify-center font-bold ${textClass} ${highlight ? highlightClass : badgeClass}`}
+			className={`aspect-square max-w-[clamp(3rem,16vmin,9rem)] w-full mx-auto rounded-full flex items-center justify-center font-bold tabular-nums ${textClass} ${highlight ? highlightClass : badgeClass}`}
 		>
 			{displayNo}
 		</motion.div>
@@ -252,12 +276,13 @@ export function CustomerDisplay() {
 				<div
 					className={`p-[clamp(0.25rem,2vmin,2rem)] ${theme.preparingCol} ${isStackLayout ? "border-b-2" : "border-r-2"} ${theme.preparingDivider}`}
 				>
-					<h2
-						className={`${scale.columnHeader} font-bold ${theme.preparingTitle} mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center`}
-					>
-						{UI_LABELS.DISPLAY.PREPARING_TITLE}
-						<CountBadge count={preparingOrders.length} />
-					</h2>
+					<ColumnKpiHeader
+						title={UI_LABELS.DISPLAY.PREPARING_TITLE}
+						count={preparingOrders.length}
+						railClass={theme.preparingRail}
+						titleClass={theme.preparingTitle}
+						kpiCardClass={theme.preparingKpiCard}
+					/>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
 						<AnimatePresence mode="popLayout">
 							{visiblePreparingOrders.map((order) => (
@@ -282,12 +307,13 @@ export function CustomerDisplay() {
 
 				{/* Ready Column */}
 				<div className={`p-[clamp(0.25rem,2vmin,2rem)] ${theme.readyCol}`}>
-					<h2
-						className={`${scale.columnHeader} font-bold ${theme.readyTitle} mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center`}
-					>
-						{UI_LABELS.DISPLAY.READY_TITLE}
-						<CountBadge count={readyOrders.length} />
-					</h2>
+					<ColumnKpiHeader
+						title={UI_LABELS.DISPLAY.READY_TITLE}
+						count={readyOrders.length}
+						railClass={theme.readyRail}
+						titleClass={theme.readyTitle}
+						kpiCardClass={theme.readyKpiCard}
+					/>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
 						<AnimatePresence mode="popLayout">
 							{visibleReadyOrders.map((order) => (
