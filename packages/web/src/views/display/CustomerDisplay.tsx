@@ -18,6 +18,7 @@ import {
 	resolveLayoutMode,
 	resolveMaxVisiblePerColumn,
 } from "./display-config";
+import { advancePage, findNewestNewReadyOrderPage, findOrderPageById } from "./pagination-logic";
 
 function useVisibleReadyOrders(readyOrders: Order[], readyDisplayMinutes: number): Order[] {
 	return useMemo(() => {
@@ -240,8 +241,8 @@ export function CustomerDisplay() {
 	// Auto-advance both columns independently so one column jump does not disturb the other.
 	useEffect(() => {
 		const interval = setInterval(() => {
-			setPreparingPage((p) => (p + 1) % preparingPageCountRef.current);
-			setReadyPage((p) => (p + 1) % readyPageCountRef.current);
+			setPreparingPage((p) => advancePage(p, preparingPageCountRef.current));
+			setReadyPage((p) => advancePage(p, readyPageCountRef.current));
 		}, displayConfig.pageSeconds * 1000);
 		return () => clearInterval(interval);
 	}, [displayConfig.pageSeconds]);
@@ -257,44 +258,21 @@ export function CustomerDisplay() {
 		}
 
 		const previousReadyIds = previousReadyIdsRef.current;
-		let newestReadyOrder: Order | null = null;
-
-		for (const order of readyOrders) {
-			if (previousReadyIds.has(order.id)) continue;
-
-			if (!newestReadyOrder) {
-				newestReadyOrder = order;
-				continue;
-			}
-
-			const currentReadyAt = order.ready_at ?? "";
-			const latestReadyAt = newestReadyOrder.ready_at ?? "";
-			if (
-				currentReadyAt > latestReadyAt ||
-				(currentReadyAt === latestReadyAt && order.display_no > newestReadyOrder.display_no)
-			) {
-				newestReadyOrder = order;
-			}
-		}
-
+		const targetPage = findNewestNewReadyOrderPage(
+			readyOrders,
+			previousReadyIds,
+			maxVisiblePerColumn,
+		);
 		previousReadyIdsRef.current = currentReadyIds;
-		if (!newestReadyOrder) return;
-
-		const idx = readyOrders.findIndex((order) => order.id === newestReadyOrder.id);
-		if (idx < 0) return;
-
-		const targetPage = Math.floor(idx / maxVisiblePerColumn);
-		if (targetPage < readyPageCountRef.current) setReadyPage(targetPage);
+		if (targetPage !== null && targetPage < readyPageCountRef.current) setReadyPage(targetPage);
 	}, [readyOrders, maxVisiblePerColumn]);
 
 	// When a new order is announced, jump the ready column to the page that contains it
 	const nowPlayingId = nowPlaying?.order_id;
 	useEffect(() => {
 		if (!nowPlayingId) return;
-		const idx = readyOrders.findIndex((o) => o.id === nowPlayingId);
-		if (idx < 0) return;
-		const targetPage = Math.floor(idx / maxVisiblePerColumn);
-		if (targetPage < readyPageCountRef.current) setReadyPage(targetPage);
+		const targetPage = findOrderPageById(readyOrders, nowPlayingId, maxVisiblePerColumn);
+		if (targetPage !== null && targetPage < readyPageCountRef.current) setReadyPage(targetPage);
 	}, [nowPlayingId, readyOrders, maxVisiblePerColumn]);
 
 	return (
