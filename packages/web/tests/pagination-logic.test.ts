@@ -1,4 +1,4 @@
-import type { Order } from "@sepetarasi/shared";
+import { OrderStatus, type Order } from "@sepetarasi/shared";
 import { describe, expect, it } from "vitest";
 import {
 	advancePage,
@@ -11,7 +11,7 @@ function createReadyOrder(id: string, displayNo: number, readyAt: string): Order
 		id,
 		business_date: "2026-04-13",
 		display_no: displayNo,
-		status: "READY",
+		status: OrderStatus.READY,
 		terminal_id: "t-1",
 		customer_name: "Test",
 		order_type: "Paket",
