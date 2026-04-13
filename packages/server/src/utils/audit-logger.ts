@@ -10,13 +10,41 @@ try {
 	// Ignore if exists
 }
 
-export function auditLog(action: string, details: string) {
-	const timestamp = new Date().toISOString();
-	const logLine = `[${timestamp}] ${action} - ${details}\n`;
+export interface AuditLogContext {
+	actor?: string;
+	ip?: string;
+	requestId?: string;
+	path?: string;
+	orderId?: string;
+	displayNo?: number;
+}
+
+function serializeError(error: unknown): { name: string; message: string } | string {
+	if (error instanceof Error) {
+		return { name: error.name, message: error.message };
+	}
+	return String(error);
+}
+
+export function auditLog(action: string, details: string, context: AuditLogContext = {}) {
+	const logLine = JSON.stringify({
+		timestamp: new Date().toISOString(),
+		action,
+		details,
+		...context,
+	});
 
 	try {
-		appendFileSync(logFilePath, logLine, "utf-8");
+		appendFileSync(logFilePath, `${logLine}\n`, "utf-8");
 	} catch (error) {
-		console.error("Failed to write to audit log:", error);
+		process.stderr.write(
+			`${JSON.stringify({
+				timestamp: new Date().toISOString(),
+				level: "error",
+				component: "audit-logger",
+				event: "audit_log_write_failed",
+				error: serializeError(error),
+			})}\n`,
+		);
 	}
 }

@@ -61,7 +61,12 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 
 			const match = await bcrypt.compare(password ?? "", hash);
 			if (!match) {
-				auditLog("LOGIN_FAILED", `Failed login attempt from ${request.ip}`);
+				auditLog("LOGIN_FAILED", "Invalid admin password", {
+					actor: "admin",
+					ip: request.ip,
+					requestId: request.id,
+					path: request.url,
+				});
 				return reply
 					.code(401)
 					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
@@ -70,7 +75,12 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			const token = app.jwt.sign({ role: "admin" }, { expiresIn: "7d" });
 			const secureCookie = AUTH_CONFIG.cookieSecure && isHttpsRequest(request);
 
-			auditLog("LOGIN_SUCCESS", `Admin logged in from ${request.ip}`);
+			auditLog("LOGIN_SUCCESS", "Admin logged in", {
+				actor: "admin",
+				ip: request.ip,
+				requestId: request.id,
+				path: request.url,
+			});
 
 			// Send http-only secure cookie
 			reply.setCookie(ADMIN_COOKIE_NAME, token, {
@@ -88,7 +98,12 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 	// POST /api/v1/auth/logout
 	app.post(API_ROUTES.V1.AUTH.LOGOUT, async (request, reply) => {
 		reply.clearCookie(ADMIN_COOKIE_NAME, { path: "/" });
-		auditLog("LOGOUT", "Admin logged out");
+		auditLog("LOGOUT", "Admin logged out", {
+			actor: "admin",
+			ip: request.ip,
+			requestId: request.id,
+			path: request.url,
+		});
 		return { ok: true, data: null };
 	});
 
@@ -153,7 +168,12 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				})
 				.run();
 
-			auditLog("PASSWORD_CHANGED", `Admin password was changed from ${request.ip}`);
+			auditLog("PASSWORD_CHANGED", "Admin password changed", {
+				actor: "admin",
+				ip: request.ip,
+				requestId: request.id,
+				path: request.url,
+			});
 			return { ok: true, data: { message: "Password updated successfully" } };
 		},
 	);

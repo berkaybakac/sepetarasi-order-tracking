@@ -1,50 +1,8 @@
-import {
-	DISPLAY_LAYOUT_PREFERENCES,
-	DISPLAY_PROFILES,
-	DISPLAY_TEXT_SCALES,
-	DISPLAY_THEMES,
-	type DisplayLayoutPreference,
-	type DisplayProfile,
-	type DisplayTextScale,
-	type DisplayTheme,
-	SETTING_KEYS,
-} from "@sepetarasi/shared";
+import type { DisplayConfig, DisplayTextScale, DisplayTheme } from "@sepetarasi/shared";
+export { DEFAULT_DISPLAY_CONFIG, parseDisplaySettings } from "@sepetarasi/shared";
+export type { DisplayConfig } from "@sepetarasi/shared";
 
 export type DisplayLayoutMode = "split" | "stack";
-
-export interface DisplayConfig {
-	profile: DisplayProfile;
-	layoutPreference: DisplayLayoutPreference;
-	maxVisiblePerColumn: number;
-	pageSeconds: number;
-	restaurantName: string;
-	readyDisplayMinutes: number;
-	textScale: DisplayTextScale;
-	theme: DisplayTheme;
-}
-
-const DISPLAY_PROFILE_SET = new Set<DisplayProfile>(DISPLAY_PROFILES);
-const DISPLAY_LAYOUT_SET = new Set<DisplayLayoutPreference>(DISPLAY_LAYOUT_PREFERENCES);
-const DISPLAY_TEXT_SCALE_SET = new Set<DisplayTextScale>(DISPLAY_TEXT_SCALES);
-const DISPLAY_THEME_SET = new Set<DisplayTheme>(DISPLAY_THEMES);
-
-const PROFILE_DEFAULTS: Record<
-	DisplayProfile,
-	Omit<DisplayConfig, "profile" | "restaurantName" | "readyDisplayMinutes" | "textScale" | "theme">
-> = {
-	auto: { layoutPreference: "auto", maxVisiblePerColumn: 20, pageSeconds: 8 },
-	led_256x512: { layoutPreference: "stack", maxVisiblePerColumn: 4, pageSeconds: 6 },
-	tv_1080p: { layoutPreference: "split", maxVisiblePerColumn: 24, pageSeconds: 8 },
-};
-
-export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
-	profile: "auto",
-	...PROFILE_DEFAULTS.auto,
-	restaurantName: "SEPET ARASI",
-	readyDisplayMinutes: 5,
-	textScale: "m",
-	theme: "dark",
-};
 
 /** "Şimdi Servis" sırasında hazır numara vurgu animasyonu süresi (saniye) */
 export const READY_HIGHLIGHT_ANIMATION_SECONDS = 1;
@@ -215,66 +173,6 @@ export const TEXT_SCALES: Record<DisplayTextScale, TextScaleClasses> = {
 		railKpiNumber: "text-[clamp(1.6rem,4.15vw,2.7rem)]",
 	},
 };
-
-// ---------------------------------------------------------------------------
-// Parse & utils
-// ---------------------------------------------------------------------------
-
-function parsePositiveInt(raw: string | undefined): number | null {
-	if (!raw) return null;
-	const n = Number(raw);
-	if (!Number.isInteger(n) || n <= 0) return null;
-	return n;
-}
-
-export function parseDisplaySettings(settings: Record<string, string>): DisplayConfig {
-	const profileRaw = settings[SETTING_KEYS.DISPLAY_PROFILE];
-	const baseProfile: DisplayProfile =
-		profileRaw && DISPLAY_PROFILE_SET.has(profileRaw as DisplayProfile)
-			? (profileRaw as DisplayProfile)
-			: "auto";
-
-	const defaults = PROFILE_DEFAULTS[baseProfile];
-	const layoutRaw = settings[SETTING_KEYS.DISPLAY_LAYOUT];
-	const layoutPreference: DisplayLayoutPreference =
-		layoutRaw && DISPLAY_LAYOUT_SET.has(layoutRaw as DisplayLayoutPreference)
-			? (layoutRaw as DisplayLayoutPreference)
-			: defaults.layoutPreference;
-
-	const maxVisible = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_MAX_VISIBLE]);
-	const maxVisiblePerColumn = Math.max(1, maxVisible ?? defaults.maxVisiblePerColumn);
-
-	const pageSecondsRaw = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_PAGE_SECONDS]);
-	const pageSeconds = Math.max(1, pageSecondsRaw ?? defaults.pageSeconds);
-
-	const restaurantName = settings[SETTING_KEYS.RESTAURANT_NAME] ?? "SEPET ARASI";
-
-	const readyDisplayMinutesRaw = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_READY_MINUTES]);
-	const readyDisplayMinutes = Math.min(60, Math.max(1, readyDisplayMinutesRaw ?? 5));
-
-	const scaleRaw = settings[SETTING_KEYS.DISPLAY_TEXT_SCALE];
-	const textScale: DisplayTextScale =
-		scaleRaw && DISPLAY_TEXT_SCALE_SET.has(scaleRaw as DisplayTextScale)
-			? (scaleRaw as DisplayTextScale)
-			: "m";
-
-	const themeRaw = settings[SETTING_KEYS.DISPLAY_THEME];
-	const theme: DisplayTheme =
-		themeRaw && DISPLAY_THEME_SET.has(themeRaw as DisplayTheme)
-			? (themeRaw as DisplayTheme)
-			: "dark";
-
-	return {
-		profile: baseProfile,
-		layoutPreference,
-		maxVisiblePerColumn,
-		pageSeconds,
-		restaurantName,
-		readyDisplayMinutes,
-		textScale,
-		theme,
-	};
-}
 
 export function resolveLayoutMode(
 	width: number,

@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { DEFAULT_DISPLAY_SETTINGS } from "@sepetarasi/shared";
 import { createDb } from "./connection.js";
 import { appSettings, terminals } from "./schema.js";
 
@@ -17,14 +18,7 @@ const defaultSettings = [
 	{ key: "receipt_phone", value: "" },
 	{ key: "receipt_tax_id", value: "" },
 	{ key: "receipt_tax_office", value: "" },
-	{ key: "display_profile", value: "auto" },
-	{ key: "display_layout", value: "auto" },
-	{ key: "display_max_visible", value: "20" },
-	{ key: "display_page_seconds", value: "8" },
-	{ key: "restaurant_name", value: "SEPET ARASI" },
-	{ key: "display_ready_minutes", value: "5" },
-	{ key: "display_text_scale", value: "m" },
-	{ key: "display_theme", value: "dark" },
+	...Object.entries(DEFAULT_DISPLAY_SETTINGS).map(([key, value]) => ({ key, value })),
 ];
 
 for (const setting of defaultSettings) {
@@ -46,4 +40,13 @@ db.insert(terminals)
 	.onConflictDoNothing()
 	.run();
 
-console.log("Seed data inserted successfully.");
+process.stdout.write(
+	`${JSON.stringify({
+		timestamp: new Date().toISOString(),
+		level: "info",
+		component: "db-seed",
+		event: "db.seed_completed",
+		defaultSettingsCount: defaultSettings.length,
+		msg: "Seed data inserted successfully",
+	})}\n`,
+);

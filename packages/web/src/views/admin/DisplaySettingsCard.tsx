@@ -7,7 +7,8 @@ import {
 	type DisplayProfile,
 	type DisplayTextScale,
 	type DisplayTheme,
-	SETTING_KEYS,
+	areDisplayConfigsEqual,
+	serializeDisplayConfig,
 } from "@sepetarasi/shared";
 import { useEffect, useRef, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
@@ -81,19 +82,6 @@ function NumberStepperField({
 	);
 }
 
-function areConfigsEqual(a: DisplayConfig, b: DisplayConfig): boolean {
-	return (
-		a.profile === b.profile &&
-		a.layoutPreference === b.layoutPreference &&
-		a.maxVisiblePerColumn === b.maxVisiblePerColumn &&
-		a.pageSeconds === b.pageSeconds &&
-		a.restaurantName === b.restaurantName &&
-		a.readyDisplayMinutes === b.readyDisplayMinutes &&
-		a.textScale === b.textScale &&
-		a.theme === b.theme
-	);
-}
-
 const PROFILE_LABELS: Record<DisplayProfile, string> = {
 	auto: UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION,
 	led_256x512: "LED 256x512",
@@ -118,19 +106,6 @@ const THEME_LABELS: Record<DisplayTheme, string> = {
 	vivid: UI_LABELS.DISPLAY_SETTINGS.THEME_VIVID,
 	retro: UI_LABELS.DISPLAY_SETTINGS.THEME_RETRO,
 };
-
-function buildDisplaySettingsPayload(config: DisplayConfig): Record<string, string> {
-	return {
-		[SETTING_KEYS.RESTAURANT_NAME]: config.restaurantName,
-		[SETTING_KEYS.DISPLAY_PROFILE]: config.profile,
-		[SETTING_KEYS.DISPLAY_LAYOUT]: config.layoutPreference,
-		[SETTING_KEYS.DISPLAY_MAX_VISIBLE]: String(config.maxVisiblePerColumn),
-		[SETTING_KEYS.DISPLAY_PAGE_SECONDS]: String(config.pageSeconds),
-		[SETTING_KEYS.DISPLAY_READY_MINUTES]: String(config.readyDisplayMinutes),
-		[SETTING_KEYS.DISPLAY_TEXT_SCALE]: config.textScale,
-		[SETTING_KEYS.DISPLAY_THEME]: config.theme,
-	};
-}
 
 export function DisplaySettingsCard() {
 	const [config, setConfig] = useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
@@ -168,7 +143,7 @@ export function DisplaySettingsCard() {
 		setSaving(true);
 		setErrorMessage(null);
 		api
-			.updateSettingsBulk(buildDisplaySettingsPayload(config))
+			.updateSettingsBulk(serializeDisplayConfig(config))
 			.then(() => {
 				setSavedConfig(config);
 				setSaveLabel("saved");
@@ -182,7 +157,7 @@ export function DisplaySettingsCard() {
 			.finally(() => setSaving(false));
 	};
 
-	const dirty = !areConfigsEqual(config, savedConfig);
+	const dirty = !areDisplayConfigsEqual(config, savedConfig);
 
 	const handleResetDefaults = () => {
 		setConfig(DEFAULT_DISPLAY_CONFIG);

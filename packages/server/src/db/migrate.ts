@@ -9,4 +9,12 @@ mkdirSync(dirname(dbPath), { recursive: true });
 const db = createDb(dbPath);
 migrate(db, { migrationsFolder: new URL("./migrations", import.meta.url).pathname });
 
-console.log("Migrations applied successfully.");
+process.stdout.write(
+	`${JSON.stringify({
+		timestamp: new Date().toISOString(),
+		level: "info",
+		component: "db-migrate",
+		event: "db.migrations_applied",
+		msg: "Migrations applied successfully",
+	})}\n`,
+);

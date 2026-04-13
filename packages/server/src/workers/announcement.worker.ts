@@ -1,15 +1,54 @@
 import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
-import type { FastifyBaseLogger } from "fastify";
 import type { AnnouncementService } from "../services/announcement.service.js";
 import type { AudioPlaybackService } from "../services/audio-playback.service.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
+
+interface WorkerLogger {
+	info: (obj: Record<string, unknown>, msg?: string) => void;
+	error: (obj: Record<string, unknown>, msg?: string) => void;
+}
+
+function createFallbackWorkerLogger(): WorkerLogger {
+	const isTestEnv = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+	if (isTestEnv) {
+		return {
+			info: () => undefined,
+			error: () => undefined,
+		};
+	}
+
+	return {
+		info: (obj, msg = "announcement-worker") => {
+			process.stdout.write(
+				`${JSON.stringify({
+					timestamp: new Date().toISOString(),
+					level: "info",
+					component: "announcement-worker",
+					msg,
+					...obj,
+				})}\n`,
+			);
+		},
+		error: (obj, msg = "announcement-worker") => {
+			process.stderr.write(
+				`${JSON.stringify({
+					timestamp: new Date().toISOString(),
+					level: "error",
+					component: "announcement-worker",
+					msg,
+					...obj,
+				})}\n`,
+			);
+		},
+	};
+}
 
 export interface AnnouncementWorkerOptions {
 	announcementService: AnnouncementService;
 	broadcaster: Broadcaster;
 	audioPlayer: AudioPlaybackService;
 	pollIntervalMs?: number;
-	logger?: FastifyBaseLogger;
+	logger?: WorkerLogger;
 }
 
 export class AnnouncementWorker {
@@ -19,14 +58,14 @@ export class AnnouncementWorker {
 	private broadcaster: Broadcaster;
 	private audioPlayer: AudioPlaybackService;
 	private pollIntervalMs: number;
-	private logger: FastifyBaseLogger | Console;
+	private logger: WorkerLogger;
 
 	constructor(opts: AnnouncementWorkerOptions) {
 		this.service = opts.announcementService;
 		this.broadcaster = opts.broadcaster;
 		this.audioPlayer = opts.audioPlayer;
 		this.pollIntervalMs = opts.pollIntervalMs ?? 1000;
-		this.logger = opts.logger ?? console;
+		this.logger = opts.logger ?? createFallbackWorkerLogger();
 	}
 
 	start() {
@@ -53,6 +92,16 @@ export class AnnouncementWorker {
 				return;
 			}
 
+			this.logger.info(
+				{
+					event: "announcement.worker.play_started",
+					announcementId: item.id,
+					orderId: item.order_id,
+					displayNo: item.display_no,
+				},
+				"Announcement playback started",
+			);
+
 			// Mark as playing + broadcast
 			this.service.markPlaying(item.id);
 			this.broadcaster.broadcast(
@@ -70,12 +119,23 @@ export class AnnouncementWorker {
 				WS_EVENTS.ANNOUNCEMENT_FINISHED,
 				{ order_id: item.order_id, display_no: item.display_no },
 			);
+			this.logger.info(
+				{
+					event: "announcement.worker.play_finished",
+					announcementId: item.id,
+					orderId: item.order_id,
+					displayNo: item.display_no,
+				},
+				"Announcement playback finished",
+			);
 		} catch (err) {
-			if ("child" in this.logger) {
-				this.logger.error({ err }, "Announcement worker error");
-			} else {
-				this.logger.error("Announcement worker error", err);
-			}
+			this.logger.error(
+				{
+					event: "announcement.worker.error",
+					error: err instanceof Error ? err.message : String(err),
+				},
+				"Announcement worker error",
+			);
 		} finally {
 			this.processing = false;
 		}

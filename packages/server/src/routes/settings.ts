@@ -1,4 +1,4 @@
-import { API_ROUTES } from "@sepetarasi/shared";
+import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import {
 	isEditableSettingKey,
@@ -10,6 +10,8 @@ import { appSettings } from "../db/schema.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
 
 export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
+	const PRIVATE_ADMIN_KEYS = new Set<string>([SETTING_KEYS.ADMIN_PASSWORD_HASH]);
+
 	// GET /api/v1/settings/public - authentication gerektirmeyen, ekrana acik ayarlar
 	app.get(API_ROUTES.V1.SETTINGS_PUBLIC, async () => {
 		const rows = db.select().from(appSettings).all();
@@ -21,6 +23,7 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 		const rows = db.select().from(appSettings).all();
 		const settings: Record<string, string> = {};
 		for (const row of rows) {
+			if (PRIVATE_ADMIN_KEYS.has(row.key)) continue;
 			settings[row.key] = row.value;
 		}
 		return { ok: true, data: settings };
@@ -78,6 +81,18 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 				}
 			});
 
+			const changedKeys = entries.map(([key]) => key).sort();
+			request.log.info(
+				{
+					event: "settings.bulk_updated",
+					changedKeys,
+					changedCount: changedKeys.length,
+					requestId: request.id,
+					ip: request.ip,
+				},
+				"Bulk settings updated",
+			);
+
 			return { ok: true, data: null };
 		},
 	);
@@ -119,6 +134,16 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 				.values({ key, value, updated_at: now })
 				.onConflictDoUpdate({ target: appSettings.key, set: { value, updated_at: now } })
 				.run();
+
+			request.log.info(
+				{
+					event: "settings.updated",
+					key,
+					requestId: request.id,
+					ip: request.ip,
+				},
+				"Setting updated",
+			);
 			return { ok: true, data: null };
 		},
 	);

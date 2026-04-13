@@ -285,6 +285,7 @@ describe("GET /api/v1/settings", () => {
 		expect(body.ok).toBe(true);
 		expect(body.data.business_name).toBe("Test Cafe");
 		expect(body.data.receipt_phone).toBe("555-1234");
+		expect(body.data.admin_password_hash).toBeUndefined();
 	});
 });
 

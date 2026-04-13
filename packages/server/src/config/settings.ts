@@ -1,21 +1,14 @@
 import {
-	DISPLAY_LAYOUT_PREFERENCES,
-	DISPLAY_PROFILES,
-	DISPLAY_TEXT_SCALES,
-	DISPLAY_THEMES,
+	DISPLAY_EDITABLE_SETTING_KEYS,
+	DISPLAY_PUBLIC_SETTING_KEYS,
 	SETTING_KEYS,
+	isDisplaySettingKey,
+	validateDisplaySettingValue,
 } from "@sepetarasi/shared";
 
 const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
-	SETTING_KEYS.RESTAURANT_NAME,
-	SETTING_KEYS.DISPLAY_PROFILE,
-	SETTING_KEYS.DISPLAY_LAYOUT,
-	SETTING_KEYS.DISPLAY_MAX_VISIBLE,
-	SETTING_KEYS.DISPLAY_PAGE_SECONDS,
-	SETTING_KEYS.DISPLAY_READY_MINUTES,
-	SETTING_KEYS.DISPLAY_TEXT_SCALE,
-	SETTING_KEYS.DISPLAY_THEME,
+	...DISPLAY_EDITABLE_SETTING_KEYS,
 	"announcement_delay_ms",
 	"business_name",
 	"receipt_business_name",
@@ -25,27 +18,9 @@ const EDITABLE_SETTING_KEYS = [
 	"receipt_tax_office",
 ] as const;
 
-const DISPLAY_PROFILE_VALUES = new Set<string>(DISPLAY_PROFILES);
-const DISPLAY_LAYOUT_VALUES = new Set<string>(DISPLAY_LAYOUT_PREFERENCES);
-const DISPLAY_TEXT_SCALE_VALUES = new Set<string>(DISPLAY_TEXT_SCALES);
-const DISPLAY_THEME_VALUES = new Set<string>(DISPLAY_THEMES);
-
-const PUBLIC_SETTING_KEYS = new Set<string>([
-	SETTING_KEYS.RESTAURANT_NAME,
-	SETTING_KEYS.DISPLAY_PROFILE,
-	SETTING_KEYS.DISPLAY_LAYOUT,
-	SETTING_KEYS.DISPLAY_MAX_VISIBLE,
-	SETTING_KEYS.DISPLAY_PAGE_SECONDS,
-	SETTING_KEYS.DISPLAY_READY_MINUTES,
-	SETTING_KEYS.DISPLAY_TEXT_SCALE,
-	SETTING_KEYS.DISPLAY_THEME,
-]);
+const PUBLIC_SETTING_KEYS = new Set<string>(DISPLAY_PUBLIC_SETTING_KEYS);
 
 const editableSettings = new Set<string>(EDITABLE_SETTING_KEYS);
-
-function formatAllowed(values: readonly string[]): string {
-	return values.join(", ");
-}
 
 export function isEditableSettingKey(key: string): boolean {
 	return editableSettings.has(key);
@@ -68,6 +43,10 @@ export function toPublicSettings(
 }
 
 export function validateSettingValue(key: string, value: string): string | null {
+	if (isDisplaySettingKey(key)) {
+		return validateDisplaySettingValue(key, value);
+	}
+
 	switch (key) {
 		case SETTING_KEYS.AUDIO_VOLUME: {
 			const num = Number(value);
@@ -76,52 +55,6 @@ export function validateSettingValue(key: string, value: string): string | null 
 			}
 			return null;
 		}
-		case SETTING_KEYS.RESTAURANT_NAME:
-			if (value.length > 60) {
-				return "restaurant_name must be <= 60 characters";
-			}
-			return null;
-		case SETTING_KEYS.DISPLAY_PROFILE:
-			if (!DISPLAY_PROFILE_VALUES.has(value)) {
-				return `display_profile must be one of: ${formatAllowed(DISPLAY_PROFILES)}`;
-			}
-			return null;
-		case SETTING_KEYS.DISPLAY_LAYOUT:
-			if (!DISPLAY_LAYOUT_VALUES.has(value)) {
-				return `display_layout must be one of: ${formatAllowed(DISPLAY_LAYOUT_PREFERENCES)}`;
-			}
-			return null;
-		case SETTING_KEYS.DISPLAY_MAX_VISIBLE: {
-			const maxVisible = Number(value);
-			if (!Number.isInteger(maxVisible) || maxVisible < 1) {
-				return "display_max_visible must be an integer >= 1";
-			}
-			return null;
-		}
-		case SETTING_KEYS.DISPLAY_PAGE_SECONDS: {
-			const pageSeconds = Number(value);
-			if (!Number.isInteger(pageSeconds) || pageSeconds < 1) {
-				return "display_page_seconds must be an integer >= 1";
-			}
-			return null;
-		}
-		case SETTING_KEYS.DISPLAY_READY_MINUTES: {
-			const minutes = Number(value);
-			if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
-				return "display_ready_minutes must be an integer between 1 and 60";
-			}
-			return null;
-		}
-		case SETTING_KEYS.DISPLAY_TEXT_SCALE:
-			if (!DISPLAY_TEXT_SCALE_VALUES.has(value)) {
-				return `display_text_scale must be one of: ${formatAllowed(DISPLAY_TEXT_SCALES)}`;
-			}
-			return null;
-		case SETTING_KEYS.DISPLAY_THEME:
-			if (!DISPLAY_THEME_VALUES.has(value)) {
-				return `display_theme must be one of: ${formatAllowed(DISPLAY_THEMES)}`;
-			}
-			return null;
 		case "announcement_delay_ms": {
 			const delay = Number(value);
 			if (!Number.isInteger(delay) || delay < 0 || delay > 60000) {

@@ -223,6 +223,7 @@ export async function buildApp(opts: AppOptions) {
 			announcementsPath: opts.announcementsPath,
 			alsaDevice: opts.alsaDevice,
 			delayMs: opts.announcementDelayMs ?? 2500,
+			logger: app.log.child({ component: "audio-playback" }),
 			getVolume: () => {
 				const row = opts.db
 					.select()
