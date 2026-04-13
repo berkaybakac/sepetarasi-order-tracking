@@ -21,6 +21,10 @@ const defaultSettings = [
 	{ key: "display_layout", value: "auto" },
 	{ key: "display_max_visible", value: "20" },
 	{ key: "display_page_seconds", value: "8" },
+	{ key: "restaurant_name", value: "SEPET ARASI" },
+	{ key: "display_ready_minutes", value: "5" },
+	{ key: "display_text_scale", value: "m" },
+	{ key: "display_theme", value: "dark" },
 ];
 
 for (const setting of defaultSettings) {

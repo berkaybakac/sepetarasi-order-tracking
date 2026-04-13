@@ -47,6 +47,18 @@ export const UI_LABELS = {
 		SAVE_ERROR: "Ayarlar kaydedilemedi. Lütfen tekrar deneyin.",
 		DECREASE: "Azalt",
 		INCREASE: "Artır",
+		RESTAURANT_NAME_LABEL: "Restoran Adı",
+		RESTAURANT_NAME_PLACEHOLDER: "Örn. Sepetarası Mutfak",
+		READY_DISPLAY_MINUTES_LABEL: "Hazır Gösterim Süresi (dk)",
+		TEXT_SCALE_LABEL: "Yazı Ölçeği",
+		TEXT_SCALE_S: "Küçük (S)",
+		TEXT_SCALE_M: "Orta (M)",
+		TEXT_SCALE_L: "Büyük (L)",
+		THEME_LABEL: "Tema",
+		THEME_DARK: "Karanlık",
+		THEME_LIGHT: "Açık",
+		THEME_VIVID: "Canlı",
+		THEME_RETRO: "Retro",
 	},
 
 	// Sipariş Kolonu Genel Metinler

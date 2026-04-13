@@ -1,5 +1,6 @@
 import { OrderStatus, WS_CHANNELS } from "@sepetarasi/shared";
 import type { Order, WsMessage } from "@sepetarasi/shared";
+import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -8,6 +9,8 @@ import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 import {
 	DEFAULT_DISPLAY_CONFIG,
 	type DisplayConfig,
+	TEXT_SCALES,
+	THEMES,
 	getPageCount,
 	getPageSlice,
 	parseDisplaySettings,
@@ -15,28 +18,15 @@ import {
 	resolveMaxVisiblePerColumn,
 } from "./display-config";
 
-// How long (ms) a READY order stays visible on the customer display after being marked ready.
-// After this duration, the order is hidden from the screen automatically — no backend change,
-// purely a frontend filter based on ready_at timestamp.
-//
-// Rationale: In a fast-food context, customers pick up their order within a few minutes.
-// Keeping old READY orders on screen indefinitely clutters the display.
-//
-// To change this behaviour:
-//   - Increase/decrease READY_DISPLAY_DURATION_MS for a different timeout
-//   - Set to Infinity to disable auto-hide entirely (orders stay until DELIVERED)
-//   - Move the filter to the server (e.g. a scheduled job that marks old READY orders as
-//     DELIVERED) if you want persistent state change rather than a visual-only hide
-const READY_DISPLAY_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-
-function useVisibleReadyOrders(readyOrders: Order[]): Order[] {
+function useVisibleReadyOrders(readyOrders: Order[], readyDisplayMinutes: number): Order[] {
 	return useMemo(() => {
 		const now = Date.now();
+		const durationMs = readyDisplayMinutes * 60 * 1000;
 		return readyOrders.filter((order) => {
 			if (!order.ready_at) return true;
-			return now - new Date(order.ready_at).getTime() < READY_DISPLAY_DURATION_MS;
+			return now - new Date(order.ready_at).getTime() < durationMs;
 		});
-	}, [readyOrders]);
+	}, [readyOrders, readyDisplayMinutes]);
 }
 
 function useDisplayLayoutMode(
@@ -49,13 +39,7 @@ function useDisplayLayoutMode(
 	}));
 
 	useEffect(() => {
-		const onResize = () => {
-			setViewport({
-				width: window.innerWidth,
-				height: window.innerHeight,
-			});
-		};
-
+		const onResize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
 		window.addEventListener("resize", onResize);
 		return () => window.removeEventListener("resize", onResize);
 	}, []);
@@ -69,9 +53,23 @@ function useDisplayLayoutMode(
 	}, [layoutPreference, profile, viewport.height, viewport.width]);
 }
 
-function CountBadge({ count }: { count: number }) {
+function ClockText({ className }: { className: string }) {
+	const [time, setTime] = useState(() => new Date());
+	useEffect(() => {
+		const id = setInterval(() => setTime(new Date()), 1000);
+		return () => clearInterval(id);
+	}, []);
 	return (
-		<span className="ml-2 inline-flex items-center justify-center w-[clamp(1.25rem,3vmin,2rem)] h-[clamp(1.25rem,3vmin,2rem)] rounded-full bg-white/20 text-white text-[clamp(0.75rem,2vmin,1rem)] font-bold">
+		<span className={className}>
+			{time.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", hour12: false })}
+		</span>
+	);
+}
+
+function CountBadge({ count }: { count: number }) {
+	if (count === 0) return null;
+	return (
+		<span className="ml-2 inline-flex items-center justify-center w-[clamp(1.25rem,3vmin,2rem)] h-[clamp(1.25rem,3vmin,2rem)] rounded-full bg-white/20 text-[clamp(0.75rem,2vmin,1rem)] font-bold">
 			{count}
 		</span>
 	);
@@ -80,28 +78,39 @@ function CountBadge({ count }: { count: number }) {
 function OrderNumber({
 	displayNo,
 	highlight,
-	layoutMode,
+	textClass,
+	badgeClass,
+	highlightClass,
 }: {
 	displayNo: number;
 	highlight?: boolean;
-	layoutMode: "stack" | "split";
+	textClass: string;
+	badgeClass: string;
+	highlightClass: string;
 }) {
-	const textClass =
-		layoutMode === "stack"
-			? "text-[clamp(1.75rem,10vmin,6rem)]"
-			: "text-[clamp(1.25rem,8vmin,5rem)]";
+	const controls = useAnimation();
+
+	useEffect(() => {
+		if (highlight) {
+			controls.start({
+				scale: [1, 1.45, 1.1, 1.0],
+				transition: { duration: 0.55, ease: "easeInOut" },
+			});
+		}
+	}, [highlight, controls]);
 
 	return (
-		<div
-			className={`rounded-xl px-[clamp(0.25rem,1.5vmin,1.5rem)] py-[clamp(0.125rem,1vmin,1rem)] text-center font-bold ${textClass} transition-all duration-300
-					${
-						highlight
-							? "bg-green-500 text-white scale-110 shadow-lg shadow-green-500/30"
-							: "bg-gray-800 text-white"
-					}`}
+		<motion.div
+			layout
+			layoutId={`order-${displayNo}`}
+			animate={controls}
+			initial={{ opacity: 0, scale: 0.75, y: 24 }}
+			exit={{ opacity: 0, scale: 0.6, y: -16, transition: { duration: 0.2 } }}
+			transition={{ type: "spring", stiffness: 300, damping: 25 }}
+			className={`rounded-xl px-[clamp(0.25rem,1.5vmin,1.5rem)] py-[clamp(0.125rem,1vmin,1rem)] text-center font-bold ${textClass} ${highlight ? highlightClass : badgeClass}`}
 		>
 			#{displayNo}
-		</div>
+		</motion.div>
 	);
 }
 
@@ -110,12 +119,17 @@ export function CustomerDisplay() {
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);
 	const nowPlaying = useOrderStore((s) => s.nowPlaying);
+	const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
 	const preparingOrders = useOrdersByStatus(OrderStatus.PREPARING);
 	const allReadyOrders = useOrdersByStatus(OrderStatus.READY);
-	const readyOrders = useVisibleReadyOrders(allReadyOrders);
-	const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
+	const readyOrders = useVisibleReadyOrders(allReadyOrders, displayConfig.readyDisplayMinutes);
 	const layoutMode = useDisplayLayoutMode(displayConfig.profile, displayConfig.layoutPreference);
 	const isStackLayout = layoutMode === "stack";
+
+	const theme = THEMES[displayConfig.theme];
+	const scale = TEXT_SCALES[displayConfig.textScale];
+	const orderTextClass = isStackLayout ? scale.orderNumberStack : scale.orderNumberSplit;
+
 	const maxVisiblePerColumn = useMemo(
 		() => resolveMaxVisiblePerColumn(displayConfig),
 		[displayConfig],
@@ -141,15 +155,15 @@ export function CustomerDisplay() {
 	);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
-	const onConnect = useCallback(() => {
-		setConnected(true, { includeStatsOnReconnect: false });
-	}, [setConnected]);
+	const onConnect = useCallback(
+		() => setConnected(true, { includeStatsOnReconnect: false }),
+		[setConnected],
+	);
 	const onDisconnect = useCallback(() => setConnected(false), [setConnected]);
 
 	useWebSocket({ channel: WS_CHANNELS.DISPLAY, onMessage, onConnect, onDisconnect });
 
 	useEffect(() => {
-		// Customer display can run without admin auth cookie, so skip stats endpoint.
 		hydrate(false, false);
 
 		const loadDisplaySettings = () => {
@@ -161,15 +175,10 @@ export function CustomerDisplay() {
 
 		loadDisplaySettings();
 		const settingsInterval = setInterval(loadDisplaySettings, 30_000);
-
-		return () => {
-			clearInterval(settingsInterval);
-		};
+		return () => clearInterval(settingsInterval);
 	}, [hydrate]);
 
 	// Re-render every minute so the auto-hide timer stays accurate.
-	// We only need a local re-render — data already stays fresh via WebSocket.
-	// Do NOT call hydrate() here; that would fire a full API request every minute unnecessarily.
 	const [, tick] = useState(0);
 	useEffect(() => {
 		const interval = setInterval(() => tick((n) => n + 1), 60_000);
@@ -183,10 +192,24 @@ export function CustomerDisplay() {
 	}, [displayConfig.pageSeconds]);
 
 	return (
-		<div className="min-h-screen bg-gray-950 text-white flex flex-col">
+		<div className={`min-h-screen flex flex-col ${theme.root}`}>
+			{/* Header: restoran adı + dijital saat */}
+			<header
+				className={`flex items-center justify-between px-[clamp(1rem,3vmin,3rem)] py-[clamp(0.5rem,1.5vmin,1.25rem)] border-b-2 ${theme.headerBorder} shrink-0`}
+			>
+				<span
+					className={`text-[clamp(1.15rem,4vmin,2.35rem)] font-bold tracking-wide ${theme.restaurantText}`}
+				>
+					{displayConfig.restaurantName || null}
+				</span>
+				<ClockText
+					className={`font-mono tabular-nums text-[clamp(1.4rem,4.75vmin,2.9rem)] font-semibold ${theme.clockText}`}
+				/>
+			</header>
+
 			{/* Now Serving Banner */}
 			{nowPlaying && (
-				<div className="bg-green-600 text-center py-[clamp(0.5rem,3vmin,2rem)] animate-pulse">
+				<div className="bg-green-600 text-white text-center py-[clamp(0.5rem,3vmin,2rem)] animate-pulse shrink-0">
 					<p className="text-[clamp(1.125rem,5vmin,2.5rem)] font-medium">
 						{UI_LABELS.DISPLAY.NOW_SERVING}
 					</p>
@@ -202,49 +225,72 @@ export function CustomerDisplay() {
 			>
 				{/* Preparing Column */}
 				<div
-					className={`p-[clamp(0.25rem,2vmin,2rem)] ${isStackLayout ? "border-b" : "border-r"} border-gray-800`}
+					className={`p-[clamp(0.25rem,2vmin,2rem)] ${theme.preparingCol} ${isStackLayout ? "border-b-2" : "border-r-2"} ${theme.preparingDivider}`}
 				>
-					<h2 className="text-[clamp(1.125rem,4vmin,2rem)] font-bold text-yellow-400 mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center">
+					<h2
+						className={`${scale.columnHeader} font-bold ${theme.preparingTitle} mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center`}
+					>
 						{UI_LABELS.DISPLAY.PREPARING_TITLE}
 						<CountBadge count={preparingOrders.length} />
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
-						{visiblePreparingOrders.map((order) => (
-							<OrderNumber key={order.id} displayNo={order.display_no} layoutMode={layoutMode} />
-						))}
+						<AnimatePresence mode="popLayout">
+							{visiblePreparingOrders.map((order) => (
+								<OrderNumber
+									key={order.id}
+									displayNo={order.display_no}
+									textClass={orderTextClass}
+									badgeClass={theme.orderBadge}
+									highlightClass={theme.orderHighlight}
+								/>
+							))}
+						</AnimatePresence>
 					</div>
 					{preparingOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)]">
+						<p
+							className={`text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)] ${theme.preparingEmpty}`}
+						>
 							{UI_LABELS.DISPLAY.NO_PREPARING_ORDERS}
 						</p>
 					)}
 				</div>
 
 				{/* Ready Column */}
-				<div className="p-[clamp(0.25rem,2vmin,2rem)]">
-					<h2 className="text-[clamp(1.125rem,4vmin,2rem)] font-bold text-green-400 mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center">
+				<div className={`p-[clamp(0.25rem,2vmin,2rem)] ${theme.readyCol}`}>
+					<h2
+						className={`${scale.columnHeader} font-bold ${theme.readyTitle} mb-[clamp(0.25rem,2vmin,1.5rem)] text-center uppercase tracking-wider flex items-center justify-center`}
+					>
 						{UI_LABELS.DISPLAY.READY_TITLE}
 						<CountBadge count={readyOrders.length} />
 					</h2>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
-						{visibleReadyOrders.map((order) => (
-							<OrderNumber
-								key={order.id}
-								displayNo={order.display_no}
-								highlight={nowPlaying?.order_id === order.id}
-								layoutMode={layoutMode}
-							/>
-						))}
+						<AnimatePresence mode="popLayout">
+							{visibleReadyOrders.map((order) => (
+								<OrderNumber
+									key={order.id}
+									displayNo={order.display_no}
+									highlight={nowPlaying?.order_id === order.id}
+									textClass={orderTextClass}
+									badgeClass={theme.orderBadge}
+									highlightClass={theme.orderHighlight}
+								/>
+							))}
+						</AnimatePresence>
 					</div>
 					{readyOrders.length === 0 && (
-						<p className="text-gray-600 text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)]">
+						<p
+							className={`text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)] ${theme.readyEmpty}`}
+						>
 							{UI_LABELS.DISPLAY.NO_READY_ORDERS}
 						</p>
 					)}
 				</div>
 			</div>
+
 			{cyclePageCount > 1 && (
-				<div className="text-center text-[clamp(0.75rem,2vmin,1rem)] text-gray-500 py-2">
+				<div
+					className={`text-center text-[clamp(0.75rem,2vmin,1rem)] py-2 shrink-0 ${theme.pageIndicator}`}
+				>
 					{UI_LABELS.DISPLAY.PAGE} {currentCyclePage + 1} / {cyclePageCount}
 				</div>
 			)}

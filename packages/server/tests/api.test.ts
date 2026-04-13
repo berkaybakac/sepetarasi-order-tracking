@@ -290,10 +290,14 @@ describe("GET /api/v1/settings", () => {
 
 describe("GET /api/v1/settings/public", () => {
 	it("should return display settings without auth", async () => {
+		db.insert(appSettings).values({ key: "restaurant_name", value: "Sepetarasi Mutfak" }).run();
 		db.insert(appSettings).values({ key: "display_profile", value: "led_256x512" }).run();
 		db.insert(appSettings).values({ key: "display_layout", value: "stack" }).run();
 		db.insert(appSettings).values({ key: "display_max_visible", value: "6" }).run();
 		db.insert(appSettings).values({ key: "display_page_seconds", value: "7" }).run();
+		db.insert(appSettings).values({ key: "display_ready_minutes", value: "4" }).run();
+		db.insert(appSettings).values({ key: "display_text_scale", value: "l" }).run();
+		db.insert(appSettings).values({ key: "display_theme", value: "vivid" }).run();
 		db.insert(appSettings).values({ key: "business_name", value: "Not Public" }).run();
 
 		const res = await app.inject({
@@ -304,10 +308,14 @@ describe("GET /api/v1/settings/public", () => {
 		expect(res.statusCode).toBe(200);
 		const body = res.json();
 		expect(body.ok).toBe(true);
+		expect(body.data.restaurant_name).toBe("Sepetarasi Mutfak");
 		expect(body.data.display_profile).toBe("led_256x512");
 		expect(body.data.display_layout).toBe("stack");
 		expect(body.data.display_max_visible).toBe("6");
 		expect(body.data.display_page_seconds).toBe("7");
+		expect(body.data.display_ready_minutes).toBe("4");
+		expect(body.data.display_text_scale).toBe("l");
+		expect(body.data.display_theme).toBe("vivid");
 		expect(body.data.business_name).toBeUndefined();
 	});
 });
@@ -366,6 +374,14 @@ describe("PATCH /api/v1/settings/:key", () => {
 	});
 
 	it("should accept display settings", async () => {
+		const restaurantNameRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/restaurant_name",
+			headers: { cookie: adminCookie },
+			payload: { value: "Sepetarasi Mutfak" },
+		});
+		expect(restaurantNameRes.statusCode).toBe(200);
+
 		const profileRes = await app.inject({
 			method: "PATCH",
 			url: "/api/v1/settings/display_profile",
@@ -381,6 +397,30 @@ describe("PATCH /api/v1/settings/:key", () => {
 			payload: { value: "9" },
 		});
 		expect(pageRes.statusCode).toBe(200);
+
+		const readyMinutesRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_ready_minutes",
+			headers: { cookie: adminCookie },
+			payload: { value: "10" },
+		});
+		expect(readyMinutesRes.statusCode).toBe(200);
+
+		const textScaleRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_text_scale",
+			headers: { cookie: adminCookie },
+			payload: { value: "l" },
+		});
+		expect(textScaleRes.statusCode).toBe(200);
+
+		const themeRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_theme",
+			headers: { cookie: adminCookie },
+			payload: { value: "retro" },
+		});
+		expect(themeRes.statusCode).toBe(200);
 	});
 
 	it("should reject invalid display_profile", async () => {
@@ -400,6 +440,39 @@ describe("PATCH /api/v1/settings/:key", () => {
 			url: "/api/v1/settings/display_page_seconds",
 			headers: { cookie: adminCookie },
 			payload: { value: "0" },
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
+	});
+
+	it("should reject invalid display_ready_minutes", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_ready_minutes",
+			headers: { cookie: adminCookie },
+			payload: { value: "61" },
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
+	});
+
+	it("should reject invalid display_text_scale", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_text_scale",
+			headers: { cookie: adminCookie },
+			payload: { value: "xl" },
+		});
+		expect(res.statusCode).toBe(400);
+		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
+	});
+
+	it("should reject invalid display_theme", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/display_theme",
+			headers: { cookie: adminCookie },
+			payload: { value: "neon" },
 		});
 		expect(res.statusCode).toBe(400);
 		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");

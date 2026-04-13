@@ -2,10 +2,14 @@ import { SETTING_KEYS } from "@sepetarasi/shared";
 
 const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
+	SETTING_KEYS.RESTAURANT_NAME,
 	SETTING_KEYS.DISPLAY_PROFILE,
 	SETTING_KEYS.DISPLAY_LAYOUT,
 	SETTING_KEYS.DISPLAY_MAX_VISIBLE,
 	SETTING_KEYS.DISPLAY_PAGE_SECONDS,
+	SETTING_KEYS.DISPLAY_READY_MINUTES,
+	SETTING_KEYS.DISPLAY_TEXT_SCALE,
+	SETTING_KEYS.DISPLAY_THEME,
 	"announcement_delay_ms",
 	"business_name",
 	"receipt_business_name",
@@ -17,12 +21,18 @@ const EDITABLE_SETTING_KEYS = [
 
 const DISPLAY_PROFILE_VALUES = new Set(["auto", "led_256x512", "tv_1080p"]);
 const DISPLAY_LAYOUT_VALUES = new Set(["auto", "split", "stack"]);
+const DISPLAY_TEXT_SCALE_VALUES = new Set(["s", "m", "l"]);
+const DISPLAY_THEME_VALUES = new Set(["dark", "light", "vivid", "retro"]);
 
 const PUBLIC_SETTING_KEYS = new Set<string>([
+	SETTING_KEYS.RESTAURANT_NAME,
 	SETTING_KEYS.DISPLAY_PROFILE,
 	SETTING_KEYS.DISPLAY_LAYOUT,
 	SETTING_KEYS.DISPLAY_MAX_VISIBLE,
 	SETTING_KEYS.DISPLAY_PAGE_SECONDS,
+	SETTING_KEYS.DISPLAY_READY_MINUTES,
+	SETTING_KEYS.DISPLAY_TEXT_SCALE,
+	SETTING_KEYS.DISPLAY_THEME,
 ]);
 
 const editableSettings = new Set<string>(EDITABLE_SETTING_KEYS);
@@ -56,6 +66,11 @@ export function validateSettingValue(key: string, value: string): string | null 
 			}
 			return null;
 		}
+		case SETTING_KEYS.RESTAURANT_NAME:
+			if (value.length > 60) {
+				return "restaurant_name must be <= 60 characters";
+			}
+			return null;
 		case SETTING_KEYS.DISPLAY_PROFILE:
 			if (!DISPLAY_PROFILE_VALUES.has(value)) {
 				return "display_profile must be one of: auto, led_256x512, tv_1080p";
@@ -80,6 +95,23 @@ export function validateSettingValue(key: string, value: string): string | null 
 			}
 			return null;
 		}
+		case SETTING_KEYS.DISPLAY_READY_MINUTES: {
+			const minutes = Number(value);
+			if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
+				return "display_ready_minutes must be an integer between 1 and 60";
+			}
+			return null;
+		}
+		case SETTING_KEYS.DISPLAY_TEXT_SCALE:
+			if (!DISPLAY_TEXT_SCALE_VALUES.has(value)) {
+				return "display_text_scale must be one of: s, m, l";
+			}
+			return null;
+		case SETTING_KEYS.DISPLAY_THEME:
+			if (!DISPLAY_THEME_VALUES.has(value)) {
+				return "display_theme must be one of: dark, light, vivid, retro";
+			}
+			return null;
 		case "announcement_delay_ms": {
 			const delay = Number(value);
 			if (!Number.isInteger(delay) || delay < 0 || delay > 60000) {

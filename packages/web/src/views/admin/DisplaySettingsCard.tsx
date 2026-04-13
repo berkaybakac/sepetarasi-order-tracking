@@ -7,6 +7,8 @@ import {
 	type DisplayConfig,
 	type DisplayLayoutPreference,
 	type DisplayProfile,
+	type DisplayTextScale,
+	type DisplayTheme,
 	parseDisplaySettings,
 } from "../display/display-config";
 
@@ -78,7 +80,11 @@ function areConfigsEqual(a: DisplayConfig, b: DisplayConfig): boolean {
 		a.profile === b.profile &&
 		a.layoutPreference === b.layoutPreference &&
 		a.maxVisiblePerColumn === b.maxVisiblePerColumn &&
-		a.pageSeconds === b.pageSeconds
+		a.pageSeconds === b.pageSeconds &&
+		a.restaurantName === b.restaurantName &&
+		a.readyDisplayMinutes === b.readyDisplayMinutes &&
+		a.textScale === b.textScale &&
+		a.theme === b.theme
 	);
 }
 
@@ -118,10 +124,14 @@ export function DisplaySettingsCard() {
 		setSaving(true);
 		setErrorMessage(null);
 		Promise.all([
+			api.updateSetting(SETTING_KEYS.RESTAURANT_NAME, config.restaurantName),
 			api.updateSetting(SETTING_KEYS.DISPLAY_PROFILE, config.profile),
 			api.updateSetting(SETTING_KEYS.DISPLAY_LAYOUT, config.layoutPreference),
 			api.updateSetting(SETTING_KEYS.DISPLAY_MAX_VISIBLE, String(config.maxVisiblePerColumn)),
 			api.updateSetting(SETTING_KEYS.DISPLAY_PAGE_SECONDS, String(config.pageSeconds)),
+			api.updateSetting(SETTING_KEYS.DISPLAY_READY_MINUTES, String(config.readyDisplayMinutes)),
+			api.updateSetting(SETTING_KEYS.DISPLAY_TEXT_SCALE, config.textScale),
+			api.updateSetting(SETTING_KEYS.DISPLAY_THEME, config.theme),
 		])
 			.then(() => {
 				setSavedConfig(config);
@@ -160,6 +170,18 @@ export function DisplaySettingsCard() {
 				</div>
 			) : (
 				<div className="relative z-10 grid grid-cols-1 gap-4">
+					<label className="text-sm text-slate-300">
+						<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.RESTAURANT_NAME_LABEL}</span>
+						<input
+							type="text"
+							maxLength={60}
+							value={config.restaurantName}
+							onChange={(e) => setConfig((prev) => ({ ...prev, restaurantName: e.target.value }))}
+							className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-600 focus:outline-none focus:border-slate-500"
+							placeholder={UI_LABELS.DISPLAY_SETTINGS.RESTAURANT_NAME_PLACEHOLDER}
+						/>
+					</label>
+
 					<label className="text-sm text-slate-300">
 						<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.PROFILE_LABEL}</span>
 						<select
@@ -216,6 +238,49 @@ export function DisplaySettingsCard() {
 							decreaseLabel={UI_LABELS.DISPLAY_SETTINGS.DECREASE}
 							increaseLabel={UI_LABELS.DISPLAY_SETTINGS.INCREASE}
 						/>
+					</div>
+
+					<NumberStepperField
+						label={UI_LABELS.DISPLAY_SETTINGS.READY_DISPLAY_MINUTES_LABEL}
+						value={config.readyDisplayMinutes}
+						min={1}
+						max={60}
+						onChange={(value) => setConfig((prev) => ({ ...prev, readyDisplayMinutes: value }))}
+						decreaseLabel={UI_LABELS.DISPLAY_SETTINGS.DECREASE}
+						increaseLabel={UI_LABELS.DISPLAY_SETTINGS.INCREASE}
+					/>
+
+					<div className="grid grid-cols-2 gap-3">
+						<label className="text-sm text-slate-300">
+							<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_LABEL}</span>
+							<select
+								className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white"
+								value={config.textScale}
+								onChange={(e) =>
+									setConfig((prev) => ({ ...prev, textScale: e.target.value as DisplayTextScale }))
+								}
+							>
+								<option value="s">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_S}</option>
+								<option value="m">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_M}</option>
+								<option value="l">{UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_L}</option>
+							</select>
+						</label>
+
+						<label className="text-sm text-slate-300">
+							<span className="block mb-1">{UI_LABELS.DISPLAY_SETTINGS.THEME_LABEL}</span>
+							<select
+								className="w-full px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white"
+								value={config.theme}
+								onChange={(e) =>
+									setConfig((prev) => ({ ...prev, theme: e.target.value as DisplayTheme }))
+								}
+							>
+								<option value="dark">{UI_LABELS.DISPLAY_SETTINGS.THEME_DARK}</option>
+								<option value="light">{UI_LABELS.DISPLAY_SETTINGS.THEME_LIGHT}</option>
+								<option value="vivid">{UI_LABELS.DISPLAY_SETTINGS.THEME_VIVID}</option>
+								<option value="retro">{UI_LABELS.DISPLAY_SETTINGS.THEME_RETRO}</option>
+							</select>
+						</label>
 					</div>
 					{errorMessage && (
 						<p className="text-xs text-rose-100/95 bg-rose-500/10 border border-rose-300/20 rounded-lg px-3 py-2">

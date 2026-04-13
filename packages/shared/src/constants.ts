@@ -60,10 +60,14 @@ export const WS_CHANNELS = {
 export const SETTING_KEYS = {
 	AUDIO_VOLUME: "audio_volume",
 	ADMIN_PASSWORD_HASH: "admin_password_hash",
+	RESTAURANT_NAME: "restaurant_name",
 	DISPLAY_PROFILE: "display_profile",
 	DISPLAY_LAYOUT: "display_layout",
 	DISPLAY_MAX_VISIBLE: "display_max_visible",
 	DISPLAY_PAGE_SECONDS: "display_page_seconds",
+	DISPLAY_READY_MINUTES: "display_ready_minutes",
+	DISPLAY_TEXT_SCALE: "display_text_scale",
+	DISPLAY_THEME: "display_theme",
 } as const;
 
 /** İstatistik Periyotları Seçenekleri (SSoT) */
