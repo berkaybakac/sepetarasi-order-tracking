@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyCookie from "@fastify/cookie";
 import fastifyJwt from "@fastify/jwt";
+import fastifyMultipart from "@fastify/multipart";
 import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
@@ -15,11 +16,13 @@ import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/a
 import type { AppDatabase } from "./db/connection.js";
 import { appSettings } from "./db/schema.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerMusicRoutes } from "./routes/music.js";
 import { registerOrderRoutes } from "./routes/orders.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerStatsRoutes } from "./routes/stats.js";
 import { AnnouncementService } from "./services/announcement.service.js";
 import { AudioPlaybackService } from "./services/audio-playback.service.js";
+import { MusicPlayerService } from "./services/music-player.service.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
 import { Broadcaster } from "./ws/broadcaster.js";
 
@@ -45,6 +48,8 @@ export interface AppOptions {
 	enableTtsFallback?: boolean;
 	/** Path to pre-recorded MP3 files named {display_no}.mp3 */
 	announcementsPath?: string;
+	/** Path to uploaded music files directory */
+	musicPath?: string;
 	/** ALSA device for mpg123 on Linux (e.g. "hw:2,0"). Reads AUDIO_ALSA_DEVICE env var. */
 	alsaDevice?: string;
 	/** Disable static file serving (useful for tests) */
@@ -203,6 +208,8 @@ export async function buildApp(opts: AppOptions) {
 		secret: AUTH_CONFIG.jwtSecret,
 		cookie: { cookieName: ADMIN_COOKIE_NAME, signed: false },
 	});
+	// Multipart support for music file uploads (streaming mode — no memory buffering)
+	await app.register(fastifyMultipart, { attachFieldsToBody: false });
 
 	// HTTP routes
 	registerAuthRoutes(app, opts.db);
@@ -212,6 +219,20 @@ export async function buildApp(opts: AppOptions) {
 
 	// Health check
 	app.get("/health", async () => ({ ok: true }));
+
+	// Music player
+	const musicPath = opts.musicPath ?? join(__dirname, "../../assets/music");
+	mkdirSync(musicPath, { recursive: true });
+
+	let musicPlayer: MusicPlayerService | null = null;
+	if (!opts.disableWorker) {
+		musicPlayer = new MusicPlayerService({
+			db: opts.db,
+			broadcaster,
+			alsaDevice: opts.alsaDevice,
+			logger: app.log.child({ component: "music-player" }),
+		});
+	}
 
 	// Announcement worker
 	let worker: AnnouncementWorker | null = null;
@@ -237,6 +258,7 @@ export async function buildApp(opts: AppOptions) {
 			announcementService,
 			broadcaster,
 			audioPlayer,
+			musicPlayer: musicPlayer ?? undefined,
 			pollIntervalMs: opts.workerPollIntervalMs ?? 1000,
 			logger: app.log,
 		});
@@ -244,13 +266,18 @@ export async function buildApp(opts: AppOptions) {
 		app.addHook("onReady", async () => {
 			// Reset any announcements stuck in "playing" from a previous crashed/power-cycled run
 			announcementService.resetStuckAnnouncements();
+			musicPlayer?.start();
 			worker?.start();
 		});
 
 		app.addHook("onClose", async () => {
+			musicPlayer?.stop();
 			worker?.stop();
 		});
 	}
+
+	// Music API routes (available even without worker, returns null player gracefully)
+	registerMusicRoutes(app, opts.db, musicPath, musicPlayer);
 
 	// Serve web frontend in production
 	if (!opts.disableStatic) {

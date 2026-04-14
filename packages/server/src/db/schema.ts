@@ -81,6 +81,19 @@ export const appSettings = sqliteTable("app_settings", {
 	updated_at: text("updated_at").notNull().default("(datetime('now'))"),
 });
 
+// --- music_tracks ---
+
+export const musicTracks = sqliteTable("music_tracks", {
+	id: text("id").primaryKey(),
+	filename: text("filename").notNull(),
+	display_name: text("display_name").notNull(),
+	file_path: text("file_path").notNull(),
+	file_size: integer("file_size").notNull(),
+	duration_seconds: integer("duration_seconds"),
+	sort_order: integer("sort_order").notNull().default(0),
+	uploaded_at: text("uploaded_at").notNull().default("(datetime('now'))"),
+});
+
 // --- announcement_queue ---
 
 export const announcementQueue = sqliteTable(

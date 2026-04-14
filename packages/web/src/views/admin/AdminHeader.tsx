@@ -1,9 +1,73 @@
 import { type SubmitEvent, useState } from "react";
+import { NavLink } from "react-router-dom";
 import { BasketIcon } from "../../components/BasketIcon";
 import { UI_LABELS } from "../../constants/labels";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { getErrorMessage } from "../../utils/error";
+
+const TABS = [
+	{
+		to: "/admin/orders",
+		label: "Siparişler",
+		icon: (
+			<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<title>siparişler</title>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+				/>
+			</svg>
+		),
+	},
+	{
+		to: "/admin/audio",
+		label: "Ses & Müzik",
+		icon: (
+			<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<title>ses müzik</title>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+				/>
+			</svg>
+		),
+	},
+	{
+		to: "/admin/display",
+		label: "Ekran",
+		icon: (
+			<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<title>ekran</title>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+				/>
+			</svg>
+		),
+	},
+	{
+		to: "/admin/stats",
+		label: "İstatistikler",
+		icon: (
+			<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<title>istatistikler</title>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+				/>
+			</svg>
+		),
+	},
+] as const;
 
 export function AdminHeader({ connected }: { connected: boolean }) {
 	const { logout } = useAuthStore();
@@ -50,8 +114,9 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 
 	return (
 		<>
-			<header className="bg-slate-900/50 backdrop-blur-md border-b border-white/5 py-4 px-6 sticky top-0 z-40 transition-all">
-				<div className="flex items-center justify-between max-w-7xl mx-auto">
+			<header className="bg-slate-900/50 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 transition-all">
+				{/* Top bar: logo + auth buttons */}
+				<div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-3">
 					<div className="flex items-center gap-3">
 						<div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
 							<BasketIcon size={20} className="text-white" strokeWidth={2} />
@@ -80,6 +145,26 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 						</button>
 					</div>
 				</div>
+
+				{/* Tab navigation */}
+				<nav className="max-w-7xl mx-auto px-6 pb-0 flex gap-1" aria-label="Ana navigasyon">
+					{TABS.map((tab) => (
+						<NavLink
+							key={tab.to}
+							to={tab.to}
+							className={({ isActive }) =>
+								`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl border-b-2 transition-all ${
+									isActive
+										? "text-white border-blue-500 bg-white/5"
+										: "text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5"
+								}`
+							}
+						>
+							{tab.icon}
+							{tab.label}
+						</NavLink>
+					))}
+				</nav>
 			</header>
 
 			{/* Parola Değiştir Modal - Dark Theme */}

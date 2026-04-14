@@ -11,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT) || 3000;
 const dbPath = process.env.DB_PATH || "./data/sepetarasi.db";
 const announcementsPath = process.env.ANNOUNCEMENTS_PATH;
+const musicPath = process.env.MUSIC_PATH;
 const disableAudio = ["1", "true", "yes", "on"].includes(
 	(process.env.DISABLE_AUDIO ?? "").toLowerCase(),
 );
@@ -27,7 +28,14 @@ const db = createDb(dbPath);
 const migrationsFolder = resolve(__dirname, "db/migrations");
 migrate(db, { migrationsFolder });
 
-const app = await buildApp({ db, announcementsPath, disableAudio, enableTtsFallback, alsaDevice });
+const app = await buildApp({
+	db,
+	announcementsPath,
+	musicPath,
+	disableAudio,
+	enableTtsFallback,
+	alsaDevice,
+});
 
 function getLanIp(): string {
 	const nets = networkInterfaces();

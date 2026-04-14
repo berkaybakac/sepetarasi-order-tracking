@@ -60,6 +60,7 @@ export const WS_EVENTS = {
 	STATS_UPDATED: "stats:updated",
 	ANNOUNCEMENT_NOW_PLAYING: "announcement:now_playing",
 	ANNOUNCEMENT_FINISHED: "announcement:finished",
+	MUSIC_STATUS_CHANGED: "music:status_changed",
 } as const;
 
 /** WebSocket channel names */
@@ -80,6 +81,9 @@ export const SETTING_KEYS = {
 	DISPLAY_READY_MINUTES: "display_ready_minutes",
 	DISPLAY_TEXT_SCALE: "display_text_scale",
 	DISPLAY_THEME: "display_theme",
+	MUSIC_VOLUME: "music_volume",
+	MUSIC_ENABLED: "music_enabled",
+	MUSIC_CURRENT_TRACK_ID: "music_current_track_id",
 } as const;
 
 /** İstatistik Periyotları Seçenekleri (SSoT) */

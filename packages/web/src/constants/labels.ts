@@ -90,4 +90,39 @@ export const UI_LABELS = {
 		MINUTES_SHORT: "dk",
 		LESS_THAN_A_MINUTE: "<1 dk",
 	},
+
+	// Ses Ayarları
+	AUDIO: {
+		ANNOUNCEMENT_VOLUME: "Anons Sesi",
+		MUSIC_VOLUME: "Müzik Sesi",
+		MUSIC_ENABLED: "Müzik Çal",
+		MUSIC_DISABLED: "Müzik Kapalı",
+	},
+
+	// Müzik Oynatıcı
+	MUSIC_PLAYER: {
+		TITLE: "Müzik Oynatıcı",
+		NOW_PLAYING: "Şu An Çalıyor",
+		PAUSED: "Duraklatıldı",
+		STOPPED: "Durduruldu",
+		DUCKED: "Anons — kısıldı",
+		NO_TRACK: "Parça seçilmedi",
+		PLAY: "Oynat",
+		PAUSE: "Duraklat",
+		SKIP: "İleri",
+		PREVIOUS: "Geri",
+	},
+
+	// Müzik Kütüphanesi
+	MUSIC_LIBRARY: {
+		TITLE: "Müzik Kütüphanesi",
+		UPLOAD: "MP3 Yükle",
+		UPLOADING: "Yükleniyor...",
+		EMPTY: "Henüz parça eklenmedi",
+		DELETE: "Sil",
+		CONFIRM_DELETE: "Bu parçayı silmek istediğinize emin misiniz?",
+		UPLOAD_ERROR: "Yükleme başarısız.",
+		DELETE_ERROR: "Silinemedi.",
+		DISK_USAGE: "Disk kullanımı",
+	},
 } as const;

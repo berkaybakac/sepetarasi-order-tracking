@@ -126,7 +126,8 @@ ssh "$TARGET" "
     npm install --omit=dev 2>&1 | tail -3
 
     # Migration SQL dosyalarini dist'e kopyala (tsc bunlari kopyalamaz)
-    cp -r packages/server/src/db/migrations packages/server/dist/db/migrations
+    mkdir -p packages/server/dist/db/migrations
+    cp -r packages/server/src/db/migrations/. packages/server/dist/db/migrations/
 
     # Migration
     DB_PATH=$APP_DIR/data/sepetarasi.db node packages/server/dist/db/migrate.js

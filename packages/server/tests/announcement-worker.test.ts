@@ -5,6 +5,7 @@ import { announcementQueue, orders } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { AnnouncementService } from "../src/services/announcement.service.js";
 import { AudioPlaybackService } from "../src/services/audio-playback.service.js";
+import type { MusicPlayerService } from "../src/services/music-player.service.js";
 import { AnnouncementWorker } from "../src/workers/announcement.worker.js";
 import { Broadcaster } from "../src/ws/broadcaster.js";
 
@@ -261,6 +262,106 @@ describe("AnnouncementWorker", () => {
 	it("should do nothing when queue is empty", async () => {
 		// Should not throw
 		await worker.processOne();
+	});
+
+	it("should call duck() before and unduck() after audio playback", async () => {
+		seedOrder("o-1", 1);
+		seedAnnouncement("aq-1", "o-1", 1);
+
+		const callOrder: string[] = [];
+		const mockMusicPlayer = {
+			duck: vi.fn(() => {
+				callOrder.push("duck");
+			}),
+			unduck: vi.fn(() => {
+				callOrder.push("unduck");
+			}),
+		} as unknown as MusicPlayerService;
+
+		const audioPlayer = new AudioPlaybackService({ disableAudio: true, delayMs: 10 });
+		const workerWithMusic = new AnnouncementWorker({
+			announcementService,
+			broadcaster,
+			audioPlayer,
+			musicPlayer: mockMusicPlayer,
+		});
+
+		await workerWithMusic.processOne();
+
+		expect(mockMusicPlayer.duck).toHaveBeenCalledOnce();
+		expect(mockMusicPlayer.unduck).toHaveBeenCalledOnce();
+		expect(callOrder).toEqual(["duck", "unduck"]);
+	});
+
+	it("should not call duck/unduck when musicPlayer is not provided", async () => {
+		seedOrder("o-1", 1);
+		seedAnnouncement("aq-1", "o-1", 1);
+
+		// worker fixture has no musicPlayer — should complete without throwing
+		await expect(worker.processOne()).resolves.toBeUndefined();
+
+		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
+		expect(item.status).toBe("played");
+	});
+
+	it("should broadcast ANNOUNCEMENT_NOW_PLAYING before and ANNOUNCEMENT_FINISHED after playback", async () => {
+		seedOrder("o-1", 42);
+		seedAnnouncement("aq-1", "o-1", 42);
+
+		const received: { event: string; data: unknown }[] = [];
+		const listeners: Record<string, Array<() => void>> = {};
+		const mockSocket = {
+			readyState: 1,
+			OPEN: 1 as const,
+			send: vi.fn((raw: string) => {
+				received.push(JSON.parse(raw));
+			}),
+			on(event: string, handler: () => void) {
+				if (!listeners[event]) listeners[event] = [];
+				listeners[event].push(handler);
+			},
+		};
+		broadcaster.subscribe("orders", mockSocket as never);
+
+		await worker.processOne();
+
+		const events = received.map((m) => m.event);
+		expect(events).toContain("announcement:now_playing");
+		expect(events).toContain("announcement:finished");
+		// now_playing must come before finished
+		expect(events.indexOf("announcement:now_playing")).toBeLessThan(
+			events.indexOf("announcement:finished"),
+		);
+
+		// payload sanity
+		const nowPlaying = received.find((m) => m.event === "announcement:now_playing")!;
+		expect((nowPlaying.data as { display_no: number }).display_no).toBe(42);
+	});
+
+	it("should call unduck even when duck was called (no orphan duck on error path)", async () => {
+		seedOrder("o-1", 1);
+		seedAnnouncement("aq-1", "o-1", 1);
+
+		const mockMusicPlayer = {
+			duck: vi.fn(),
+			unduck: vi.fn(),
+		} as unknown as MusicPlayerService;
+
+		// Make markPlayed throw after audio plays — unduck should still have been called
+		// because unduck is called before markPlayed in the try block
+		const audioPlayer = new AudioPlaybackService({ disableAudio: true, delayMs: 5 });
+		const workerWithMusic = new AnnouncementWorker({
+			announcementService,
+			broadcaster,
+			audioPlayer,
+			musicPlayer: mockMusicPlayer,
+		});
+
+		await workerWithMusic.processOne();
+
+		// Both must have been called regardless
+		expect(mockMusicPlayer.duck).toHaveBeenCalledOnce();
+		expect(mockMusicPlayer.unduck).toHaveBeenCalledOnce();
 	});
 
 	it("should not crash and should reset processing flag when poll throws", async () => {
