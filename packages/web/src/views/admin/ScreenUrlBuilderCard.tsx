@@ -5,6 +5,7 @@ import {
 	type DisplayTextScale,
 } from "@sepetarasi/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { UI_LABELS } from "../../constants/labels";
 import { buildDisplayUrl } from "../display/display-url-overrides";
 import { LAYOUT_LABELS, TEXT_SCALE_LABELS } from "./display-settings-labels";
 
@@ -16,13 +17,16 @@ interface ScreenSlot {
 	scale: DisplayTextScale | "";
 }
 
-let slotCounter = 0;
-function newSlot(name: string): ScreenSlot {
-	return { id: String(++slotCounter), name, layout: "", max: "", scale: "" };
-}
-
 export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean }) {
-	const [slots, setSlots] = useState<ScreenSlot[]>(() => [newSlot("Ekran 1"), newSlot("Ekran 2")]);
+	const slotCounterRef = useRef(0);
+	function newSlot(name: string): ScreenSlot {
+		return { id: String(++slotCounterRef.current), name, layout: "", max: "", scale: "" };
+	}
+
+	const [slots, setSlots] = useState<ScreenSlot[]>(() => [
+		newSlot(`${UI_LABELS.SCREEN_URL_BUILDER.DEFAULT_SLOT_PREFIX} 1`),
+		newSlot(`${UI_LABELS.SCREEN_URL_BUILDER.DEFAULT_SLOT_PREFIX} 2`),
+	]);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
 	const [copyErrorId, setCopyErrorId] = useState<string | null>(null);
 	const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,7 +46,11 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 		setSlots((prev) => prev.filter((slot) => slot.id !== id));
 	}, []);
 
-	const addSlot = () => setSlots((prev) => [...prev, newSlot(`Ekran ${prev.length + 1}`)]);
+	const addSlot = () =>
+		setSlots((prev) => [
+			...prev,
+			newSlot(`${UI_LABELS.SCREEN_URL_BUILDER.DEFAULT_SLOT_PREFIX} ${prev.length + 1}`),
+		]);
 
 	const copyUrl = async (slot: ScreenSlot) => {
 		const url = window.location.origin + buildDisplayUrl(slot);
@@ -76,10 +84,10 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 			<div className={overlayClass} />
 
 			<div className="relative z-10">
-				<h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Ekran URL'leri</h3>
-				<p className="text-xs text-slate-500 mt-1">
-					Her ekran için düzen, maksimum sipariş ve yazı ölçeği override URL'i üretir.
-				</p>
+				<h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+					{UI_LABELS.SCREEN_URL_BUILDER.TITLE}
+				</h3>
+				<p className="text-xs text-slate-500 mt-1">{UI_LABELS.SCREEN_URL_BUILDER.DESCRIPTION}</p>
 			</div>
 
 			<div className="relative z-10 flex flex-col gap-3">
@@ -95,7 +103,7 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 									type="text"
 									value={slot.name}
 									onChange={(e) => updateSlot(slot.id, { name: e.target.value })}
-									placeholder="Ekran adı"
+									placeholder={UI_LABELS.SCREEN_URL_BUILDER.SLOT_NAME_PLACEHOLDER}
 									className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-slate-500"
 								/>
 								{slots.length > 1 && (
@@ -104,14 +112,14 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 										onClick={() => removeSlot(slot.id)}
 										className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
 									>
-										Sil
+										{UI_LABELS.SCREEN_URL_BUILDER.REMOVE}
 									</button>
 								)}
 							</div>
 
 							<div className="grid grid-cols-3 gap-2">
 								<label className="text-xs text-slate-400">
-									<span className="block mb-1">Düzen</span>
+									<span className="block mb-1">{UI_LABELS.SCREEN_URL_BUILDER.LAYOUT_LABEL}</span>
 									<select
 										className="w-full px-2 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700 text-white text-xs"
 										value={slot.layout}
@@ -121,7 +129,7 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 											})
 										}
 									>
-										<option value="">Global</option>
+										<option value="">{UI_LABELS.SCREEN_URL_BUILDER.GLOBAL_OPTION}</option>
 										{DISPLAY_LAYOUT_PREFERENCES.map((layout) => (
 											<option key={layout} value={layout}>
 												{LAYOUT_LABELS[layout]}
@@ -131,11 +139,11 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 								</label>
 
 								<label className="text-xs text-slate-400">
-									<span className="block mb-1">Maks. Sipariş</span>
+									<span className="block mb-1">{UI_LABELS.SCREEN_URL_BUILDER.MAX_ORDERS_LABEL}</span>
 									<input
 										type="number"
 										min={1}
-										placeholder="Global"
+										placeholder={UI_LABELS.SCREEN_URL_BUILDER.GLOBAL_OPTION}
 										value={slot.max}
 										onChange={(e) => updateSlot(slot.id, { max: e.target.value })}
 										className="number-input-no-spinner w-full px-2 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700 text-white text-xs text-center placeholder:text-slate-600 focus:outline-none"
@@ -143,7 +151,7 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 								</label>
 
 								<label className="text-xs text-slate-400">
-									<span className="block mb-1">Yazı Ölçeği</span>
+									<span className="block mb-1">{UI_LABELS.SCREEN_URL_BUILDER.TEXT_SCALE_LABEL}</span>
 									<select
 										className="w-full px-2 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700 text-white text-xs"
 										value={slot.scale}
@@ -151,7 +159,7 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 											updateSlot(slot.id, { scale: e.target.value as DisplayTextScale | "" })
 										}
 									>
-										<option value="">Global</option>
+										<option value="">{UI_LABELS.SCREEN_URL_BUILDER.GLOBAL_OPTION}</option>
 										{DISPLAY_TEXT_SCALES.map((scale) => (
 											<option key={scale} value={scale}>
 												{TEXT_SCALE_LABELS[scale]}
@@ -171,10 +179,10 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 									className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/60 hover:bg-slate-700/70 text-slate-100 border border-slate-600/40 transition-all"
 								>
 									{copiedId === slot.id
-										? "Kopyalandı!"
+										? UI_LABELS.SCREEN_URL_BUILDER.COPIED
 										: copyErrorId === slot.id
-											? "Kopyalanamadı"
-											: "Kopyala"}
+											? UI_LABELS.SCREEN_URL_BUILDER.COPY_ERROR
+											: UI_LABELS.SCREEN_URL_BUILDER.COPY}
 								</button>
 							</div>
 						</div>
@@ -188,7 +196,7 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 					onClick={addSlot}
 					className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-900/60 hover:bg-slate-800/80 text-slate-300 border border-slate-700/50 transition-all"
 				>
-					+ Ekran Ekle
+					{UI_LABELS.SCREEN_URL_BUILDER.ADD_SCREEN}
 				</button>
 			</div>
 		</div>

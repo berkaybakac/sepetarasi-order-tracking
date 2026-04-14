@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	buildDisplayUrl,
 	parseUrlDisplayOverrides,
@@ -48,6 +48,50 @@ describe("parseUrlDisplayOverrides", () => {
 		expect(parseUrlDisplayOverrides("?max=10")).toEqual({ maxVisiblePerColumn: 10 });
 		expect(parseUrlDisplayOverrides("?scale=l")).toEqual({ textScale: "l" });
 		expect(parseUrlDisplayOverrides("?layout=split")).toEqual({ layoutPreference: "split" });
+	});
+});
+
+describe("parseUrlDisplayOverrides — console.warn on invalid params", () => {
+	beforeEach(() => {
+		vi.spyOn(console, "warn").mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("warns for unrecognised layout value", () => {
+		parseUrlDisplayOverrides("?layout=grid");
+		expect(console.warn).toHaveBeenCalledOnce();
+		expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("layout"));
+	});
+
+	it("warns for invalid max value", () => {
+		parseUrlDisplayOverrides("?max=0");
+		expect(console.warn).toHaveBeenCalledOnce();
+		expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("max"));
+	});
+
+	it("warns for unrecognised scale value", () => {
+		parseUrlDisplayOverrides("?scale=xl");
+		expect(console.warn).toHaveBeenCalledOnce();
+		expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("scale"));
+	});
+
+	it("does not warn for layout=auto (intentionally silent global reset)", () => {
+		parseUrlDisplayOverrides("?layout=auto");
+		expect(console.warn).not.toHaveBeenCalled();
+	});
+
+	it("does not warn when params are absent or empty string", () => {
+		parseUrlDisplayOverrides("");
+		parseUrlDisplayOverrides("?layout=&max=&scale=");
+		expect(console.warn).not.toHaveBeenCalled();
+	});
+
+	it("does not warn for valid params", () => {
+		parseUrlDisplayOverrides("?layout=stack&max=5&scale=l");
+		expect(console.warn).not.toHaveBeenCalled();
 	});
 });
 

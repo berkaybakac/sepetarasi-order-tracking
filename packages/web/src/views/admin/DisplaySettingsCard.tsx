@@ -156,7 +156,7 @@ export function DisplaySettingsCard() {
 				</h3>
 				<p className="text-xs text-slate-500 mt-1">{UI_LABELS.DISPLAY_SETTINGS.DESCRIPTION}</p>
 				<p className="text-[11px] text-slate-500 mt-1">
-					Not: URL parametreleri (`layout`, `max`, `scale`) global ayarların üstüne yazılır.
+					{UI_LABELS.DISPLAY_SETTINGS.URL_OVERRIDE_NOTE}
 				</p>
 			</div>
 
@@ -295,11 +295,10 @@ export function DisplaySettingsCard() {
 
 			<details className="relative z-10 rounded-2xl border border-slate-700/60 bg-slate-900/35 p-4">
 				<summary className="cursor-pointer select-none text-sm font-medium text-slate-300">
-					Gelişmiş: Ekran Bazlı URL Override
+					{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_TITLE}
 				</summary>
 				<p className="mt-2 text-xs text-slate-500">
-					Farklı ekran boyutlarında yalnızca ilgili ekran için layout/max/scale ayarlamak
-					gerektiğinde kullan.
+					{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_DESC}
 				</p>
 				<div className="mt-4">
 					<ScreenUrlBuilderCard embedded />

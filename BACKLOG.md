@@ -90,6 +90,44 @@ build sonrası Pi4'te gereksiz kalıyor. Runtime'ı etkilemez ama SD kart dolma 
 
 ---
 
+## Müşteri Ekranı / Display
+
+### [ ] useVisibleReadyOrders: Date.now() stale time sorunu
+
+**Neden:** `useVisibleReadyOrders` hook'u `Date.now()`'ı render anında alıyor; `useMemo`
+dependency listesinde zaman yok. Hazır siparişler `readyDisplayMinutes` sınırını geçse bile
+state güncellenmeden liste ekrandan düşmüyor. (Şu an her 60 sn'de `tick` state'i tetiklendiği
+için maksimum 60 sn gecikmeyle düzeliyor — kritik değil ama kesin çözüm değil.)
+
+**Nasıl yapılır:**
+
+- Seçenek A: Mevcut `tick` interval'ını `useVisibleReadyOrders`'a prop olarak geçir ve
+  dependency'ye ekle — sıfır dependency değişikliği.
+- Seçenek B: Hook'u `now` parametresi alacak şekilde pure yap, `CustomerDisplay`'den `Date.now()`
+  geçir (tick tetiklendiğinde yeniden hesaplanır).
+
+**Öncelik:** Düşük — mevcut 60 sn tick yeterli görünüyor, aktif bildirim yapılan siparişler
+zaten `nowPlaying` üzerinden vurgulanıyor.
+
+---
+
+### [ ] OrdersColumn: 15 prop yerine tema objesi geçir
+
+**Neden:** `OrdersColumn` şu an 15 prop taşıyor; çoğu CSS class string olup tema nesnelerinden
+geliyor. Yeni prop eklendikçe arayüz büyüyor.
+
+**Nasıl yapılır:**
+
+- `ColumnTheme` interface'i ekle: `{ railClass, titleClass, kpiCardClass, kpiNumberClass,
+  badgeClass, highlightClass, emptyTextClass }` alanları.
+- `CustomerDisplay` theme nesnesinden `ColumnTheme` objeleri derive et ve tek prop olarak geç.
+- Kalan scalar prop'lar (`title`, `count`, `orders`, `titleSizeClass`, `kpiCardSizeClass`,
+  `orderTextClass`, `emptyText`, `highlightOrderId`, `containerClass`) ayrı kalır.
+
+**Öncelik:** Düşük — mevcut arayüz fonksiyonel, tema değişmediği sürece prop sayısı artmıyor.
+
+---
+
 ## QA / Windows
 
 ### [ ] Windows validation otomasyonu (Playwright/Windows runner)

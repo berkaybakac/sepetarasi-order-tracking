@@ -34,12 +34,29 @@ export function parseUrlDisplayOverrides(
 	const overrides: Partial<
 		Pick<DisplayConfig, "layoutPreference" | "maxVisiblePerColumn" | "textScale">
 	> = {};
+
 	const layout = params.get("layout");
-	if (layout === "stack" || layout === "split") overrides.layoutPreference = layout;
-	const max = Number(params.get("max"));
-	if (Number.isInteger(max) && max >= 1) overrides.maxVisiblePerColumn = max;
+	if (layout === "stack" || layout === "split") {
+		overrides.layoutPreference = layout;
+	} else if (layout !== null && layout !== "auto" && layout !== "") {
+		console.warn(`[display] Geçersiz URL param: layout="${layout}" (beklenen: stack|split)`);
+	}
+
+	const maxRaw = params.get("max");
+	const max = Number(maxRaw);
+	if (Number.isInteger(max) && max >= 1) {
+		overrides.maxVisiblePerColumn = max;
+	} else if (maxRaw !== null && maxRaw !== "") {
+		console.warn(`[display] Geçersiz URL param: max="${maxRaw}" (beklenen: tam sayı >= 1)`);
+	}
+
 	const scale = params.get("scale");
-	if (scale === "s" || scale === "m" || scale === "l") overrides.textScale = scale;
+	if (scale === "s" || scale === "m" || scale === "l") {
+		overrides.textScale = scale;
+	} else if (scale !== null && scale !== "") {
+		console.warn(`[display] Geçersiz URL param: scale="${scale}" (beklenen: s|m|l)`);
+	}
+
 	return overrides;
 }
 

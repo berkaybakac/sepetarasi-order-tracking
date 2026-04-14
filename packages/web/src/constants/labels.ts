@@ -31,10 +31,32 @@ export const UI_LABELS = {
 		NO_READY_ORDERS: "Hazır sipariş yok",
 	},
 
+	// Admin > Ekran Bazlı URL Override
+	SCREEN_URL_BUILDER: {
+		TITLE: "Ekran URL'leri",
+		DESCRIPTION: "Her ekran için düzen, maksimum sipariş ve yazı ölçeği override URL'i üretir.",
+		DEFAULT_SLOT_PREFIX: "Ekran",
+		SLOT_NAME_PLACEHOLDER: "Ekran adı",
+		REMOVE: "Sil",
+		LAYOUT_LABEL: "Düzen",
+		MAX_ORDERS_LABEL: "Maks. Sipariş",
+		TEXT_SCALE_LABEL: "Yazı Ölçeği",
+		GLOBAL_OPTION: "Global",
+		COPY: "Kopyala",
+		COPIED: "Kopyalandı!",
+		COPY_ERROR: "Kopyalanamadı",
+		ADD_SCREEN: "+ Ekran Ekle",
+	},
+
 	// Admin > Müşteri Ekranı Ayarları
 	DISPLAY_SETTINGS: {
 		TITLE: "Müşteri Ekranı Ayarları",
 		DESCRIPTION: "Profil, düzen ve sayfalama ayarları tüm müşteri ekranlarına uygulanır.",
+		URL_OVERRIDE_NOTE:
+			"Not: URL parametreleri (`layout`, `max`, `scale`) global ayarların üstüne yazılır.",
+		ADVANCED_TITLE: "Gelişmiş: Ekran Bazlı URL Override",
+		ADVANCED_DESC:
+			"Farklı ekran boyutlarında yalnızca ilgili ekran için layout/max/scale ayarlamak gerektiğinde kullan.",
 		PROFILE_LABEL: "Profil",
 		LAYOUT_LABEL: "Düzen",
 		MAX_PER_COLUMN_LABEL: "Maksimum Sipariş / Kolon",
