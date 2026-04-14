@@ -3,10 +3,10 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
-import { OrderCommandService } from "../src/services/order.command.service.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
+import { OrderCommandService } from "../src/services/order.command.service.js";
 import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
 let db: AppDatabase;

@@ -18,6 +18,13 @@ import {
 	type DisplayConfig,
 	parseDisplaySettings,
 } from "../display/display-config";
+import { ScreenUrlBuilderCard } from "./ScreenUrlBuilderCard";
+import {
+	LAYOUT_LABELS,
+	PROFILE_LABELS,
+	TEXT_SCALE_LABELS,
+	THEME_LABELS,
+} from "./display-settings-labels";
 
 function clampInt(value: number, min: number, max?: number): number {
 	if (max === undefined) return Math.max(min, value);
@@ -81,31 +88,6 @@ function NumberStepperField({
 		</label>
 	);
 }
-
-const PROFILE_LABELS: Record<DisplayProfile, string> = {
-	auto: UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION,
-	led_256x512: "LED 256x512",
-	tv_1080p: "TV 1080p",
-};
-
-const LAYOUT_LABELS: Record<DisplayLayoutPreference, string> = {
-	auto: UI_LABELS.DISPLAY_SETTINGS.AUTO_OPTION,
-	split: UI_LABELS.DISPLAY_SETTINGS.LAYOUT_SPLIT,
-	stack: UI_LABELS.DISPLAY_SETTINGS.LAYOUT_STACK,
-};
-
-const TEXT_SCALE_LABELS: Record<DisplayTextScale, string> = {
-	s: UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_S,
-	m: UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_M,
-	l: UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_L,
-};
-
-const THEME_LABELS: Record<DisplayTheme, string> = {
-	dark: UI_LABELS.DISPLAY_SETTINGS.THEME_DARK,
-	light: UI_LABELS.DISPLAY_SETTINGS.THEME_LIGHT,
-	vivid: UI_LABELS.DISPLAY_SETTINGS.THEME_VIVID,
-	retro: UI_LABELS.DISPLAY_SETTINGS.THEME_RETRO,
-};
 
 export function DisplaySettingsCard() {
 	const [config, setConfig] = useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
@@ -173,6 +155,9 @@ export function DisplaySettingsCard() {
 					{UI_LABELS.DISPLAY_SETTINGS.TITLE}
 				</h3>
 				<p className="text-xs text-slate-500 mt-1">{UI_LABELS.DISPLAY_SETTINGS.DESCRIPTION}</p>
+				<p className="text-[11px] text-slate-500 mt-1">
+					Not: URL parametreleri (`layout`, `max`, `scale`) global ayarların üstüne yazılır.
+				</p>
 			</div>
 
 			{loading ? (
@@ -307,6 +292,19 @@ export function DisplaySettingsCard() {
 					)}
 				</fieldset>
 			)}
+
+			<details className="relative z-10 rounded-2xl border border-slate-700/60 bg-slate-900/35 p-4">
+				<summary className="cursor-pointer select-none text-sm font-medium text-slate-300">
+					Gelişmiş: Ekran Bazlı URL Override
+				</summary>
+				<p className="mt-2 text-xs text-slate-500">
+					Farklı ekran boyutlarında yalnızca ilgili ekran için layout/max/scale ayarlamak
+					gerektiğinde kullan.
+				</p>
+				<div className="mt-4">
+					<ScreenUrlBuilderCard embedded />
+				</div>
+			</details>
 
 			<div className="relative z-10 flex items-center justify-end gap-3 h-10">
 				<a

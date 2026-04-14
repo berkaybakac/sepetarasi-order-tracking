@@ -277,11 +277,7 @@ describe("AnnouncementWorker", () => {
 		// processing flag gerçekten sıfırlandıysa ikinci çağrı kuyruğu işler ve kayıt "played" olur.
 		// Flag sıfırlanmamış olsaydı poll() erken return ederdi ve kayıt hâlâ "pending" kalırdı.
 		await worker.processOne();
-		const item = db
-			.select()
-			.from(announcementQueue)
-			.where(eq(announcementQueue.id, "aq-1"))
-			.get()!;
+		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
 		expect(item.status).toBe("played");
 	});
 });

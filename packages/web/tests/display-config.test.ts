@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+	buildDisplayUrl,
+	parseUrlDisplayOverrides,
+	resolveDisplayConfigWithUrlOverrides,
+} from "../src/views/display/display-url-overrides";
+import {
 	DEFAULT_DISPLAY_CONFIG,
 	getPageCount,
 	getPageSlice,
@@ -7,6 +12,92 @@ import {
 	resolveLayoutMode,
 	resolveMaxVisiblePerColumn,
 } from "../src/views/display/display-config";
+
+describe("parseUrlDisplayOverrides", () => {
+	it("parses valid layout, max and scale", () => {
+		expect(parseUrlDisplayOverrides("?layout=stack&max=4&scale=s")).toEqual({
+			layoutPreference: "stack",
+			maxVisiblePerColumn: 4,
+			textScale: "s",
+		});
+	});
+
+	it("returns empty object when no params present", () => {
+		expect(parseUrlDisplayOverrides("")).toEqual({});
+	});
+
+	it("ignores invalid max values", () => {
+		expect(parseUrlDisplayOverrides("?max=0")).toEqual({});
+		expect(parseUrlDisplayOverrides("?max=-5")).toEqual({});
+		expect(parseUrlDisplayOverrides("?max=abc")).toEqual({});
+		expect(parseUrlDisplayOverrides("?max=1.5")).toEqual({});
+	});
+
+	it("ignores invalid scale values", () => {
+		expect(parseUrlDisplayOverrides("?scale=xl")).toEqual({});
+		expect(parseUrlDisplayOverrides("?scale=")).toEqual({});
+	});
+
+	it("ignores invalid layout values", () => {
+		expect(parseUrlDisplayOverrides("?layout=auto")).toEqual({});
+		expect(parseUrlDisplayOverrides("?layout=grid")).toEqual({});
+		expect(parseUrlDisplayOverrides("?layout=")).toEqual({});
+	});
+
+	it("applies only the overrides that are present", () => {
+		expect(parseUrlDisplayOverrides("?max=10")).toEqual({ maxVisiblePerColumn: 10 });
+		expect(parseUrlDisplayOverrides("?scale=l")).toEqual({ textScale: "l" });
+		expect(parseUrlDisplayOverrides("?layout=split")).toEqual({ layoutPreference: "split" });
+	});
+});
+
+describe("resolveDisplayConfigWithUrlOverrides", () => {
+	it("applies URL overrides on top of base config", () => {
+		const base = {
+			...DEFAULT_DISPLAY_CONFIG,
+			layoutPreference: "auto" as const,
+			maxVisiblePerColumn: 9,
+			textScale: "m" as const,
+			theme: "retro" as const,
+		};
+
+		const resolved = resolveDisplayConfigWithUrlOverrides(base, "?layout=stack&max=4&scale=l");
+
+		expect(resolved.layoutPreference).toBe("stack");
+		expect(resolved.maxVisiblePerColumn).toBe(4);
+		expect(resolved.textScale).toBe("l");
+		expect(resolved.theme).toBe("retro");
+	});
+
+	it("keeps base config when URL params are invalid", () => {
+		const base = {
+			...DEFAULT_DISPLAY_CONFIG,
+			maxVisiblePerColumn: 7,
+			textScale: "s" as const,
+		};
+
+		const resolved = resolveDisplayConfigWithUrlOverrides(base, "?max=0&scale=xl");
+
+		expect(resolved.maxVisiblePerColumn).toBe(7);
+		expect(resolved.textScale).toBe("s");
+	});
+});
+
+describe("buildDisplayUrl", () => {
+	it("builds URL with valid overrides", () => {
+		expect(buildDisplayUrl({ layout: "stack", max: "12", scale: "l" })).toBe(
+			"/display?layout=stack&max=12&scale=l",
+		);
+	});
+
+	it("omits global/invalid values", () => {
+		expect(buildDisplayUrl({ layout: "", max: "", scale: "" })).toBe("/display");
+		expect(buildDisplayUrl({ layout: "auto", max: "0", scale: "m" })).toBe("/display?scale=m");
+		expect(buildDisplayUrl({ layout: "split", max: "1.5", scale: "" })).toBe(
+			"/display?layout=split",
+		);
+	});
+});
 
 describe("display-config (happy path)", () => {
 	it("parses valid settings", () => {
