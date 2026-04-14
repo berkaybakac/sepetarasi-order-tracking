@@ -2,9 +2,9 @@ import type { Order } from "@sepetarasi/shared";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import {
+	type DisplayConfig,
 	READY_HIGHLIGHT_ANIMATION_SECONDS,
 	resolveLayoutMode,
-	type DisplayConfig,
 } from "./display-config";
 
 export function useVisibleReadyOrders(readyOrders: Order[], readyDisplayMinutes: number): Order[] {
@@ -83,7 +83,9 @@ export function ColumnKpiHeader({
 			<div
 				className={`shrink-0 inline-flex items-center justify-center rounded-[clamp(0.65rem,1.45vmin,0.85rem)] shadow-lg shadow-black/20 ${kpiCardSizeClass} ${kpiCardClass}`}
 			>
-				<span className={`font-extrabold tabular-nums leading-none ${kpiNumberClass}`}>{count}</span>
+				<span className={`font-extrabold tabular-nums leading-none ${kpiNumberClass}`}>
+					{count}
+				</span>
 			</div>
 		</div>
 	);
@@ -196,7 +198,9 @@ export function OrdersColumn({
 				</AnimatePresence>
 			</div>
 			{orders.length === 0 && (
-				<p className={`text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)] ${emptyTextClass}`}>
+				<p
+					className={`text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)] ${emptyTextClass}`}
+				>
 					{emptyText}
 				</p>
 			)}

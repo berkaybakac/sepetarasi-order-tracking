@@ -139,7 +139,9 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 								</label>
 
 								<label className="text-xs text-slate-400">
-									<span className="block mb-1">{UI_LABELS.SCREEN_URL_BUILDER.MAX_ORDERS_LABEL}</span>
+									<span className="block mb-1">
+										{UI_LABELS.SCREEN_URL_BUILDER.MAX_ORDERS_LABEL}
+									</span>
 									<input
 										type="number"
 										min={1}
@@ -151,7 +153,9 @@ export function ScreenUrlBuilderCard({ embedded = false }: { embedded?: boolean 
 								</label>
 
 								<label className="text-xs text-slate-400">
-									<span className="block mb-1">{UI_LABELS.SCREEN_URL_BUILDER.TEXT_SCALE_LABEL}</span>
+									<span className="block mb-1">
+										{UI_LABELS.SCREEN_URL_BUILDER.TEXT_SCALE_LABEL}
+									</span>
 									<select
 										className="w-full px-2 py-1.5 rounded-lg bg-slate-900/60 border border-slate-700 text-white text-xs"
 										value={slot.scale}

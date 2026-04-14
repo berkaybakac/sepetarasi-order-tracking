@@ -297,9 +297,7 @@ export function DisplaySettingsCard() {
 				<summary className="cursor-pointer select-none text-sm font-medium text-slate-300">
 					{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_TITLE}
 				</summary>
-				<p className="mt-2 text-xs text-slate-500">
-					{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_DESC}
-				</p>
+				<p className="mt-2 text-xs text-slate-500">{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_DESC}</p>
 				<div className="mt-4">
 					<ScreenUrlBuilderCard embedded />
 				</div>

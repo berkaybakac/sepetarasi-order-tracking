@@ -7,6 +7,12 @@ import { useWebSocket } from "../../hooks/useWebSocket";
 import { api } from "../../lib/api";
 import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 import {
+	ClockText,
+	OrdersColumn,
+	useDisplayLayoutMode,
+	useVisibleReadyOrders,
+} from "./customer-display-parts";
+import {
 	DEFAULT_DISPLAY_CONFIG,
 	type DisplayConfig,
 	TEXT_SCALES,
@@ -16,12 +22,6 @@ import {
 	parseDisplaySettings,
 	resolveMaxVisiblePerColumn,
 } from "./display-config";
-import {
-	ClockText,
-	OrdersColumn,
-	useDisplayLayoutMode,
-	useVisibleReadyOrders,
-} from "./customer-display-parts";
 import { resolveDisplayConfigWithUrlOverrides } from "./display-url-overrides";
 import { advancePage, findNewestNewReadyOrderPage, findOrderPageById } from "./pagination-logic";
 
@@ -39,7 +39,10 @@ export function CustomerDisplay() {
 	const preparingOrders = useOrdersByStatus(OrderStatus.PREPARING);
 	const allReadyOrders = useOrdersByStatus(OrderStatus.READY);
 	const readyOrders = useVisibleReadyOrders(allReadyOrders, effectiveConfig.readyDisplayMinutes);
-	const layoutMode = useDisplayLayoutMode(effectiveConfig.profile, effectiveConfig.layoutPreference);
+	const layoutMode = useDisplayLayoutMode(
+		effectiveConfig.profile,
+		effectiveConfig.layoutPreference,
+	);
 	const isStackLayout = layoutMode === "stack";
 
 	const theme = THEMES[effectiveConfig.theme];
@@ -181,48 +184,48 @@ export function CustomerDisplay() {
 						#{nowPlaying.display_no}
 					</p>
 				</div>
-				)}
+			)}
 
-				{/* Main Grid */}
-				<div
-					className={`flex-1 grid gap-0 ${isStackLayout ? "grid-cols-1 grid-rows-2" : "grid-cols-2"}`}
-				>
-					<OrdersColumn
-						containerClass={`p-[clamp(0.25rem,2vmin,2rem)] overflow-hidden min-h-0 ${theme.preparingCol} ${isStackLayout ? "border-b-2" : "border-r-2"} ${theme.preparingDivider}`}
-						title={UI_LABELS.DISPLAY.PREPARING_TITLE}
-						count={preparingOrders.length}
-						railClass={theme.preparingRail}
-						titleSizeClass={railTitleClass}
-						titleClass={theme.preparingTitle}
-						kpiCardSizeClass={railKpiCardSizeClass}
-						kpiCardClass={theme.preparingKpiCard}
-						kpiNumberClass={railKpiNumberClass}
-						orders={visiblePreparingOrders}
-						orderTextClass={orderTextClass}
-						badgeClass={theme.preparingOrderBadge}
-						highlightClass={theme.orderHighlight}
-						emptyText={UI_LABELS.DISPLAY.NO_PREPARING_ORDERS}
-						emptyTextClass={theme.preparingEmpty}
-					/>
-					<OrdersColumn
-						containerClass={`p-[clamp(0.25rem,2vmin,2rem)] overflow-hidden min-h-0 ${theme.readyCol}`}
-						title={UI_LABELS.DISPLAY.READY_TITLE}
-						count={readyOrders.length}
-						railClass={theme.readyRail}
-						titleSizeClass={railTitleClass}
-						titleClass={theme.readyTitle}
-						kpiCardSizeClass={railKpiCardSizeClass}
-						kpiCardClass={theme.readyKpiCard}
-						kpiNumberClass={railKpiNumberClass}
-						orders={visibleReadyOrders}
-						orderTextClass={orderTextClass}
-						badgeClass={theme.readyOrderBadge}
-						highlightClass={theme.orderHighlight}
-						highlightOrderId={nowPlayingId}
-						emptyText={UI_LABELS.DISPLAY.NO_READY_ORDERS}
-						emptyTextClass={theme.readyEmpty}
-					/>
-				</div>
+			{/* Main Grid */}
+			<div
+				className={`flex-1 grid gap-0 ${isStackLayout ? "grid-cols-1 grid-rows-2" : "grid-cols-2"}`}
+			>
+				<OrdersColumn
+					containerClass={`p-[clamp(0.25rem,2vmin,2rem)] overflow-hidden min-h-0 ${theme.preparingCol} ${isStackLayout ? "border-b-2" : "border-r-2"} ${theme.preparingDivider}`}
+					title={UI_LABELS.DISPLAY.PREPARING_TITLE}
+					count={preparingOrders.length}
+					railClass={theme.preparingRail}
+					titleSizeClass={railTitleClass}
+					titleClass={theme.preparingTitle}
+					kpiCardSizeClass={railKpiCardSizeClass}
+					kpiCardClass={theme.preparingKpiCard}
+					kpiNumberClass={railKpiNumberClass}
+					orders={visiblePreparingOrders}
+					orderTextClass={orderTextClass}
+					badgeClass={theme.preparingOrderBadge}
+					highlightClass={theme.orderHighlight}
+					emptyText={UI_LABELS.DISPLAY.NO_PREPARING_ORDERS}
+					emptyTextClass={theme.preparingEmpty}
+				/>
+				<OrdersColumn
+					containerClass={`p-[clamp(0.25rem,2vmin,2rem)] overflow-hidden min-h-0 ${theme.readyCol}`}
+					title={UI_LABELS.DISPLAY.READY_TITLE}
+					count={readyOrders.length}
+					railClass={theme.readyRail}
+					titleSizeClass={railTitleClass}
+					titleClass={theme.readyTitle}
+					kpiCardSizeClass={railKpiCardSizeClass}
+					kpiCardClass={theme.readyKpiCard}
+					kpiNumberClass={railKpiNumberClass}
+					orders={visibleReadyOrders}
+					orderTextClass={orderTextClass}
+					badgeClass={theme.readyOrderBadge}
+					highlightClass={theme.orderHighlight}
+					highlightOrderId={nowPlayingId}
+					emptyText={UI_LABELS.DISPLAY.NO_READY_ORDERS}
+					emptyTextClass={theme.readyEmpty}
+				/>
+			</div>
 
 			{(preparingPageCount > 1 || readyPageCount > 1) && (
 				<div

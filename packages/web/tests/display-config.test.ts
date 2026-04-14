@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	buildDisplayUrl,
-	parseUrlDisplayOverrides,
-	resolveDisplayConfigWithUrlOverrides,
-} from "../src/views/display/display-url-overrides";
-import {
 	DEFAULT_DISPLAY_CONFIG,
 	getPageCount,
 	getPageSlice,
@@ -12,6 +7,11 @@ import {
 	resolveLayoutMode,
 	resolveMaxVisiblePerColumn,
 } from "../src/views/display/display-config";
+import {
+	buildDisplayUrl,
+	parseUrlDisplayOverrides,
+	resolveDisplayConfigWithUrlOverrides,
+} from "../src/views/display/display-url-overrides";
 
 describe("parseUrlDisplayOverrides", () => {
 	it("parses valid layout, max and scale", () => {
