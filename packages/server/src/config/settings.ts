@@ -8,6 +8,8 @@ import {
 
 const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
+	SETTING_KEYS.MUSIC_VOLUME,
+	SETTING_KEYS.MUSIC_ENABLED,
 	...DISPLAY_EDITABLE_SETTING_KEYS,
 	"announcement_delay_ms",
 	"business_name",
@@ -52,6 +54,19 @@ export function validateSettingValue(key: string, value: string): string | null 
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < 0 || num > 100) {
 				return "audio_volume must be an integer between 0 and 100";
+			}
+			return null;
+		}
+		case SETTING_KEYS.MUSIC_VOLUME: {
+			const num = Number(value);
+			if (!Number.isInteger(num) || num < 0 || num > 100) {
+				return "music_volume must be an integer between 0 and 100";
+			}
+			return null;
+		}
+		case SETTING_KEYS.MUSIC_ENABLED: {
+			if (value !== "0" && value !== "1") {
+				return "music_enabled must be '0' or '1'";
 			}
 			return null;
 		}

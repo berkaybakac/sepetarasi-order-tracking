@@ -1,28 +1,24 @@
 import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
-import type { WsMessage } from "@sepetarasi/shared";
+import type { MusicStatus, WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { useMusicStore } from "../../stores/musicStore";
 import { useOrderStore } from "../../stores/orderStore";
-import { DisplaySettingsCard } from "./DisplaySettingsCard";
-import { OrderColumns, StatCards } from "./OrderColumns";
-import { PeriodStats } from "./PeriodStats";
-import { VolumeControl } from "./VolumeControl";
-
 import { AdminHeader } from "./AdminHeader";
+import { AudioTab } from "./tabs/AudioTab";
+import { DisplayTab } from "./tabs/DisplayTab";
+import { OrdersTab } from "./tabs/OrdersTab";
+import { StatsTab } from "./tabs/StatsTab";
 
-/**
- * AdminView — orkestratör.
- * Tek sorumluluk: WebSocket bağlantısını yönet, layout'u oluştur.
- * İş mantığı her section'ın kendi dosyasında.
- */
 export function AdminView() {
 	const hydrate = useOrderStore((s) => s.hydrate);
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);
 	const connected = useOrderStore((s) => s.connected);
 	const lastReconnectedAt = useOrderStore((s) => s.lastReconnectedAt);
+	const setMusicStatus = useMusicStore((s) => s.setStatus);
 
-	// Local trigger for WS events (not reconnects)
 	const [internalStatsTrigger, setInternalStatsTrigger] = useState(0);
 
 	const onMessage = useCallback(
@@ -35,8 +31,11 @@ export function AdminView() {
 			) {
 				setInternalStatsTrigger((n) => n + 1);
 			}
+			if (msg.event === WS_EVENTS.MUSIC_STATUS_CHANGED && msg.data) {
+				setMusicStatus(msg.data as MusicStatus);
+			}
 		},
-		[applyWsEvent],
+		[applyWsEvent, setMusicStatus],
 	);
 
 	const onConnect = useCallback(() => setConnected(true), [setConnected]);
@@ -57,14 +56,19 @@ export function AdminView() {
 			<div className="relative z-10 min-h-screen flex flex-col">
 				<AdminHeader connected={connected} />
 
-				<main className="flex-1 p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
-					<StatCards />
-					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-						<PeriodStats wsTrigger={internalStatsTrigger} reconnectedAt={lastReconnectedAt} />
-						<VolumeControl />
-						<DisplaySettingsCard />
-					</div>
-					<OrderColumns />
+				<main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full">
+					<Routes>
+						<Route index element={<Navigate to="orders" replace />} />
+						<Route path="orders" element={<OrdersTab />} />
+						<Route path="audio" element={<AudioTab />} />
+						<Route path="display" element={<DisplayTab />} />
+						<Route
+							path="stats"
+							element={
+								<StatsTab wsTrigger={internalStatsTrigger} reconnectedAt={lastReconnectedAt} />
+							}
+						/>
+					</Routes>
 				</main>
 			</div>
 		</div>

@@ -1,6 +1,7 @@
 import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { AnnouncementService } from "../services/announcement.service.js";
 import type { AudioPlaybackService } from "../services/audio-playback.service.js";
+import type { MusicPlayerService } from "../services/music-player.service.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
 
 interface WorkerLogger {
@@ -47,6 +48,7 @@ export interface AnnouncementWorkerOptions {
 	announcementService: AnnouncementService;
 	broadcaster: Broadcaster;
 	audioPlayer: AudioPlaybackService;
+	musicPlayer?: MusicPlayerService;
 	pollIntervalMs?: number;
 	logger?: WorkerLogger;
 }
@@ -57,6 +59,7 @@ export class AnnouncementWorker {
 	private service: AnnouncementService;
 	private broadcaster: Broadcaster;
 	private audioPlayer: AudioPlaybackService;
+	private musicPlayer: MusicPlayerService | undefined;
 	private pollIntervalMs: number;
 	private logger: WorkerLogger;
 
@@ -64,6 +67,7 @@ export class AnnouncementWorker {
 		this.service = opts.announcementService;
 		this.broadcaster = opts.broadcaster;
 		this.audioPlayer = opts.audioPlayer;
+		this.musicPlayer = opts.musicPlayer;
 		this.pollIntervalMs = opts.pollIntervalMs ?? 1000;
 		this.logger = opts.logger ?? createFallbackWorkerLogger();
 	}
@@ -102,8 +106,9 @@ export class AnnouncementWorker {
 				"Announcement playback started",
 			);
 
-			// Mark as playing + broadcast
+			// Mark as playing + duck music (wait for fade) + broadcast
 			this.service.markPlaying(item.id);
+			await this.musicPlayer?.duck();
 			this.broadcaster.broadcast(
 				[WS_CHANNELS.ORDERS, WS_CHANNELS.DISPLAY],
 				WS_EVENTS.ANNOUNCEMENT_NOW_PLAYING,
@@ -112,8 +117,9 @@ export class AnnouncementWorker {
 
 			await this.audioPlayer.play(item.display_no);
 
-			// Mark as played + broadcast
+			// Mark as played + restore music + broadcast
 			this.service.markPlayed(item.id);
+			this.musicPlayer?.unduck();
 			this.broadcaster.broadcast(
 				[WS_CHANNELS.ORDERS, WS_CHANNELS.DISPLAY],
 				WS_EVENTS.ANNOUNCEMENT_FINISHED,

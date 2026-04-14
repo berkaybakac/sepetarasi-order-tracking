@@ -16,3 +16,5 @@ coverage/
 packages/server/coverage/
 packages/server/assets/announcements/*
 !packages/server/assets/announcements/.gitkeep
+packages/server/assets/music/*
+!packages/server/assets/music/.gitkeep

@@ -135,3 +135,26 @@ export interface AnnouncementPayload {
 	order_id: string;
 	display_no: number;
 }
+
+// --- Music ---
+
+export interface MusicTrack {
+	id: string;
+	filename: string;
+	display_name: string;
+	file_path: string;
+	file_size: number;
+	duration_seconds: number | null;
+	sort_order: number;
+	uploaded_at: string;
+}
+
+export interface MusicStatus {
+	isPlaying: boolean;
+	isPaused: boolean;
+	isDucked: boolean;
+	currentTrackId: string | null;
+	currentTrackName: string | null;
+	volume: number;
+	enabled: boolean;
+}

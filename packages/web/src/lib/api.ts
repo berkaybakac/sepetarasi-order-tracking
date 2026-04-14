@@ -1,6 +1,6 @@
 // ADR: intentionally separate from kasa/api.ts — see docs/dev-notes.md "Intentional Separations"
 import { API_ROUTES } from "@sepetarasi/shared";
-import type { DayStats, Order } from "@sepetarasi/shared";
+import type { DayStats, MusicStatus, MusicTrack, Order } from "@sepetarasi/shared";
 
 const baseUrl = "";
 const cashierToken = import.meta.env.VITE_CASHIER_TOKEN?.trim();
@@ -54,4 +54,56 @@ export const api = {
 	authCheck: () => request<{ role: string }>("GET", API_ROUTES.V1.AUTH.ME),
 	authChangePassword: (currentPassword: string, newPassword: string) =>
 		request<null>("POST", API_ROUTES.V1.AUTH.CHANGE_PASSWORD, { currentPassword, newPassword }),
+
+	// Music
+	getMusicTracks: () => request<MusicTrack[]>("GET", "/api/v1/music/tracks"),
+	getMusicStatus: () => request<MusicStatus>("GET", "/api/v1/music/status"),
+	getMusicDisk: () =>
+		request<{ totalBytes: number; freeBytes: number; usedBytes: number } | null>(
+			"GET",
+			"/api/v1/music/disk",
+		),
+	deleteMusicTrack: (id: string) => request<null>("DELETE", `/api/v1/music/tracks/${id}`),
+	updateMusicTrack: (id: string, patch: { display_name?: string; sort_order?: number }) =>
+		request<null>("PATCH", `/api/v1/music/tracks/${id}`, patch),
+	musicPlay: () => request<null>("POST", "/api/v1/music/play"),
+	musicPause: () => request<null>("POST", "/api/v1/music/pause"),
+	musicSkip: () => request<null>("POST", "/api/v1/music/skip"),
+	musicPrevious: () => request<null>("POST", "/api/v1/music/previous"),
+	setMusicVolume: (volume: number) => request<null>("PATCH", "/api/v1/music/volume", { volume }),
+
+	uploadMusicTrack: (file: File, onProgress?: (pct: number) => void): Promise<MusicTrack> =>
+		new Promise((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			const form = new FormData();
+			form.append("file", file);
+
+			xhr.upload.onprogress = (e) => {
+				if (e.lengthComputable && onProgress) {
+					onProgress(Math.round((e.loaded / e.total) * 100));
+				}
+			};
+
+			xhr.onload = () => {
+				if (xhr.status === 429) {
+					reject(new Error("Çok fazla deneme. 1 dakika bekleyin."));
+					return;
+				}
+				try {
+					const json = JSON.parse(xhr.responseText);
+					if (!json.ok) {
+						reject(new Error(json.error?.message || "Yükleme başarısız."));
+					} else {
+						resolve(json.data as MusicTrack);
+					}
+				} catch {
+					reject(new Error("Sunucu yanıtı okunamadı."));
+				}
+			};
+
+			xhr.onerror = () => reject(new Error("Ağ hatası. Bağlantıyı kontrol edin."));
+			xhr.open("POST", "/api/v1/music/tracks");
+			xhr.withCredentials = true;
+			xhr.send(form);
+		}),
 };
