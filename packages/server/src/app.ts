@@ -23,12 +23,14 @@ import { registerStatsRoutes } from "./routes/stats.js";
 import { AnnouncementService } from "./services/announcement.service.js";
 import { AudioPlaybackService } from "./services/audio-playback.service.js";
 import { MusicPlayerService } from "./services/music-player.service.js";
+import { migrateLegacyMusicStorage } from "./services/music-storage-migration.service.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
 import { Broadcaster } from "./ws/broadcaster.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const HEARTBEAT_INTERVAL = 60000;
 const HEARTBEAT_INTERVAL_LABEL = "60s";
+const MAX_MUSIC_UPLOAD_BYTES = 500 * 1024 * 1024;
 
 function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
 	return request.ip || request.socket?.remoteAddress || undefined;
@@ -54,6 +56,8 @@ export interface AppOptions {
 	alsaDevice?: string;
 	/** Disable static file serving (useful for tests) */
 	disableStatic?: boolean;
+	/** Max single MP3 upload size in bytes (default: 500MB) */
+	musicUploadMaxBytes?: number;
 }
 
 export async function buildApp(opts: AppOptions) {
@@ -208,8 +212,13 @@ export async function buildApp(opts: AppOptions) {
 		secret: AUTH_CONFIG.jwtSecret,
 		cookie: { cookieName: ADMIN_COOKIE_NAME, signed: false },
 	});
+	const musicUploadMaxBytes = opts.musicUploadMaxBytes ?? MAX_MUSIC_UPLOAD_BYTES;
+
 	// Multipart support for music file uploads (streaming mode — no memory buffering)
-	await app.register(fastifyMultipart, { attachFieldsToBody: false });
+	await app.register(fastifyMultipart, {
+		attachFieldsToBody: false,
+		limits: { fileSize: musicUploadMaxBytes, files: 1, parts: 10 },
+	});
 
 	// HTTP routes
 	registerAuthRoutes(app, opts.db);
@@ -221,8 +230,15 @@ export async function buildApp(opts: AppOptions) {
 	app.get("/health", async () => ({ ok: true }));
 
 	// Music player
-	const musicPath = opts.musicPath ?? join(__dirname, "../../assets/music");
+	const musicPath = opts.musicPath ?? join(__dirname, "../assets/music");
+	const legacyMusicPath = join(__dirname, "../../assets/music");
 	mkdirSync(musicPath, { recursive: true });
+	await migrateLegacyMusicStorage({
+		db: opts.db,
+		musicPath,
+		legacyMusicPath,
+		logger: app.log.child({ component: "music-storage-migration" }),
+	});
 
 	let musicPlayer: MusicPlayerService | null = null;
 	if (!opts.disableWorker) {
@@ -277,7 +293,7 @@ export async function buildApp(opts: AppOptions) {
 	}
 
 	// Music API routes (available even without worker, returns null player gracefully)
-	registerMusicRoutes(app, opts.db, musicPath, musicPlayer);
+	registerMusicRoutes(app, opts.db, musicPath, musicPlayer, musicUploadMaxBytes);
 
 	// Serve web frontend in production
 	if (!opts.disableStatic) {

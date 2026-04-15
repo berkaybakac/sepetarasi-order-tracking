@@ -5,7 +5,7 @@
 	"type": "module",
 	"main": "./dist/server.js",
 	"scripts": {
-		"dev": "tsx watch --env-file=.env src/server.ts",
+		"dev": "pkill -f 'tsx watch src/server' 2>/dev/null; tsx watch --env-file=.env src/server.ts",
 		"build": "tsc && rm -rf dist/db/migrations && mkdir -p dist/db/migrations && cp -r src/db/migrations/. dist/db/migrations/",
 		"start": "node dist/server.js",
 		"typecheck": "tsc --noEmit",
@@ -13,6 +13,7 @@
 		"db:migrate": "tsx src/db/migrate.ts",
 		"db:seed": "tsx src/db/seed.ts",
 		"db:reset-password": "tsx scripts/reset-password.ts",
+		"db:migrate-music-paths": "tsx scripts/migrate-music-paths.ts",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:watch": "vitest"

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
-import type { MusicStatus, MusicTrack } from "@sepetarasi/shared";
+import type { MusicStatus, MusicTrackRecord } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings, musicTracks } from "../db/schema.js";
@@ -65,12 +65,16 @@ const UNDUCK_STEPS: [number, number][] = [
 
 export class MusicPlayerService {
 	private proc: ChildProcess | null = null;
-	private playlist: MusicTrack[] = [];
+	private playlist: MusicTrackRecord[] = [];
 	private currentIndex = 0;
 	private isPlaying = false;
 	private isPaused = false;
 	private isDucked = false;
 	private fadeTimers: ReturnType<typeof setTimeout>[] = [];
+	private lastLoadAt = 0;
+	private consecutiveLoadFailures = 0;
+	private static readonly LOAD_FAIL_THRESHOLD_MS = 500;
+	private static readonly MAX_CONSECUTIVE_FAILURES = 3;
 
 	private db: AppDatabase;
 	private broadcaster: Broadcaster;
@@ -113,7 +117,17 @@ export class MusicPlayerService {
 	}
 
 	stop(): void {
-		if (!this.proc) return;
+		this.consecutiveLoadFailures = 0;
+		this.clearFadeTimers();
+		this.isDucked = false;
+
+		if (!this.proc) {
+			this.isPlaying = false;
+			this.isPaused = false;
+			this.broadcastStatus();
+			return;
+		}
+
 		this.sendCommand("STOP");
 		this.sendCommand("QUIT");
 		setTimeout(() => {
@@ -122,12 +136,14 @@ export class MusicPlayerService {
 		}, 300);
 		this.isPlaying = false;
 		this.isPaused = false;
+		this.broadcastStatus();
 	}
 
 	play(): void {
 		if (!this.proc) {
 			// Process may not have started if music was disabled at boot
 			this.start();
+			this.broadcastStatus();
 			return;
 		}
 		if (this.isPaused) {
@@ -141,7 +157,7 @@ export class MusicPlayerService {
 	}
 
 	pause(): void {
-		if (!this.proc || !this.isPlaying) return;
+		if (!this.proc || (!this.isPlaying && !this.isPaused)) return;
 		this.sendCommand("PAUSE");
 		this.isPaused = !this.isPaused;
 		this.isPlaying = !this.isPaused;
@@ -150,7 +166,16 @@ export class MusicPlayerService {
 
 	skip(): void {
 		if (this.playlist.length === 0) return;
-		this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
+		const nextIndex = this.resolveNextIndex();
+		if (nextIndex === null) {
+			this.sendCommand("STOP");
+			this.isPlaying = false;
+			this.isPaused = false;
+			this.broadcastStatus();
+			return;
+		}
+
+		this.currentIndex = nextIndex;
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {
 			this.loadCurrentTrack();
@@ -160,11 +185,36 @@ export class MusicPlayerService {
 
 	previous(): void {
 		if (this.playlist.length === 0) return;
-		this.currentIndex = (this.currentIndex - 1 + this.playlist.length) % this.playlist.length;
+		if (this.getShuffleEnabled()) {
+			this.currentIndex = this.pickRandomIndexExcludingCurrent();
+		} else if (this.currentIndex > 0) {
+			this.currentIndex -= 1;
+		} else if (this.getLoopEnabled()) {
+			this.currentIndex = this.playlist.length - 1;
+		} else {
+			return;
+		}
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {
 			this.loadCurrentTrack();
 		}
+		this.broadcastStatus();
+	}
+
+	setEnabled(enabled: boolean): void {
+		if (enabled) {
+			this.start();
+			this.broadcastStatus();
+		} else {
+			this.stop();
+		}
+	}
+
+	setLoop(_loopEnabled: boolean): void {
+		this.broadcastStatus();
+	}
+
+	setShuffle(_shuffleEnabled: boolean): void {
 		this.broadcastStatus();
 	}
 
@@ -269,6 +319,8 @@ export class MusicPlayerService {
 			currentTrackName: current?.display_name ?? null,
 			volume: this.getMusicVolume(),
 			enabled: this.getEnabled(),
+			loop: this.getLoopEnabled(),
+			shuffle: this.getShuffleEnabled(),
 		};
 	}
 
@@ -280,7 +332,21 @@ export class MusicPlayerService {
 
 		this.logger.info({ event: "music.process.spawn", args }, "Spawning mpg123 remote process");
 
-		this.proc = spawn("mpg123", args, { stdio: ["pipe", "pipe", "ignore"] });
+		this.proc = spawn("mpg123", args, { stdio: ["pipe", "pipe", "pipe"] });
+
+		this.proc.stdin?.on("error", (err) => {
+			this.logger.warn(
+				{ event: "music.stdin.error", error: (err as NodeJS.ErrnoException).code ?? String(err) },
+				"mpg123 stdin error (process likely died)",
+			);
+		});
+
+		this.proc.stderr?.on("data", (chunk: Buffer) => {
+			const text = chunk.toString().trim();
+			if (text) {
+				this.logger.warn({ event: "music.mpg123.stderr", output: text }, "mpg123 stderr");
+			}
+		});
 
 		this.proc.on("error", (err) => {
 			this.logger.error(
@@ -318,13 +384,55 @@ export class MusicPlayerService {
 		if (!line.startsWith("@")) return;
 
 		if (line.startsWith("@P 0")) {
-			// Track finished — auto advance
 			this.isPlaying = false;
-			if (!this.isDucked && this.playlist.length > 0) {
-				this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
+			if (this.isDucked || this.playlist.length === 0) return;
+
+			const elapsed = Date.now() - this.lastLoadAt;
+			if (elapsed < MusicPlayerService.LOAD_FAIL_THRESHOLD_MS) {
+				this.consecutiveLoadFailures += 1;
+				const failedTrack = this.playlist[this.currentIndex];
+				this.logger.error(
+					{
+						event: "music.track.load_failed",
+						trackId: failedTrack?.id,
+						name: failedTrack?.display_name,
+						path: failedTrack?.file_path,
+						elapsedMs: elapsed,
+						failures: this.consecutiveLoadFailures,
+					},
+					"mpg123 stopped immediately after LOAD — likely missing file or decode error",
+				);
+				if (this.consecutiveLoadFailures >= MusicPlayerService.MAX_CONSECUTIVE_FAILURES) {
+					this.logger.error(
+						{ event: "music.player.halted", failures: this.consecutiveLoadFailures },
+						"Too many consecutive load failures — halting music player",
+					);
+					this.stop();
+					return;
+				}
+				const nextIndex = this.resolveNextIndex();
+				if (nextIndex === null) {
+					this.stop();
+					return;
+				}
+				this.currentIndex = nextIndex;
 				this.persistCurrentTrack();
 				this.loadCurrentTrack();
+				return;
 			}
+
+			// Normal end-of-track: advance and reset failure counter
+			this.consecutiveLoadFailures = 0;
+			const nextIndex = this.resolveNextIndex();
+			if (nextIndex === null) {
+				this.isPlaying = false;
+				this.isPaused = false;
+				this.broadcastStatus();
+				return;
+			}
+			this.currentIndex = nextIndex;
+			this.persistCurrentTrack();
+			this.loadCurrentTrack();
 		} else if (line.startsWith("@P 1")) {
 			this.isPaused = true;
 			this.isPlaying = false;
@@ -337,6 +445,7 @@ export class MusicPlayerService {
 	private loadCurrentTrack(): void {
 		const track = this.playlist[this.currentIndex];
 		if (!track) return;
+		this.lastLoadAt = Date.now();
 		this.sendCommand(`LOAD ${track.file_path}`);
 		this.isPlaying = true;
 		this.isPaused = false;
@@ -359,12 +468,12 @@ export class MusicPlayerService {
 		}
 	}
 
-	private loadPlaylistFromDb(): MusicTrack[] {
+	private loadPlaylistFromDb(): MusicTrackRecord[] {
 		return this.db
 			.select()
 			.from(musicTracks)
 			.orderBy(musicTracks.sort_order, musicTracks.uploaded_at)
-			.all() as MusicTrack[];
+			.all() as MusicTrackRecord[];
 	}
 
 	private resolveStartIndex(): number {
@@ -425,6 +534,44 @@ export class MusicPlayerService {
 			.where(eq(appSettings.key, SETTING_KEYS.MUSIC_ENABLED))
 			.get();
 		return row?.value === "1";
+	}
+
+	private getLoopEnabled(): boolean {
+		const row = this.db
+			.select()
+			.from(appSettings)
+			.where(eq(appSettings.key, SETTING_KEYS.MUSIC_LOOP_ENABLED))
+			.get();
+		return row ? row.value === "1" : true;
+	}
+
+	private getShuffleEnabled(): boolean {
+		const row = this.db
+			.select()
+			.from(appSettings)
+			.where(eq(appSettings.key, SETTING_KEYS.MUSIC_SHUFFLE_ENABLED))
+			.get();
+		return row?.value === "1";
+	}
+
+	private pickRandomIndexExcludingCurrent(): number {
+		if (this.playlist.length <= 1) return this.currentIndex;
+		let next = this.currentIndex;
+		while (next === this.currentIndex) {
+			next = Math.floor(Math.random() * this.playlist.length);
+		}
+		return next;
+	}
+
+	private resolveNextIndex(): number | null {
+		if (this.playlist.length === 0) return null;
+		if (this.getShuffleEnabled()) {
+			return this.pickRandomIndexExcludingCurrent();
+		}
+
+		const next = this.currentIndex + 1;
+		if (next < this.playlist.length) return next;
+		return this.getLoopEnabled() ? 0 : null;
 	}
 
 	private broadcastStatus(): void {

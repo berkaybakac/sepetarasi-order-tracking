@@ -27,11 +27,19 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		throw new Error("Çok fazla deneme. 1 dakika bekleyin.");
 	}
 
-	const json = await res.json();
+	let json: { ok: boolean; data?: T; error?: { message?: string } };
+	try {
+		json = await res.json();
+	} catch {
+		// Non-JSON response (e.g. 502 proxy error, nginx error page)
+		throw new Error(
+			res.ok ? "Sunucu yanıtı okunamadı." : `Sunucuya ulaşılamıyor (HTTP ${res.status}).`,
+		);
+	}
 	if (!json.ok) {
 		throw new Error(json.error?.message || "Bilinmeyen bir hata oluştu.");
 	}
-	return json.data;
+	return json.data as T;
 }
 
 export const api = {
@@ -71,6 +79,10 @@ export const api = {
 	musicSkip: () => request<null>("POST", "/api/v1/music/skip"),
 	musicPrevious: () => request<null>("POST", "/api/v1/music/previous"),
 	setMusicVolume: (volume: number) => request<null>("PATCH", "/api/v1/music/volume", { volume }),
+	setMusicEnabled: (enabled: boolean) =>
+		request<null>("PATCH", "/api/v1/music/enabled", { enabled }),
+	setMusicMode: (mode: { loop?: boolean; shuffle?: boolean }) =>
+		request<null>("PATCH", "/api/v1/music/mode", mode),
 
 	uploadMusicTrack: (file: File, onProgress?: (pct: number) => void): Promise<MusicTrack> =>
 		new Promise((resolve, reject) => {

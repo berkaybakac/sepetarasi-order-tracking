@@ -43,7 +43,7 @@ export function MusicVolumeCard() {
 		const next = !enabled;
 		setTogglingEnabled(true);
 		api
-			.updateSetting(SETTING_KEYS.MUSIC_ENABLED, next ? "1" : "0")
+			.setMusicEnabled(next)
 			.then(() => setEnabled(next))
 			.catch((err) => console.error("[MusicVolumeCard] toggle enabled failed:", err))
 			.finally(() => setTogglingEnabled(false));

@@ -142,11 +142,17 @@ export interface MusicTrack {
 	id: string;
 	filename: string;
 	display_name: string;
-	file_path: string;
 	file_size: number;
 	duration_seconds: number | null;
 	sort_order: number;
 	uploaded_at: string;
+}
+
+/**
+ * DB/internal music row shape. `file_path` is intentionally not exposed to clients.
+ */
+export interface MusicTrackRecord extends MusicTrack {
+	file_path: string;
 }
 
 export interface MusicStatus {
@@ -157,4 +163,6 @@ export interface MusicStatus {
 	currentTrackName: string | null;
 	volume: number;
 	enabled: boolean;
+	loop: boolean;
+	shuffle: boolean;
 }

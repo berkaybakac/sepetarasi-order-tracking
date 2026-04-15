@@ -60,3 +60,17 @@ Bu dosya, feature gelistirmeyi bloklamayan ama teknik borc birikimini kontrol al
 - Problem: Isim/logo birden fazla yerde elle yonetiliyor; degisiklikte drift riski var.
 - Hedef: Tek kaynaktan uretim (brand config/build step) ile UI + desktop metadata senkronu.
 - Not: Push/merge bloklayici degil; MVP akisini durdurmaz.
+
+### 6) MusicPlayer Setting Read Caching (P2 #5)
+- Durum: Backlog (simdilik aksiyon yok)
+- Oncelik: P2
+- Kapsam:
+  - `/packages/server/src/services/music-player.service.ts`
+- Problem:
+  - `getLoopEnabled()` / `getShuffleEnabled()` / `getMusicVolume()` / `getEnabled()` sik cagriliyor ve her cagrida SQLite read yapiliyor.
+  - Pi4 icin bug/incident olusturmuyor ancak gereksiz DB I/O birikimi var.
+- Plan:
+  - In-memory `musicSettings` cache modeli eklemek.
+  - Cache invalidation tetikleyicileri: `setEnabled`, `setLoop`, `setShuffle`, `setVolume`, `reloadPlaylist`, startup load.
+  - `getStatus()` ve track transition akisinda DB yerine cache okumak.
+- Not: Mevcut davranis dogru oldugu icin release bloklayici degil; orta vadeli performans/temizlik isi.

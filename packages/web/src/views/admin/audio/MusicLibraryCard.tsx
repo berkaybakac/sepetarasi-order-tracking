@@ -16,6 +16,17 @@ function formatBytes(bytes: number): string {
 	return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function formatDuration(seconds: number | null): string {
+	if (seconds === null || seconds === undefined) return "—";
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+	const secs = seconds % 60;
+	if (hours > 0)
+		return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+	return `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
 export function MusicLibraryCard() {
 	const [tracks, setTracks] = useState<MusicTrack[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -35,6 +46,13 @@ export function MusicLibraryCard() {
 			.then(setDiskInfo)
 			.catch(() => undefined);
 	}, []);
+
+	const refreshMusicStatus = useCallback(() => {
+		api
+			.getMusicStatus()
+			.then(setMusicStatus)
+			.catch(() => undefined);
+	}, [setMusicStatus]);
 
 	useEffect(() => {
 		api
@@ -58,7 +76,7 @@ export function MusicLibraryCard() {
 		}));
 		setUploads(items);
 
-		// Upload sequentially to avoid overwhelming Pi4
+		// Upload sequentially to avoid overwhelming Pi4.
 		for (let i = 0; i < files.length; i++) {
 			try {
 				const newTrack = await api.uploadMusicTrack(files[i], (pct) =>
@@ -73,11 +91,8 @@ export function MusicLibraryCard() {
 				setUploads((prev) => prev.map((u, idx) => (idx === i ? { ...u, error: msg } : u)));
 			}
 		}
-		// Refresh music status and disk after all uploads
-		api
-			.getMusicStatus()
-			.then(setMusicStatus)
-			.catch(() => undefined);
+
+		refreshMusicStatus();
 		refreshDisk();
 	};
 
@@ -88,10 +103,7 @@ export function MusicLibraryCard() {
 			.deleteMusicTrack(track.id)
 			.then(() => {
 				setTracks((prev) => prev.filter((t) => t.id !== track.id));
-				api
-					.getMusicStatus()
-					.then(setMusicStatus)
-					.catch(() => undefined);
+				refreshMusicStatus();
 				refreshDisk();
 			})
 			.catch((err) => console.error("[MusicLibraryCard] deleteMusicTrack failed:", err))
@@ -104,7 +116,6 @@ export function MusicLibraryCard() {
 		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
 			<div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-			{/* Header */}
 			<div className="relative z-10 flex items-center justify-between mb-1">
 				<h3 className="text-sm font-medium text-slate-400 flex items-center gap-2 uppercase tracking-wider">
 					<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,7 +150,6 @@ export function MusicLibraryCard() {
 				/>
 			</div>
 
-			{/* Library + disk info */}
 			<div className="relative z-10 text-xs text-slate-600 mb-4 space-y-1">
 				{tracks.length > 0 && (
 					<p>
@@ -154,7 +164,6 @@ export function MusicLibraryCard() {
 				)}
 			</div>
 
-			{/* Upload progress bars */}
 			{uploads.length > 0 && (
 				<div className="relative z-10 mb-4 space-y-2">
 					{uploads
@@ -196,7 +205,6 @@ export function MusicLibraryCard() {
 				</div>
 			)}
 
-			{/* Track list */}
 			<div className="relative z-10 space-y-2 max-h-64 overflow-y-auto pr-1">
 				{loading && (
 					<div className="flex justify-center py-8">
@@ -218,7 +226,9 @@ export function MusicLibraryCard() {
 							<p className="text-sm text-white truncate" title={track.display_name}>
 								{track.display_name}
 							</p>
-							<p className="text-xs text-slate-600">{formatBytes(track.file_size)}</p>
+							<p className="text-xs text-slate-600">
+								{formatBytes(track.file_size)} • {formatDuration(track.duration_seconds)}
+							</p>
 						</div>
 						<button
 							type="button"

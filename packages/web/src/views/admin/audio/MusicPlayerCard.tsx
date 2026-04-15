@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { UI_LABELS } from "../../../constants/labels";
 import { api } from "../../../lib/api";
 import { useMusicStore } from "../../../stores/musicStore";
@@ -7,7 +7,6 @@ export function MusicPlayerCard() {
 	const status = useMusicStore((s) => s.status);
 	const setStatus = useMusicStore((s) => s.setStatus);
 
-	// Poll status on mount
 	useEffect(() => {
 		api
 			.getMusicStatus()
@@ -15,52 +14,59 @@ export function MusicPlayerCard() {
 			.catch((err) => console.error("[MusicPlayerCard] getMusicStatus failed:", err));
 	}, [setStatus]);
 
-	const handlePlay = () => {
+	const refreshStatus = () =>
 		api
-			.musicPlay()
-			.then(() => api.getMusicStatus().then(setStatus))
-			.catch(console.error);
-	};
+			.getMusicStatus()
+			.then(setStatus)
+			.catch((err) => console.error("[MusicPlayerCard] refresh failed:", err));
 
-	const handlePause = () => {
-		api
-			.musicPause()
-			.then(() => api.getMusicStatus().then(setStatus))
-			.catch(console.error);
+	const handlePlayPause = () => {
+		const action = status?.isPlaying ? api.musicPause() : api.musicPlay();
+		action.then(refreshStatus).catch(console.error);
 	};
 
 	const handleSkip = () => {
-		api
-			.musicSkip()
-			.then(() => api.getMusicStatus().then(setStatus))
-			.catch(console.error);
+		api.musicSkip().then(refreshStatus).catch(console.error);
 	};
 
 	const handlePrevious = () => {
+		api.musicPrevious().then(refreshStatus).catch(console.error);
+	};
+
+	const handleToggleLoop = () => {
 		api
-			.musicPrevious()
-			.then(() => api.getMusicStatus().then(setStatus))
+			.setMusicMode({ loop: !(status?.loop ?? true) })
+			.then(refreshStatus)
 			.catch(console.error);
 	};
 
-	const statusLabel = (() => {
+	const handleToggleShuffle = () => {
+		api
+			.setMusicMode({ shuffle: !(status?.shuffle ?? false) })
+			.then(refreshStatus)
+			.catch(console.error);
+	};
+
+	const statusLabel = useMemo(() => {
 		if (!status) return "—";
 		if (status.isDucked) return UI_LABELS.MUSIC_PLAYER.DUCKED;
 		if (status.isPlaying) return UI_LABELS.MUSIC_PLAYER.NOW_PLAYING;
 		if (status.isPaused) return UI_LABELS.MUSIC_PLAYER.PAUSED;
 		return UI_LABELS.MUSIC_PLAYER.STOPPED;
-	})();
+	}, [status]);
 
-	const statusColor = (() => {
+	const statusColor = useMemo(() => {
 		if (!status) return "text-slate-500";
 		if (status.isDucked) return "text-amber-400";
 		if (status.isPlaying) return "text-brand-success";
 		if (status.isPaused) return "text-blue-400";
 		return "text-slate-500";
-	})();
+	}, [status]);
 
 	const trackName = status?.currentTrackName ?? UI_LABELS.MUSIC_PLAYER.NO_TRACK;
-	const isPlayingOrPaused = status?.isPlaying || status?.isPaused;
+	const showPause = status?.isPlaying ?? false;
+	const loopEnabled = status?.loop ?? true;
+	const shuffleEnabled = status?.shuffle ?? false;
 
 	const SOUND_BARS = ["a", "b", "c", "d", "e"] as const;
 
@@ -92,7 +98,6 @@ export function MusicPlayerCard() {
 				</span>
 			</div>
 
-			{/* Track name */}
 			<div className="relative z-10 mb-6">
 				<p className="text-white font-medium truncate text-base" title={trackName}>
 					{trackName}
@@ -114,7 +119,6 @@ export function MusicPlayerCard() {
 				)}
 			</div>
 
-			{/* Controls */}
 			<div className="relative z-10 flex items-center justify-center gap-3">
 				<button
 					type="button"
@@ -133,32 +137,24 @@ export function MusicPlayerCard() {
 					</svg>
 				</button>
 
-				{/* Play / Pause */}
-				{isPlayingOrPaused ? (
-					<button
-						type="button"
-						onClick={handlePause}
-						title={UI_LABELS.MUSIC_PLAYER.PAUSE}
-						className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-400 hover:to-teal-400 text-white shadow-lg shadow-green-500/20 transition-all"
-					>
+				<button
+					type="button"
+					onClick={handlePlayPause}
+					title={showPause ? UI_LABELS.MUSIC_PLAYER.PAUSE : UI_LABELS.MUSIC_PLAYER.PLAY}
+					className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-400 hover:to-teal-400 text-white shadow-lg shadow-green-500/20 transition-all"
+				>
+					{showPause ? (
 						<svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
 							<title>{UI_LABELS.MUSIC_PLAYER.PAUSE}</title>
 							<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
 						</svg>
-					</button>
-				) : (
-					<button
-						type="button"
-						onClick={handlePlay}
-						title={UI_LABELS.MUSIC_PLAYER.PLAY}
-						className="p-3 rounded-2xl bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-400 hover:to-teal-400 text-white shadow-lg shadow-green-500/20 transition-all"
-					>
+					) : (
 						<svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
 							<title>{UI_LABELS.MUSIC_PLAYER.PLAY}</title>
 							<path d="M8 5v14l11-7z" />
 						</svg>
-					</button>
-				)}
+					)}
+				</button>
 
 				<button
 					type="button"
@@ -175,6 +171,31 @@ export function MusicPlayerCard() {
 							d="M13 5l7 7-7 7M5 5l7 7-7 7"
 						/>
 					</svg>
+				</button>
+			</div>
+
+			<div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
+				<button
+					type="button"
+					onClick={handleToggleLoop}
+					className={`px-3 py-2 text-xs rounded-xl border transition-all ${
+						loopEnabled
+							? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+							: "bg-white/5 border-white/10 text-slate-400 hover:text-slate-200"
+					}`}
+				>
+					{UI_LABELS.MUSIC_PLAYER.LOOP}
+				</button>
+				<button
+					type="button"
+					onClick={handleToggleShuffle}
+					className={`px-3 py-2 text-xs rounded-xl border transition-all ${
+						shuffleEnabled
+							? "bg-cyan-500/20 border-cyan-400/40 text-cyan-200"
+							: "bg-white/5 border-white/10 text-slate-400 hover:text-slate-200"
+					}`}
+				>
+					{UI_LABELS.MUSIC_PLAYER.SHUFFLE}
 				</button>
 			</div>
 		</div>

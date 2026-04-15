@@ -84,6 +84,8 @@ export const SETTING_KEYS = {
 	MUSIC_VOLUME: "music_volume",
 	MUSIC_ENABLED: "music_enabled",
 	MUSIC_CURRENT_TRACK_ID: "music_current_track_id",
+	MUSIC_LOOP_ENABLED: "music_loop_enabled",
+	MUSIC_SHUFFLE_ENABLED: "music_shuffle_enabled",
 } as const;
 
 /** İstatistik Periyotları Seçenekleri (SSoT) */

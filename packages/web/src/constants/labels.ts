@@ -111,6 +111,8 @@ export const UI_LABELS = {
 		PAUSE: "Duraklat",
 		SKIP: "İleri",
 		PREVIOUS: "Geri",
+		LOOP: "Loop",
+		SHUFFLE: "Karışık",
 	},
 
 	// Müzik Kütüphanesi
