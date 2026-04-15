@@ -8,6 +8,7 @@ import { useOrderStore } from "../../stores/orderStore";
 import { AdminHeader } from "./AdminHeader";
 import { AudioTab } from "./tabs/AudioTab";
 import { DisplayTab } from "./tabs/DisplayTab";
+import { NotePresetsTab } from "./tabs/NotePresetsTab";
 import { OrdersTab } from "./tabs/OrdersTab";
 import { StatsTab } from "./tabs/StatsTab";
 
@@ -62,6 +63,7 @@ export function AdminView() {
 						<Route path="orders" element={<OrdersTab />} />
 						<Route path="audio" element={<AudioTab />} />
 						<Route path="display" element={<DisplayTab />} />
+						<Route path="notes" element={<NotePresetsTab />} />
 						<Route
 							path="stats"
 							element={

@@ -93,6 +93,26 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 				"Bulk settings updated",
 			);
 
+			const presetEntry = entries.find(([key]) => key === SETTING_KEYS.NOTE_PRESETS);
+			if (presetEntry) {
+				let presetCount: number | null = null;
+				try {
+					const parsed = JSON.parse(presetEntry[1]);
+					if (Array.isArray(parsed)) presetCount = parsed.length;
+				} catch {
+					// validation already passed; defensive
+				}
+				request.log.info(
+					{
+						event: "note_presets.updated",
+						presetCount,
+						requestId: request.id,
+						ip: request.ip,
+					},
+					"Note presets updated",
+				);
+			}
+
 			return { ok: true, data: null };
 		},
 	);

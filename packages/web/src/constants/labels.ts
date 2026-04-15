@@ -99,6 +99,23 @@ export const UI_LABELS = {
 		MUSIC_DISABLED: "Müzik Kapalı",
 	},
 
+	// Hızlı Not Presetleri
+	NOTE_PRESETS: {
+		TITLE: "Hızlı Notlar",
+		DESCRIPTION:
+			"Kasa çalışanlarının sık kullandığı notları ekleyin. Presetler sipariş formunda chip olarak görüntülenir.",
+		LOAD_ERROR: "Presetler yüklenemedi. Lütfen bağlantıyı kontrol edin.",
+		SAVE_ERROR: "Presetler kaydedilemedi. Lütfen tekrar deneyin.",
+		EMPTY_STATE: "Henüz preset eklenmedi",
+		EMPTY_STATE_HINT: "Yeni bir not eklemeye başlayın",
+		ADD_BUTTON: "Ekle",
+		REMOVE_BUTTON: "Sil",
+		PLACEHOLDER: "Ör. Ketçap bol",
+		MAX_LENGTH_ERROR: "Maksimum 50 karakter",
+		EMPTY_ERROR: "Preset boş olamaz",
+		MAX_ITEMS_ERROR: "Maksimum 20 preset ekleyebilirsiniz",
+	},
+
 	// Müzik Oynatıcı
 	MUSIC_PLAYER: {
 		TITLE: "Müzik Oynatıcı",

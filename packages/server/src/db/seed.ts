@@ -18,6 +18,7 @@ const defaultSettings = [
 	{ key: "receipt_phone", value: "" },
 	{ key: "receipt_tax_id", value: "" },
 	{ key: "receipt_tax_office", value: "" },
+	{ key: "note_presets", value: "[]" },
 	...Object.entries(DEFAULT_DISPLAY_SETTINGS).map(([key, value]) => ({ key, value })),
 ];
 

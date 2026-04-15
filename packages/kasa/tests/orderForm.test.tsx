@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import type { Order } from "@sepetarasi/shared";
+import { type Order, OrderStatus } from "@sepetarasi/shared";
 import { act } from "react";
 import { type Root, createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,7 @@ import { api } from "../src/lib/api";
 vi.mock("../src/lib/api", () => ({
 	api: {
 		createOrder: vi.fn(),
+		getPublicSettings: vi.fn().mockResolvedValue({}),
 	},
 }));
 
@@ -18,7 +19,7 @@ function buildOrder(overrides: Partial<Order> = {}): Order {
 		id: "order-1",
 		business_date: "2026-04-11",
 		display_no: 7,
-		status: "PREPARING",
+		status: OrderStatus.PREPARING,
 		terminal_id: "KASA-1",
 		customer_name: "Ayşe",
 		order_type: "Paket",
@@ -40,7 +41,7 @@ describe("OrderForm", () => {
 	let printReceipt: ReturnType<typeof vi.fn>;
 
 	beforeEach(async () => {
-		globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		container = document.createElement("div");
 		document.body.appendChild(container);
 		root = createRoot(container);
@@ -124,6 +125,44 @@ describe("OrderForm", () => {
 		await setInputValue(getCustomerInput(), "Fatma");
 		await submitForm();
 		expect(container.textContent).not.toContain("Tekrar Yazdır");
+	});
+
+	it("renders preset chips from public settings and appends to notes on click", async () => {
+		// Re-mount with presets returned from server
+		await act(async () => {
+			root.unmount();
+		});
+		vi.mocked(api.getPublicSettings).mockResolvedValueOnce({
+			note_presets: JSON.stringify(["Ketçap bol", "Acılı"]),
+		});
+		container = document.createElement("div");
+		document.body.appendChild(container);
+		root = createRoot(container);
+		await act(async () => {
+			root.render(<OrderForm />);
+		});
+		// Allow getPublicSettings promise to resolve
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		const chip = Array.from(container.querySelectorAll("button")).find((b) =>
+			b.textContent?.includes("Ketçap bol"),
+		);
+		if (!(chip instanceof HTMLButtonElement)) throw new Error("Preset chip not found");
+
+		await act(async () => {
+			chip.click();
+		});
+		expect(getNotesTextarea().value).toBe("Ketçap bol");
+
+		const chip2 = Array.from(container.querySelectorAll("button")).find((b) =>
+			b.textContent?.includes("Acılı"),
+		) as HTMLButtonElement;
+		await act(async () => {
+			chip2.click();
+		});
+		expect(getNotesTextarea().value).toBe("Ketçap bol, Acılı");
 	});
 
 	it("shows retry action when printing fails and retries the last receipt", async () => {

@@ -10,6 +10,7 @@ const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
 	SETTING_KEYS.MUSIC_VOLUME,
 	SETTING_KEYS.MUSIC_ENABLED,
+	SETTING_KEYS.NOTE_PRESETS,
 	...DISPLAY_EDITABLE_SETTING_KEYS,
 	"announcement_delay_ms",
 	"business_name",
@@ -20,7 +21,10 @@ const EDITABLE_SETTING_KEYS = [
 	"receipt_tax_office",
 ] as const;
 
-const PUBLIC_SETTING_KEYS = new Set<string>(DISPLAY_PUBLIC_SETTING_KEYS);
+const PUBLIC_SETTING_KEYS = new Set<string>([
+	...DISPLAY_PUBLIC_SETTING_KEYS,
+	SETTING_KEYS.NOTE_PRESETS as string,
+]);
 
 const editableSettings = new Set<string>(EDITABLE_SETTING_KEYS);
 
@@ -69,6 +73,28 @@ export function validateSettingValue(key: string, value: string): string | null 
 				return "music_enabled must be '0' or '1'";
 			}
 			return null;
+		}
+		case SETTING_KEYS.NOTE_PRESETS: {
+			try {
+				const parsed = JSON.parse(value);
+				if (!Array.isArray(parsed)) {
+					return "note_presets must be a JSON array";
+				}
+				if (parsed.length > 20) {
+					return "note_presets cannot have more than 20 items";
+				}
+				for (const item of parsed) {
+					if (typeof item !== "string") {
+						return "note_presets must contain only strings";
+					}
+					if (item.length === 0 || item.length > 50) {
+						return "each preset must be 1-50 characters";
+					}
+				}
+				return null;
+			} catch {
+				return "note_presets must be valid JSON";
+			}
 		}
 		case "announcement_delay_ms": {
 			const delay = Number(value);

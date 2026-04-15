@@ -1,5 +1,6 @@
 import type { Order, OrderType } from "@sepetarasi/shared";
-import { useState } from "react";
+import { parseNotePresets } from "@sepetarasi/shared";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
 interface OrderFormProps {
@@ -24,6 +25,21 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [printError, setPrintError] = useState<string | null>(null);
 	const [lastPrintableOrder, setLastPrintableOrder] = useState<Order | null>(null);
+	const [presets, setPresets] = useState<string[]>([]);
+
+	useEffect(() => {
+		const loadPresets = () => {
+			api
+				.getPublicSettings()
+				.then((settings) => setPresets(parseNotePresets(settings)))
+				.catch((err) => {
+					console.error("[OrderForm] getPublicSettings failed:", err);
+				});
+		};
+		loadPresets();
+		const interval = setInterval(loadPresets, 30_000);
+		return () => clearInterval(interval);
+	}, []);
 
 	const printOrder = async (order: Order) => {
 		if (!window.electronAPI) {
@@ -86,6 +102,14 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 			);
 		} finally {
 			setPrinting(false);
+		}
+	};
+
+	const handlePresetClick = (preset: string) => {
+		if (notes.trim()) {
+			setNotes(`${notes.trim()}, ${preset}`);
+		} else {
+			setNotes(preset);
 		}
 	};
 
@@ -160,6 +184,22 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 					className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
 					rows={2}
 				/>
+
+				{/* Hızlı Not Presetleri */}
+				{presets.length > 0 && (
+					<div className="mt-3 flex flex-wrap gap-2">
+						{presets.map((preset) => (
+							<button
+								key={preset}
+								type="button"
+								onClick={() => handlePresetClick(preset)}
+								className="inline-flex px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-medium hover:bg-emerald-500/30 hover:border-emerald-500 transition-colors active:scale-95 active:bg-emerald-500/40"
+							>
+								{preset}
+							</button>
+						))}
+					</div>
+				)}
 			</div>
 
 			{/* Hata mesajı */}

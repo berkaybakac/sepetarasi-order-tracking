@@ -85,4 +85,6 @@ export const api = {
 		request<Order>("PATCH", API_ROUTES.V1.ORDER_STATUS(orderId), input),
 
 	getStats: () => request<DayStats>("GET", API_ROUTES.V1.STATS_TODAY),
+
+	getPublicSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS_PUBLIC),
 };

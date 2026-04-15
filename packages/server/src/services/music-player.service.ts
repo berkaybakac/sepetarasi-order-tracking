@@ -166,12 +166,12 @@ export class MusicPlayerService {
 
 	skip(): void {
 		if (this.playlist.length === 0) return;
-		// Manuel ileri: shuffle açıksa rastgele, değilse her zaman döngüsel ilerle
-		if (this.getShuffleEnabled()) {
-			this.currentIndex = this.pickRandomIndexExcludingCurrent();
-		} else {
-			this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
+		const nextIndex = this.resolveNextIndex();
+		if (nextIndex === null) {
+			this.stop();
+			return;
 		}
+		this.currentIndex = nextIndex;
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {
 			this.loadCurrentTrack();
@@ -185,8 +185,7 @@ export class MusicPlayerService {
 		if (this.getShuffleEnabled()) {
 			this.currentIndex = this.pickRandomIndexExcludingCurrent();
 		} else {
-			this.currentIndex =
-				this.currentIndex > 0 ? this.currentIndex - 1 : this.playlist.length - 1;
+			this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.playlist.length - 1;
 		}
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {
