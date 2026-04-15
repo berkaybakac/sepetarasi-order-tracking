@@ -119,24 +119,46 @@ export function MusicPlayerCard() {
 				)}
 			</div>
 
+			{/* Kontrol Satırı: [karıştır] [önceki] [oynat/duraklat] [sonraki] [döngü] */}
 			<div className="relative z-10 flex items-center justify-center gap-3">
+				{/* Karışık Çal (Shuffle) */}
+				<button
+					type="button"
+					onClick={handleToggleShuffle}
+					title={
+						shuffleEnabled ? UI_LABELS.MUSIC_PLAYER.SHUFFLE_ON : UI_LABELS.MUSIC_PLAYER.SHUFFLE_OFF
+					}
+					className={`p-2 rounded-xl border transition-all ${
+						shuffleEnabled
+							? "bg-cyan-500/15 border-cyan-400/30 text-cyan-400 hover:bg-cyan-500/25"
+							: "bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
+					}`}
+				>
+					{/* YouTube shuffle ikonu: çapraz oklar */}
+					<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+						<title>
+							{shuffleEnabled
+								? UI_LABELS.MUSIC_PLAYER.SHUFFLE_ON
+								: UI_LABELS.MUSIC_PLAYER.SHUFFLE_OFF}
+						</title>
+						<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+					</svg>
+				</button>
+
+				{/* Önceki Parça */}
 				<button
 					type="button"
 					onClick={handlePrevious}
 					title={UI_LABELS.MUSIC_PLAYER.PREVIOUS}
 					className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 hover:text-white transition-all"
 				>
-					<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
 						<title>{UI_LABELS.MUSIC_PLAYER.PREVIOUS}</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-						/>
+						<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
 					</svg>
 				</button>
 
+				{/* Oynat / Duraklat */}
 				<button
 					type="button"
 					onClick={handlePlayPause}
@@ -156,46 +178,37 @@ export function MusicPlayerCard() {
 					)}
 				</button>
 
+				{/* Sonraki Parça */}
 				<button
 					type="button"
 					onClick={handleSkip}
 					title={UI_LABELS.MUSIC_PLAYER.SKIP}
 					className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 hover:text-white transition-all"
 				>
-					<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
 						<title>{UI_LABELS.MUSIC_PLAYER.SKIP}</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M13 5l7 7-7 7M5 5l7 7-7 7"
-						/>
+						<path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
 					</svg>
 				</button>
-			</div>
 
-			<div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
+				{/* Döngü (Loop) */}
 				<button
 					type="button"
 					onClick={handleToggleLoop}
-					className={`px-3 py-2 text-xs rounded-xl border transition-all ${
+					title={loopEnabled ? UI_LABELS.MUSIC_PLAYER.LOOP_ON : UI_LABELS.MUSIC_PLAYER.LOOP_OFF}
+					className={`p-2 rounded-xl border transition-all ${
 						loopEnabled
-							? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
-							: "bg-white/5 border-white/10 text-slate-400 hover:text-slate-200"
+							? "bg-emerald-500/15 border-emerald-400/30 text-emerald-400 hover:bg-emerald-500/25"
+							: "bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
 					}`}
 				>
-					{UI_LABELS.MUSIC_PLAYER.LOOP}
-				</button>
-				<button
-					type="button"
-					onClick={handleToggleShuffle}
-					className={`px-3 py-2 text-xs rounded-xl border transition-all ${
-						shuffleEnabled
-							? "bg-cyan-500/20 border-cyan-400/40 text-cyan-200"
-							: "bg-white/5 border-white/10 text-slate-400 hover:text-slate-200"
-					}`}
-				>
-					{UI_LABELS.MUSIC_PLAYER.SHUFFLE}
+					{/* YouTube loop ikonu: dikdörtgen oluşturan iki ok */}
+					<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+						<title>
+							{loopEnabled ? UI_LABELS.MUSIC_PLAYER.LOOP_ON : UI_LABELS.MUSIC_PLAYER.LOOP_OFF}
+						</title>
+						<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v5z" />
+					</svg>
 				</button>
 			</div>
 		</div>

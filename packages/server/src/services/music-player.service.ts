@@ -166,16 +166,12 @@ export class MusicPlayerService {
 
 	skip(): void {
 		if (this.playlist.length === 0) return;
-		const nextIndex = this.resolveNextIndex();
-		if (nextIndex === null) {
-			this.sendCommand("STOP");
-			this.isPlaying = false;
-			this.isPaused = false;
-			this.broadcastStatus();
-			return;
+		// Manuel ileri: shuffle açıksa rastgele, değilse her zaman döngüsel ilerle
+		if (this.getShuffleEnabled()) {
+			this.currentIndex = this.pickRandomIndexExcludingCurrent();
+		} else {
+			this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
 		}
-
-		this.currentIndex = nextIndex;
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {
 			this.loadCurrentTrack();
@@ -185,14 +181,12 @@ export class MusicPlayerService {
 
 	previous(): void {
 		if (this.playlist.length === 0) return;
+		// Manuel geri: shuffle açıksa rastgele, değilse her zaman döngüsel geri al
 		if (this.getShuffleEnabled()) {
 			this.currentIndex = this.pickRandomIndexExcludingCurrent();
-		} else if (this.currentIndex > 0) {
-			this.currentIndex -= 1;
-		} else if (this.getLoopEnabled()) {
-			this.currentIndex = this.playlist.length - 1;
 		} else {
-			return;
+			this.currentIndex =
+				this.currentIndex > 0 ? this.currentIndex - 1 : this.playlist.length - 1;
 		}
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {

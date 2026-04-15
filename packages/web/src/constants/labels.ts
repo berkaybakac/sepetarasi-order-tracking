@@ -109,10 +109,12 @@ export const UI_LABELS = {
 		NO_TRACK: "Parça seçilmedi",
 		PLAY: "Oynat",
 		PAUSE: "Duraklat",
-		SKIP: "İleri",
-		PREVIOUS: "Geri",
-		LOOP: "Loop",
-		SHUFFLE: "Karışık",
+		SKIP: "Sonraki parça",
+		PREVIOUS: "Önceki parça",
+		LOOP_ON: "Döngü açık — Tümünü tekrar et",
+		LOOP_OFF: "Döngüyü aç",
+		SHUFFLE_ON: "Karışık Çal açık",
+		SHUFFLE_OFF: "Karıştır",
 	},
 
 	// Müzik Kütüphanesi
@@ -126,5 +128,10 @@ export const UI_LABELS = {
 		UPLOAD_ERROR: "Yükleme başarısız.",
 		DELETE_ERROR: "Silinemedi.",
 		DISK_USAGE: "Disk kullanımı",
+		SELECT_MODE: "Seç",
+		SELECT_CANCEL: "Vazgeç",
+		SELECT_ALL: "Tümünü Seç",
+		DESELECT_ALL: "Seçimi Kaldır",
+		DELETE_SELECTED: "Seçilenleri Sil",
 	},
 } as const;

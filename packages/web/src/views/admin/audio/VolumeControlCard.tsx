@@ -56,7 +56,8 @@ export function VolumeControlCard({
 	const colors = COLORS[colorScheme];
 
 	useEffect(() => {
-		onMountRef.current()
+		onMountRef
+			.current()
 			.then(({ volume: v, enabled: en }) => {
 				setVolume(v);
 				setSavedVolume(v);
