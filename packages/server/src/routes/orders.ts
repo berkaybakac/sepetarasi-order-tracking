@@ -105,6 +105,19 @@ export function registerOrderRoutes(
 			try {
 				const { order, previousStatus } = orderCommand.changeStatusWithMeta(id, request.body);
 
+				auditLog(
+					"ORDER_STATUS_CHANGED",
+					`Order status changed: ${previousStatus} → ${order.status}`,
+					{
+						actor: "cashier_or_admin",
+						ip: request.ip,
+						requestId: request.id,
+						path: request.url,
+						orderId: order.id,
+						displayNo: order.display_no,
+					},
+				);
+
 				broadcaster.broadcast(
 					[WS_CHANNELS.ORDERS, WS_CHANNELS.DISPLAY],
 					WS_EVENTS.ORDER_STATUS_CHANGED,

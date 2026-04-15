@@ -364,6 +364,19 @@ describe("AnnouncementWorker", () => {
 		expect(mockMusicPlayer.unduck).toHaveBeenCalledOnce();
 	});
 
+	it("start() called twice does not create a second polling interval", () => {
+		const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+		worker.start();
+		worker.start(); // second call must be a no-op
+		expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+		worker.stop();
+		setIntervalSpy.mockRestore();
+	});
+
+	it("stop() when not yet started does not throw", () => {
+		expect(() => worker.stop()).not.toThrow();
+	});
+
 	it("should not crash and should reset processing flag when poll throws", async () => {
 		seedOrder("o-1", 1);
 		seedAnnouncement("aq-1", "o-1", 1);

@@ -281,7 +281,13 @@ export async function buildApp(opts: AppOptions) {
 
 		app.addHook("onReady", async () => {
 			// Reset any announcements stuck in "playing" from a previous crashed/power-cycled run
-			announcementService.resetStuckAnnouncements();
+			const stuckCount = announcementService.resetStuckAnnouncements();
+			if (stuckCount > 0) {
+				app.log.warn(
+					{ event: "announcement.stuck.reset", count: stuckCount },
+					`${stuckCount} stuck announcement(s) reset to pending on startup (previous crash or power-cycle)`,
+				);
+			}
 			musicPlayer?.start();
 			worker?.start();
 		});

@@ -46,12 +46,13 @@ export class AnnouncementService {
 	 * the worker never picks it up again (it only queries "pending"). This
 	 * ensures those announcements are replayed after restart.
 	 */
-	resetStuckAnnouncements() {
-		this.db
+	resetStuckAnnouncements(): number {
+		const result = this.db
 			.update(announcementQueue)
 			.set({ status: "pending" })
 			.where(eq(announcementQueue.status, "playing"))
 			.run();
+		return result.changes;
 	}
 
 	/** Mark announcement as failed */

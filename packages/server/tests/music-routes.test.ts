@@ -140,11 +140,7 @@ describe("Music routes", () => {
 
 	it("rejects upload with wrong MIME type and does not persist track", async () => {
 		const fileBuffer = Buffer.alloc(1024, 0x3);
-		const { boundary, payload } = buildMultipartPayload(
-			"not-audio.wav",
-			"audio/wav",
-			fileBuffer,
-		);
+		const { boundary, payload } = buildMultipartPayload("not-audio.wav", "audio/wav", fileBuffer);
 
 		const res = await app.inject({
 			method: "POST",
@@ -162,11 +158,7 @@ describe("Music routes", () => {
 	});
 
 	it("rejects empty file upload and does not persist track", async () => {
-		const { boundary, payload } = buildMultipartPayload(
-			"empty.mp3",
-			"audio/mpeg",
-			Buffer.alloc(0),
-		);
+		const { boundary, payload } = buildMultipartPayload("empty.mp3", "audio/mpeg", Buffer.alloc(0));
 
 		const res = await app.inject({
 			method: "POST",
@@ -235,6 +227,70 @@ describe("Music routes", () => {
 			expect(res.statusCode).toBe(400);
 			expect(res.json().error.code).toBe("VALIDATION_ERROR");
 		}
+	});
+
+	it("rejects PATCH /enabled with non-boolean and rejects PATCH /mode with no valid fields", async () => {
+		const enabledRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/music/enabled",
+			headers: { cookie: adminCookie },
+			payload: { enabled: "yes" },
+		});
+		expect(enabledRes.statusCode).toBe(400);
+		expect(enabledRes.json().error.code).toBe("VALIDATION_ERROR");
+
+		const modeRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/music/mode",
+			headers: { cookie: adminCookie },
+			payload: { loop: "on" }, // string, not boolean
+		});
+		expect(modeRes.statusCode).toBe(400);
+		expect(modeRes.json().error.code).toBe("VALIDATION_ERROR");
+	});
+
+	it("renames and reorders a track via PATCH /tracks/:id, returns 404 for missing", async () => {
+		// Upload a track to rename
+		const fileBuffer = Buffer.alloc(512, 0x5);
+		const { boundary, payload } = buildMultipartPayload(
+			"original-name.mp3",
+			"audio/mpeg",
+			fileBuffer,
+		);
+		const uploadRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/music/tracks",
+			headers: {
+				cookie: adminCookie,
+				"content-type": `multipart/form-data; boundary=${boundary}`,
+			},
+			payload,
+		});
+		expect(uploadRes.statusCode).toBe(201);
+		const { id } = uploadRes.json().data;
+
+		// Rename
+		const renameRes = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/music/tracks/${id}`,
+			headers: { cookie: adminCookie },
+			payload: { display_name: "Yeni İsim", sort_order: 5 },
+		});
+		expect(renameRes.statusCode).toBe(200);
+
+		const updated = db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
+		expect(updated?.display_name).toBe("Yeni İsim");
+		expect(updated?.sort_order).toBe(5);
+
+		// 404 for missing track
+		const missingRes = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/music/tracks/nonexistent-id",
+			headers: { cookie: adminCookie },
+			payload: { display_name: "test" },
+		});
+		expect(missingRes.statusCode).toBe(404);
+		expect(missingRes.json().error.code).toBe("NOT_FOUND");
 	});
 
 	it("updates enabled/loop/shuffle mode settings and reflects them in status", async () => {
