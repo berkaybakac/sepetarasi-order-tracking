@@ -181,7 +181,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 					value={notes}
 					onChange={(e) => setNotes(e.target.value)}
 					maxLength={300}
-					className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-sm resize-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+					className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-sm resize-none [overflow-wrap:anywhere] [word-break:break-word] focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
 					rows={2}
 				/>
 

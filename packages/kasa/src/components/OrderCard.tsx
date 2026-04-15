@@ -47,6 +47,7 @@ export function OrderCard({ order }: OrderCardProps) {
 	const badge = STATUS_BADGE[order.status] ?? STATUS_BADGE.PREPARING;
 	const cardFrom = STATUS_CARD_FROM[order.status] ?? "from-transparent";
 	const isTerminal = order.status === "DELIVERED" || order.status === "CANCELLED";
+	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
 	// Track elapsed minutes — update every 30s for accurate 18/20-min boundary detection
 	const [mins, setMins] = useState(() => elapsedMins(order.created_at));
@@ -93,15 +94,15 @@ export function OrderCard({ order }: OrderCardProps) {
 			animate={{ opacity: isTerminal ? 0.4 : 1, scale: 1, y: 0 }}
 			exit={{ opacity: 0, scale: 0.9, x: -20 }}
 			transition={{ type: "spring", stiffness: 350, damping: 30 }}
-			className={`bg-gradient-to-br ${cardFrom} to-slate-900 rounded-2xl border border-white/[0.07] border-l-4 ${borderColor} overflow-hidden hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/40 transition-all duration-200 ${urgencyClass}`}
+			className={`bg-gradient-to-br ${cardFrom} to-slate-900 rounded-2xl border border-white/[0.07] border-l-4 ${borderColor} overflow-hidden min-w-0 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/40 transition-all duration-200 ${urgencyClass}`}
 		>
-			<div className="p-4">
+			<div className="p-4 min-w-0">
 				{/* Top: order number + status badge + elapsed */}
-				<div className="flex items-start justify-between mb-3">
-					<span className="text-4xl font-black tabular-nums leading-none bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent">
+				<div className="flex items-start justify-between gap-3 mb-3 min-w-0">
+					<span className="text-4xl font-black tabular-nums leading-none bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent shrink-0">
 						#{formatDisplayNo(order.display_no)}
 					</span>
-					<div className="flex flex-col items-end gap-1.5">
+					<div className="flex flex-col items-end gap-1.5 shrink-0">
 						<span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badge.className}`}>
 							{badge.label}
 						</span>
@@ -112,8 +113,8 @@ export function OrderCard({ order }: OrderCardProps) {
 				</div>
 
 				{/* Customer info */}
-				<div className="mb-3">
-					<p className="text-lg font-bold text-white leading-snug">
+				<div className="mb-3 min-w-0">
+					<p className="text-lg font-bold text-white leading-snug break-words [overflow-wrap:anywhere] [word-break:break-word]">
 						{order.customer_name ?? "İsimsiz"}
 					</p>
 					<span className="inline-block mt-1 bg-slate-700/60 text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-medium">
@@ -123,8 +124,25 @@ export function OrderCard({ order }: OrderCardProps) {
 
 				{/* Notes */}
 				{order.notes && (
-					<div className="mb-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg px-3 py-2 text-sm">
-						{order.notes}
+					<div className="mb-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg px-3 py-2 text-sm min-w-0">
+						<p
+							className={`break-words [overflow-wrap:anywhere] [word-break:break-word] ${
+								isNoteExpanded
+									? "max-h-24 overflow-y-auto pr-1"
+									: "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+							}`}
+						>
+							{order.notes}
+						</p>
+						{order.notes.length > 120 && (
+							<button
+								type="button"
+								onClick={() => setIsNoteExpanded((v) => !v)}
+								className="mt-1 text-xs font-semibold text-amber-200/90 hover:text-amber-100 transition-colors"
+							>
+								{isNoteExpanded ? "Notu daralt" : "Notun tamamını göster"}
+							</button>
+						)}
 					</div>
 				)}
 

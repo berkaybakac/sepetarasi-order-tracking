@@ -81,9 +81,9 @@ function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 			</header>
 
 			{/* Body */}
-			<div className="flex flex-1 overflow-hidden">
+			<div className="flex flex-1 overflow-hidden min-w-0">
 				{/* Main */}
-				<main className="flex-1 overflow-y-auto">
+				<main className="flex-1 min-w-0 overflow-y-auto">
 					{loading ? (
 						<div className="flex items-center justify-center py-24">
 							<div className="w-8 h-8 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin" />

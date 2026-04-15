@@ -125,6 +125,7 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 		status !== OrderStatus.DELIVERED && status !== OrderStatus.CANCELLED
 			? getOrderTimer(order.created_at)
 			: { isOverdue: false, isUrgent: false };
+	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
 	const styles = CARD_STYLES[status];
 
@@ -138,27 +139,48 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 	return (
 		<div
 			className={`
-				bg-dark-surface backdrop-blur-sm border rounded-2xl p-4
+				bg-dark-surface backdrop-blur-sm border rounded-2xl p-4 min-w-0
 				transition-all duration-300
 				hover:bg-white/8 hover:scale-[1.01] hover:shadow-lg
 				${borderClass}
 				${isOverdue ? styles.overdueGlow : ""}
 			`}
 		>
-			<div className="flex justify-between items-start mb-2">
+			<div className="flex justify-between items-start mb-2 gap-2 min-w-0">
 				<span className="text-2xl font-bold text-dark-text tracking-tight">
 					#{order.display_no}
 				</span>
 				<TimerBadge createdAt={order.created_at} status={status} />
 			</div>
 
-			<div className="space-y-1 text-sm text-dark-muted">
-				<p className="text-base font-semibold text-dark-text">
+			<div className="space-y-1 text-sm text-dark-muted min-w-0">
+				<p className="text-base font-semibold text-dark-text break-words [overflow-wrap:anywhere] [word-break:break-word]">
 					{order.customer_name ?? "İsimsiz müşteri"}
 				</p>
 				<p>Tip: {order.order_type ?? "-"}</p>
 				<p>Saat: {formatOrderTimestamp(order.created_at)}</p>
-				{order.notes && <p className="italic text-brand-warning">Not: {order.notes}</p>}
+				{order.notes && (
+					<div className="italic text-brand-warning min-w-0">
+						<p
+							className={`break-words [overflow-wrap:anywhere] [word-break:break-word] ${
+								isNoteExpanded
+									? "max-h-24 overflow-y-auto pr-1"
+									: "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+							}`}
+						>
+							Not: {order.notes}
+						</p>
+						{order.notes.length > 120 && (
+							<button
+								type="button"
+								onClick={() => setIsNoteExpanded((v) => !v)}
+								className="mt-1 not-italic text-[11px] font-semibold text-brand-warning/90 hover:text-brand-warning transition-colors"
+							>
+								{isNoteExpanded ? "Notu daralt" : "Notun tamamını göster"}
+							</button>
+						)}
+					</div>
+				)}
 			</div>
 
 			{order.items && order.items.length > 0 && (

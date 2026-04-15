@@ -36,14 +36,18 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 	const orders = useOrdersByStatus(status);
 
 	return (
-		<div className="flex-1 min-w-[260px] flex flex-col gap-3">
+		<div className="min-w-0 flex flex-col gap-3">
 			{/* Sütun Başlığı */}
-			<div className="flex items-center justify-between px-1">
+			<div className="flex items-center justify-between px-1 gap-2 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className={`w-2 h-2 rounded-full ${dotClass}`} />
-					<h2 className="text-sm font-semibold text-dark-text tracking-wide uppercase">{title}</h2>
+					<h2 className="text-sm font-semibold text-dark-text tracking-wide uppercase min-w-0 truncate">
+						{title}
+					</h2>
 				</div>
-				<span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${countClass}`}>
+				<span
+					className={`text-xs font-bold px-2 py-0.5 rounded-full border shrink-0 ${countClass}`}
+				>
 					{orders.length}
 				</span>
 			</div>

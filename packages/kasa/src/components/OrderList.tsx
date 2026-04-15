@@ -34,7 +34,7 @@ export function OrderList() {
 	}
 
 	return (
-		<div className="p-5 grid [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))] gap-4 content-start">
+		<div className="p-5 grid [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-4 content-start [&>*]:min-w-0">
 			<AnimatePresence mode="popLayout">
 				{activeOrders.map((order) => (
 					<OrderCard key={order.id} order={order} />
