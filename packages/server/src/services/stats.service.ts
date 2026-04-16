@@ -59,7 +59,22 @@ export class StatsService {
 		const averagePrepMinutes =
 			avgResult?.avgMinutes != null ? Math.round(avgResult.avgMinutes * 10) / 10 : null;
 
-		return { totalOrders, byStatus, averagePrepMinutes };
+		const deliveryAvgResult = this.db
+			.select({
+				avgSeconds: sql<number | null>`AVG(
+					(julianday(${orders.delivered_at}) - julianday(${orders.created_at})) * 86400
+				)`,
+			})
+			.from(orders)
+			.where(and(eq(orders.business_date, date), sql`${orders.delivered_at} IS NOT NULL`))
+			.get();
+
+		const averageDeliverySeconds =
+			deliveryAvgResult?.avgSeconds != null
+				? Math.max(0, Math.round(deliveryAvgResult.avgSeconds))
+				: null;
+
+		return { totalOrders, byStatus, averagePrepMinutes, averageDeliverySeconds };
 	}
 
 	getByPeriod(period: "daily" | "weekly" | "monthly"): DayStats {
@@ -115,6 +130,21 @@ export class StatsService {
 		const averagePrepMinutes =
 			avgResult?.avgMinutes != null ? Math.round(avgResult.avgMinutes * 10) / 10 : null;
 
-		return { totalOrders, byStatus, averagePrepMinutes };
+		const deliveryAvgResult = this.db
+			.select({
+				avgSeconds: sql<number | null>`AVG(
+					(julianday(${orders.delivered_at}) - julianday(${orders.created_at})) * 86400
+				)`,
+			})
+			.from(orders)
+			.where(and(dateFilter, sql`${orders.delivered_at} IS NOT NULL`))
+			.get();
+
+		const averageDeliverySeconds =
+			deliveryAvgResult?.avgSeconds != null
+				? Math.max(0, Math.round(deliveryAvgResult.avgSeconds))
+				: null;
+
+		return { totalOrders, byStatus, averagePrepMinutes, averageDeliverySeconds };
 	}
 }

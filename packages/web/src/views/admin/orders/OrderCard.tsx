@@ -1,7 +1,7 @@
 import { OrderStatus } from "@sepetarasi/shared";
 import type { Order } from "@sepetarasi/shared";
 import { useEffect, useState } from "react";
-import { getOrderTimer } from "../../../utils/date";
+import { getDeliveredOrderDurationLabel, getOrderTimer } from "../../../utils/date";
 
 function formatOrderTimestamp(dateStr: string): string {
 	return new Intl.DateTimeFormat("tr-TR", {
@@ -16,28 +16,30 @@ function formatOrderTimestamp(dateStr: string): string {
 }
 
 /**
- * TimerBadge — Siparişin kalan/geçen süresini gösteren canlı rozet.
- * Her 30 saniyede kendi kendini günceller.
+ * TimerBadge — PREPARING/READY için canlı, DELIVERED için sabit süre rozetidir.
  */
-function TimerBadge({ createdAt, status }: { createdAt: string; status: OrderStatus }) {
+function TimerBadge({ order, status }: { order: Order; status: OrderStatus }) {
+	const isLiveTimer = status === OrderStatus.PREPARING || status === OrderStatus.READY;
 	const [, setTick] = useState(0);
 
 	useEffect(() => {
+		if (!isLiveTimer) return;
 		const id = setInterval(() => setTick((t) => t + 1), 30_000);
 		return () => clearInterval(id);
-	}, []);
+	}, [isLiveTimer]);
 
-	// Teslim edilmiş → sadece geçen süre
 	if (status === OrderStatus.DELIVERED) {
-		const { elapsedMins } = getOrderTimer(createdAt);
+		const deliveredDuration = getDeliveredOrderDurationLabel(
+			order.created_at,
+			order.delivered_at,
+			order.updated_at,
+		);
 		return (
-			<span className="text-xs text-dark-muted font-medium">
-				{elapsedMins < 1 ? "az önce" : `${elapsedMins} dk`}
-			</span>
+			<span className="text-xs text-dark-muted font-medium tabular-nums">{deliveredDuration}</span>
 		);
 	}
 
-	const { isUrgent, isOverdue, formatted, remainingMins } = getOrderTimer(createdAt);
+	const { isUrgent, isOverdue, formatted, remainingMins } = getOrderTimer(order.created_at);
 
 	if (isOverdue) {
 		return (
@@ -150,7 +152,7 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 				<span className="text-2xl font-bold text-dark-text tracking-tight">
 					#{order.display_no}
 				</span>
-				<TimerBadge createdAt={order.created_at} status={status} />
+				<TimerBadge order={order} status={status} />
 			</div>
 
 			<div className="space-y-1 text-sm text-dark-muted min-w-0">

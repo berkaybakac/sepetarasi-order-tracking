@@ -36,3 +36,50 @@ export function getOrderTimer(createdAtStr: string, targetMinutes = 20) {
 		formatted: isOverdue ? `Gecikti (${Math.abs(remainingMins)} dk)` : `${remainingMins} dk kaldı`,
 	};
 }
+
+function getUnixMs(dateStr: string | null | undefined): number | null {
+	if (!dateStr) return null;
+	const ms = new Date(dateStr).getTime();
+	return Number.isFinite(ms) ? ms : null;
+}
+
+export function formatFixedDurationMs(durationMs: number): string {
+	const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+
+	if (totalSeconds < 60) {
+		return `${totalSeconds} ${UI_LABELS.ORDERS.SECONDS_SHORT}`;
+	}
+
+	if (totalSeconds < 3600) {
+		const minutes = Math.floor(totalSeconds / 60);
+		const seconds = totalSeconds % 60;
+		return `${minutes} ${UI_LABELS.ORDERS.MINUTES_SHORT} ${String(seconds).padStart(2, "0")} ${UI_LABELS.ORDERS.SECONDS_SHORT}`;
+	}
+
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	return `${hours} ${UI_LABELS.ORDERS.HOURS_SHORT} ${String(minutes).padStart(2, "0")} ${UI_LABELS.ORDERS.MINUTES_SHORT}`;
+}
+
+export function getDeliveredOrderDurationLabel(
+	createdAtStr: string,
+	deliveredAtStr: string | null | undefined,
+	fallbackEndAtStr?: string | null,
+): string {
+	const startMs = getUnixMs(createdAtStr);
+	const endMs = getUnixMs(deliveredAtStr) ?? getUnixMs(fallbackEndAtStr) ?? startMs;
+
+	if (startMs == null || endMs == null) {
+		return `0 ${UI_LABELS.ORDERS.SECONDS_SHORT}`;
+	}
+
+	return formatFixedDurationMs(Math.max(0, endMs - startMs));
+}
+
+export function formatAverageDeliveryMinutes(averageDeliverySeconds: number | null): string | null {
+	if (averageDeliverySeconds == null) return null;
+
+	const roundedMinutes = Math.round((averageDeliverySeconds / 60) * 10) / 10;
+	const fixed = roundedMinutes.toFixed(1);
+	return fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
+}

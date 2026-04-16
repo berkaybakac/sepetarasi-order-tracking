@@ -261,6 +261,38 @@ describe("GET /api/v1/stats/today", () => {
 		expect(body.ok).toBe(true);
 		expect(body.data.totalOrders).toBe(1);
 		expect(body.data.byStatus.PREPARING).toBe(1);
+		expect(body.data).toHaveProperty("averageDeliverySeconds");
+	});
+
+	it("should exclude cancelled orders from totalOrders while keeping cancelled breakdown", async () => {
+		const createRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: buildCreateOrderInput({ customer_name: "Iptal KPI", items: [] }),
+		});
+		const orderId = createRes.json().data.id as string;
+
+		const cancelRes = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/orders/${orderId}/status`,
+			headers: withCashierAuth(),
+			payload: { status: "CANCELLED" },
+		});
+		expect(cancelRes.statusCode).toBe(200);
+
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/stats/today",
+			headers: { cookie: adminCookie },
+		});
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.ok).toBe(true);
+		expect(body.data.totalOrders).toBe(0);
+		expect(body.data.byStatus.CANCELLED).toBe(1);
+		expect(body.data.averagePrepMinutes).toBeNull();
+		expect(body.data.averageDeliverySeconds).toBeNull();
 	});
 });
 
@@ -579,6 +611,7 @@ describe("GET /api/v1/stats", () => {
 		expect(res.json().ok).toBe(true);
 		expect(res.json().data).toHaveProperty("totalOrders");
 		expect(res.json().data).toHaveProperty("averagePrepMinutes");
+		expect(res.json().data).toHaveProperty("averageDeliverySeconds");
 	});
 
 	it("accepts weekly and monthly period", async () => {

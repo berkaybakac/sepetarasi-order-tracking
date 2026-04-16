@@ -337,11 +337,126 @@ describe("Stats", () => {
 		expect(stats.averagePrepMinutes).not.toBeNull();
 		expect(stats.averagePrepMinutes!).toBeGreaterThan(5);
 		expect(stats.averagePrepMinutes!).toBeLessThan(10);
+		expect(stats.averageDeliverySeconds).toBeNull();
 	});
 
-	it("should return null averagePrepMinutes when no orders are ready", () => {
+	it("should calculate averageDeliverySeconds only from delivered orders", () => {
+		const today = new Date().toISOString().slice(0, 10);
+		const now = Date.now();
+		const fiveMinAgo = new Date(now - 5 * 60 * 1000).toISOString();
+		const tenMinAgo = new Date(now - 10 * 60 * 1000).toISOString();
+		const deliveredTime = new Date(now).toISOString();
+
+		db.insert(orders)
+			.values([
+				{
+					id: "o-delivered-1",
+					business_date: today,
+					display_no: 1,
+					status: "DELIVERED",
+					created_at: tenMinAgo,
+					updated_at: deliveredTime,
+					delivered_at: deliveredTime,
+				},
+				{
+					id: "o-delivered-2",
+					business_date: today,
+					display_no: 2,
+					status: "DELIVERED",
+					created_at: fiveMinAgo,
+					updated_at: deliveredTime,
+					delivered_at: deliveredTime,
+				},
+				{
+					id: "o-ready",
+					business_date: today,
+					display_no: 3,
+					status: "READY",
+					created_at: deliveredTime,
+					updated_at: deliveredTime,
+					ready_at: deliveredTime,
+				},
+			])
+			.run();
+
+		const stats = statsService.getToday(today);
+		expect(stats.averageDeliverySeconds).toBe(450);
+	});
+
+	it("should exclude cancelled orders from totalOrders but keep cancelled status count", () => {
+		const today = new Date().toISOString().slice(0, 10);
+		const now = new Date().toISOString();
+
+		db.insert(orders)
+			.values([
+				{
+					id: "o-active",
+					business_date: today,
+					display_no: 1,
+					status: "PREPARING",
+					created_at: now,
+					updated_at: now,
+				},
+				{
+					id: "o-cancelled",
+					business_date: today,
+					display_no: 2,
+					status: "CANCELLED",
+					created_at: now,
+					updated_at: now,
+					cancelled_at: now,
+				},
+			])
+			.run();
+
+		const stats = statsService.getToday(today);
+		expect(stats.totalOrders).toBe(1);
+		expect(stats.byStatus[OrderStatus.PREPARING]).toBe(1);
+		expect(stats.byStatus[OrderStatus.CANCELLED]).toBe(1);
+	});
+
+	it("should exclude cancelled orders from averagePrepMinutes even if ready_at exists", () => {
+		const today = new Date().toISOString().slice(0, 10);
+		const now = Date.now();
+		const tenMinAgo = new Date(now - 10 * 60 * 1000).toISOString();
+		const thirtyMinAgo = new Date(now - 30 * 60 * 1000).toISOString();
+		const currentTime = new Date(now).toISOString();
+
+		db.insert(orders)
+			.values([
+				{
+					id: "o-ready",
+					business_date: today,
+					display_no: 1,
+					status: "READY",
+					created_at: tenMinAgo,
+					updated_at: currentTime,
+					ready_at: currentTime,
+				},
+				{
+					// Simulates READY -> CANCELLED historical row: ready_at is present
+					id: "o-cancelled-after-ready",
+					business_date: today,
+					display_no: 2,
+					status: "CANCELLED",
+					created_at: thirtyMinAgo,
+					updated_at: currentTime,
+					ready_at: currentTime,
+					cancelled_at: currentTime,
+				},
+			])
+			.run();
+
+		const stats = statsService.getToday(today);
+		expect(stats.averagePrepMinutes).not.toBeNull();
+		expect(stats.averagePrepMinutes!).toBeGreaterThan(9);
+		expect(stats.averagePrepMinutes!).toBeLessThan(12);
+	});
+
+	it("should return null averages when there are no completed orders", () => {
 		const stats = statsService.getToday();
 		expect(stats.averagePrepMinutes).toBeNull();
+		expect(stats.averageDeliverySeconds).toBeNull();
 		expect(stats.totalOrders).toBe(0);
 	});
 });

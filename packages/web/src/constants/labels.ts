@@ -8,6 +8,7 @@ export const UI_LABELS = {
 	// Sayfa / Bileşen Başlıkları
 	ADMIN_TITLE: "Yönetici Paneli",
 	AVG_PREP_TIME: "Ortalama Hazırlanma Süresi",
+	AVG_DELIVERY_TIME: "Ortalama Teslim Süresi",
 	TOTAL_ORDERS: "Toplam Sipariş",
 	VOLUME_CONTROL: "Ses Seviyesi",
 	SAVE: "Kaydet",
@@ -88,6 +89,8 @@ export const UI_LABELS = {
 	ORDERS: {
 		EMPTY: "Sipariş yok",
 		MINUTES_SHORT: "dk",
+		SECONDS_SHORT: "sn",
+		HOURS_SHORT: "sa",
 		LESS_THAN_A_MINUTE: "<1 dk",
 	},
 

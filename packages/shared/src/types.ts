@@ -74,6 +74,7 @@ export interface DayStats {
 	totalOrders: number;
 	byStatus: Record<OrderStatus, number>;
 	averagePrepMinutes: number | null;
+	averageDeliverySeconds: number | null;
 }
 
 // --- API ---

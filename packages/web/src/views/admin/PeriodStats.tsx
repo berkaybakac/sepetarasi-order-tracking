@@ -1,8 +1,9 @@
+import { OrderStatus, STAT_PERIODS } from "@sepetarasi/shared";
 import type { DayStats, StatPeriod } from "@sepetarasi/shared";
-import { STAT_PERIODS } from "@sepetarasi/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UI_LABELS } from "../../constants/labels";
 import { api } from "../../lib/api";
+import { formatAverageDeliveryMinutes } from "../../utils/date";
 
 const PERIOD_LABELS: Record<StatPeriod, string> = {
 	daily: "Günlük",
@@ -51,6 +52,11 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 		if (reconnectedAt) fetchStats(periodRef.current, true);
 	}, [reconnectedAt, fetchStats]);
 
+	const averageDeliveryMinutes = formatAverageDeliveryMinutes(
+		stats?.averageDeliverySeconds ?? null,
+	);
+	const deliveredOrders = stats?.byStatus[OrderStatus.DELIVERED] ?? 0;
+
 	return (
 		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 space-y-5 relative overflow-hidden group hover:border-white/10 transition-colors">
 			{/* Subtle inner glow */}
@@ -75,7 +81,7 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 
 			<div className="text-center py-6 relative z-10">
 				<p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-2">
-					{UI_LABELS.AVG_PREP_TIME}
+					{UI_LABELS.AVG_DELIVERY_TIME}
 				</p>
 				{loading ? (
 					<div className="flex justify-center h-14 items-center">
@@ -83,9 +89,9 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 					</div>
 				) : (
 					<p className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
-						{stats?.averagePrepMinutes != null ? (
+						{averageDeliveryMinutes != null ? (
 							<>
-								{stats.averagePrepMinutes}
+								{averageDeliveryMinutes}
 								<span className="text-2xl font-medium text-slate-500 ml-2">
 									{UI_LABELS.ORDERS.MINUTES_SHORT}
 								</span>
@@ -112,7 +118,7 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 									d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
 								/>
 							</svg>
-							{stats.totalOrders} toplam sipariş
+							{deliveredOrders} teslim edilen sipariş
 						</span>
 					)}
 				</div>
