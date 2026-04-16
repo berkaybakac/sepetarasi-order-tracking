@@ -91,6 +91,20 @@ export function ColumnKpiHeader({
 	);
 }
 
+export function getOrderNumberCompactClass(displayNo: number): string {
+	const digitCount = String(Math.abs(displayNo)).length;
+	if (digitCount >= 4) return "text-[0.64em] tracking-[-0.07em]";
+	if (digitCount >= 3) return "text-[0.82em] tracking-[-0.045em]";
+	return "";
+}
+
+export function getOrderBadgeSizeClass(displayNo: number): string {
+	const digitCount = String(Math.abs(displayNo)).length;
+	if (digitCount >= 4) return "w-[2.02em]";
+	if (digitCount >= 3) return "w-[1.86em]";
+	return "w-[1.62em]";
+}
+
 export function OrderNumber({
 	displayNo,
 	highlight,
@@ -104,6 +118,9 @@ export function OrderNumber({
 	badgeClass: string;
 	highlightClass: string;
 }) {
+	const compactNumberClass = getOrderNumberCompactClass(displayNo);
+	const badgeSizeClass = getOrderBadgeSizeClass(displayNo);
+
 	return (
 		<motion.div
 			layout
@@ -127,9 +144,9 @@ export function OrderNumber({
 			initial={{ opacity: 0, scale: 0.75, y: 24 }}
 			exit={{ opacity: 0, scale: 0.6, y: -16, transition: { duration: 0.2 } }}
 			transition={{ type: "spring", stiffness: 300, damping: 25 }}
-			className={`aspect-square max-w-[clamp(3rem,16vmin,9rem)] w-full mx-auto rounded-full flex items-center justify-center font-bold tabular-nums ${textClass} ${highlight ? highlightClass : badgeClass}`}
+			className={`aspect-square ${badgeSizeClass} max-w-full mx-auto rounded-full flex items-center justify-center font-bold tabular-nums ${textClass} ${highlight ? highlightClass : badgeClass}`}
 		>
-			{displayNo}
+			<span className={`leading-none ${compactNumberClass}`}>{displayNo}</span>
 		</motion.div>
 	);
 }
