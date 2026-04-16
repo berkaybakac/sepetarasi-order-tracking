@@ -2,6 +2,7 @@ import { OrderStatus, STATUS_TRANSITIONS } from "@sepetarasi/shared";
 import type { Order } from "@sepetarasi/shared";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { reportRendererError } from "../lib/electron";
 import { useOrderStore } from "../stores/orderStore";
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; lgClass: string; smClass: string }> = {
@@ -76,7 +77,17 @@ export function StatusButton({
 		try {
 			await api.changeStatus(order.id, { status: targetStatus });
 		} catch (err) {
-			console.error("Status change failed:", err);
+			reportRendererError({
+				component: "status-button",
+				event: "orders.status_change_failed",
+				message: "Status change failed",
+				error: err,
+				context: {
+					orderId: order.id,
+					currentStatus,
+					targetStatus,
+				},
+			});
 			await hydrate();
 		} finally {
 			setLoading(false);

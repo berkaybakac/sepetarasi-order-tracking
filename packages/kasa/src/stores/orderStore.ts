@@ -2,6 +2,7 @@ import { type OrderStatus, applyOrderWsEvent } from "@sepetarasi/shared";
 import type { Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
 import { ApiError, api } from "../lib/api";
+import { reportRendererError, reportRendererWarning } from "../lib/electron";
 
 interface OrderState {
 	orders: Map<string, Order>;
@@ -50,10 +51,16 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 			} catch (err) {
 				attempt++;
 				const errorMsg = (err as Error).message;
-				console.error(`Failed to hydrate orders (attempt ${attempt}):`, errorMsg);
 
 				// Rate limit: retrying immediately makes things worse — bail out
 				if (err instanceof ApiError && err.statusCode === 429) {
+					reportRendererWarning({
+						component: "order-store",
+						event: "orders.hydrate_rate_limited",
+						message: "Kasa order hydration was rate limited",
+						error: err,
+						context: { attempt, silent, statusCode: err.statusCode },
+					});
 					set({ error: errorMsg, isHydrating: false });
 					if (!silent) set({ loading: false });
 					return;
@@ -63,6 +70,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 					const backoff = 1000 * 2 ** attempt;
 					await delay(backoff);
 				} else {
+					reportRendererError({
+						component: "order-store",
+						event: "orders.hydrate_failed",
+						message: "Kasa order hydration failed after retries",
+						error: err,
+						context: { attempt, silent },
+					});
 					set({ error: errorMsg });
 					if (!silent) set({ loading: false });
 					set({ isHydrating: false });

@@ -1,5 +1,6 @@
 import * as net from "node:net";
 import iconv from "iconv-lite";
+import { summarizeTextChange } from "../src/lib/logging";
 
 interface PrintOrder {
 	display_no: number;
@@ -133,8 +134,15 @@ function emitEncodingWarning(state: BuildState, warning: PrinterEncodingWarning)
 		return;
 	}
 
+	const summary = summarizeTextChange(
+		warning.field,
+		warning.encoding,
+		warning.codePage,
+		warning.original,
+		warning.rendered,
+	);
 	console.warn(
-		`[printer][charset-warning] field=${warning.field} encoding=${warning.encoding} codePage=${warning.codePage} original=${JSON.stringify(warning.original)} rendered=${JSON.stringify(warning.rendered)}`,
+		`[printer][charset-warning] field=${summary.field} encoding=${summary.encoding} codePage=${summary.codePage} originalLength=${summary.originalLength} renderedLength=${summary.renderedLength} changedCharacterCount=${summary.changedCharacterCount}`,
 	);
 }
 

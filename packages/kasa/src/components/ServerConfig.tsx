@@ -1,4 +1,3 @@
-import type { Order } from "@sepetarasi/shared";
 import { useEffect, useState } from "react";
 import {
 	getBaseUrl,
@@ -6,33 +5,7 @@ import {
 	setTerminalId as setApiTerminalId,
 	setBaseUrl,
 } from "../lib/api";
-
-interface KasaConfig {
-	serverUrl: string;
-	terminalId: string;
-	terminalName: string;
-	hotkey: string;
-	printerIp: string;
-	printerCodePage: number;
-	printerEncoding: string;
-	cashierToken: string;
-}
-
-interface PrintReceiptResult {
-	ok: boolean;
-	error?: string;
-}
-
-declare global {
-	interface Window {
-		electronAPI?: {
-			getConfig: () => Promise<KasaConfig>;
-			saveConfig: (config: KasaConfig) => Promise<boolean>;
-			discoverServer: () => Promise<string | null>;
-			printReceipt: (order: Order) => Promise<PrintReceiptResult>;
-		};
-	}
-}
+import { type KasaConfig, getElectronAPI, reportRendererError } from "../lib/electron";
 
 interface ServerConfigProps {
 	onConnected: () => void;
@@ -59,8 +32,9 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 
 	useEffect(() => {
 		async function load() {
-			if (window.electronAPI) {
-				const config = await window.electronAPI.getConfig();
+			const electronAPI = getElectronAPI();
+			if (electronAPI) {
+				const config = await electronAPI.getConfig();
 				setUrl(config.serverUrl);
 				setTerminalId(config.terminalId);
 				setTerminalName(config.terminalName);
@@ -74,12 +48,13 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	}, []);
 
 	const handleDiscover = async () => {
-		if (!window.electronAPI) return;
+		const electronAPI = getElectronAPI();
+		if (!electronAPI) return;
 		setDiscovering(true);
 		setDiscoverHint(null);
 		setError(null);
 		try {
-			const found = await window.electronAPI.discoverServer();
+			const found = await electronAPI.discoverServer();
 			if (found) {
 				setUrl(found);
 			} else {
@@ -90,7 +65,13 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						: "Sunucu bulunamadı. Cihazın aynı ağda olduğundan emin olun.",
 				);
 			}
-		} catch {
+		} catch (error) {
+			reportRendererError({
+				component: "config",
+				event: "config.discovery_failed",
+				message: "Kasa server discovery failed",
+				error,
+			});
 			setDiscoverHint("Arama sırasında hata oluştu.");
 		} finally {
 			setDiscovering(false);
@@ -125,14 +106,23 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					printerEncoding: printerEncoding.trim().toLowerCase() || "cp857",
 					cashierToken,
 				};
-				await window.electronAPI?.saveConfig(config);
+				await getElectronAPI()?.saveConfig(config);
 				onConnected();
 			} else {
 				setError("Sunucu yanıt verdi ama sağlık kontrolü başarısız");
 			}
 		} catch (err) {
 			// Dev note: .local hostnames require Bonjour on Windows (comes with iTunes or install separately from Apple)
-			console.error("Kasa connection failed:", err);
+			reportRendererError({
+				component: "config",
+				event: "config.connection_test_failed",
+				message: "Kasa server connection test failed",
+				error: err,
+				context: {
+					serverUrl: url,
+					terminalId,
+				},
+			});
 			setError("Sunucuya bağlanılamadı. Adresi ve ağ bağlantısını kontrol edin.");
 		} finally {
 			setTesting(false);
@@ -290,7 +280,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					<button
 						type="button"
 						onClick={handleDiscover}
-						disabled={testing || discovering || !window.electronAPI}
+						disabled={testing || discovering || !getElectronAPI()}
 						className="flex-1 border border-slate-600 text-slate-300 hover:border-slate-500 hover:text-white hover:bg-slate-700/50 font-bold py-3 rounded-xl text-base disabled:opacity-40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
 					>
 						{discovering ? (

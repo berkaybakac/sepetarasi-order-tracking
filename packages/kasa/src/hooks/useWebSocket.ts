@@ -1,6 +1,7 @@
 import type { WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useRef } from "react";
 import { getBaseUrl } from "../lib/api";
+import { reportRendererError, reportRendererWarning } from "../lib/electron";
 
 interface UseWebSocketOptions {
 	channel: string;
@@ -13,14 +14,21 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 	const wsRef = useRef<WebSocket | null>(null);
 	const reconnectAttempt = useRef(0);
 	const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const unauthorizedLogged = useRef(false);
+	const missingKeyLogged = useRef(false);
 
 	const connect = useCallback(() => {
 		const key = import.meta.env.VITE_WS_AUTH_KEY;
 
-		if (!key) {
-			console.error(
-				"VITE_WS_AUTH_KEY eksik! packages/kasa/.env dosyasına ekle: VITE_WS_AUTH_KEY=<server .env'deki WS_AUTH_KEY ile aynı değer>",
-			);
+		if (!key && !missingKeyLogged.current) {
+			missingKeyLogged.current = true;
+			reportRendererWarning({
+				component: "websocket",
+				event: "ws.auth_key_missing",
+				message:
+					"VITE_WS_AUTH_KEY eksik! packages/kasa/.env dosyasına ekle: VITE_WS_AUTH_KEY=<server .env'deki WS_AUTH_KEY ile aynı değer>",
+				context: { channel },
+			});
 		}
 
 		const wsUrl = `${getBaseUrl().replace(/^http/, "ws")}/ws?channel=${channel}${key ? `&key=${encodeURIComponent(key)}` : ""}`;
@@ -38,13 +46,26 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 				try {
 					const msg: WsMessage = JSON.parse(event.data);
 					if (msg.event === "error" && msg.message === "Unauthorized") {
-						console.error(
-							"WebSocket Unauthorized! This usually means VITE_WS_AUTH_KEY does not match the server's WS_AUTH_KEY. Please check your .env files and rebuild the app.",
-						);
+						if (!unauthorizedLogged.current) {
+							unauthorizedLogged.current = true;
+							reportRendererError({
+								component: "websocket",
+								event: "ws.unauthorized",
+								message:
+									"WebSocket Unauthorized! This usually means VITE_WS_AUTH_KEY does not match the server's WS_AUTH_KEY. Please check your .env files and rebuild the app.",
+								context: { channel, baseUrl: getBaseUrl() },
+							});
+						}
 					}
 					onMessage(msg);
 				} catch (err) {
-					console.error("WS message parse error:", err);
+					reportRendererError({
+						component: "websocket",
+						event: "ws.message_parse_failed",
+						message: "WS message parse error",
+						error: err,
+						context: { channel },
+					});
 				}
 			};
 
@@ -56,7 +77,14 @@ export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: Us
 			ws.onerror = () => {
 				ws.close();
 			};
-		} catch {
+		} catch (error) {
+			reportRendererError({
+				component: "websocket",
+				event: "ws.connection_init_failed",
+				message: "WebSocket connection initialization failed",
+				error,
+				context: { channel, baseUrl: getBaseUrl() },
+			});
 			scheduleReconnect();
 		}
 	}, [channel, onMessage, onConnect, onDisconnect]);
