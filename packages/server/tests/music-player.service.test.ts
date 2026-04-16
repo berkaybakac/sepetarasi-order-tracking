@@ -387,6 +387,139 @@ describe("MusicPlayerService — stop / play / skip / previous", () => {
 		}
 	});
 
+	it("shuffle previous() skips stale history ids no longer in the playlist", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "1", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-shuffle-prev-stale-"));
+		const trackAPath = join(tempDir, "a.mp3");
+		const trackBPath = join(tempDir, "b.mp3");
+		writeFileSync(trackAPath, "fake-mp3-a");
+		writeFileSync(trackBPath, "fake-mp3-b");
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: trackAPath, display_name: "A" },
+				{ id: "b", file_path: trackBPath, display_name: "B" },
+			];
+			internal.currentIndex = 1;
+			internal.shuffleHistory = ["a", "removed"];
+			internal.shuffleQueue = [];
+
+			player.previous();
+
+			expect(internal.currentIndex).toBe(0);
+			expect(internal.shuffleHistory).toEqual([]);
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackAPath}\n`));
+		} finally {
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("shuffle previous() with empty history falls back to a random other track", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "1", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-shuffle-prev-fallback-"));
+		const trackAPath = join(tempDir, "a.mp3");
+		const trackBPath = join(tempDir, "b.mp3");
+		writeFileSync(trackAPath, "fake-mp3-a");
+		writeFileSync(trackBPath, "fake-mp3-b");
+
+		const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: trackAPath, display_name: "A" },
+				{ id: "b", file_path: trackBPath, display_name: "B" },
+			];
+			internal.currentIndex = 1;
+			internal.shuffleHistory = [];
+			internal.shuffleQueue = [];
+
+			player.previous();
+
+			expect(internal.currentIndex).toBe(0);
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackAPath}\n`));
+		} finally {
+			randomSpy.mockRestore();
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("shuffle next() skips stale queue ids no longer in the playlist", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "0", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-shuffle-next-stale-"));
+		const trackAPath = join(tempDir, "a.mp3");
+		const trackBPath = join(tempDir, "b.mp3");
+		writeFileSync(trackAPath, "fake-mp3-a");
+		writeFileSync(trackBPath, "fake-mp3-b");
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: trackAPath, display_name: "A" },
+				{ id: "b", file_path: trackBPath, display_name: "B" },
+			];
+			internal.currentIndex = 0;
+			internal.shuffleQueue = ["removed", "b"];
+
+			player.skip();
+
+			expect(internal.currentIndex).toBe(1);
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackBPath}\n`));
+		} finally {
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("broadcastStatus swallows broadcaster failures without crashing", () => {
+		const db = createTestDb();
+		const broadcaster = {
+			broadcast: vi.fn(() => {
+				throw new Error("ws down");
+			}),
+		};
+		const player = new MusicPlayerService({ db, broadcaster: broadcaster as never });
+		const internal = player as unknown as { broadcastStatus: () => void };
+		expect(() => internal.broadcastStatus()).not.toThrow();
+		expect(broadcaster.broadcast).toHaveBeenCalled();
+	});
+
 	it("shuffle next() starts a new shuffled cycle when the queue is exhausted", () => {
 		const db = createTestDb();
 		db.insert(appSettings)
@@ -425,7 +558,7 @@ describe("MusicPlayerService — stop / play / skip / previous", () => {
 
 			expect(internal.currentIndex).toBe(0);
 			expect(internal.isPlaying).toBe(true);
-			expect(internal.shuffleHistory).toContain("c");
+			expect(internal.shuffleHistory).toEqual([]);
 			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackAPath}\n`));
 		} finally {
 			randomSpy.mockRestore();
@@ -590,7 +723,7 @@ describe("MusicPlayerService — automatic end-of-track transitions", () => {
 
 			expect(internal.currentIndex).toBe(0);
 			expect(internal.isPlaying).toBe(true);
-			expect(internal.shuffleHistory).toContain("c");
+			expect(internal.shuffleHistory).toEqual([]);
 			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackAPath}\n`));
 		} finally {
 			randomSpy.mockRestore();

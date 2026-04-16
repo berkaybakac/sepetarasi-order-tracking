@@ -599,10 +599,6 @@ export class MusicPlayerService {
 		);
 	}
 
-	private findTrackIndex(trackId: string): number {
-		return this.playlist.findIndex((track) => track.id === trackId);
-	}
-
 	private persistCurrentTrack(): void {
 		const trackId = this.getCurrentTrackId();
 		if (!trackId) return;
@@ -671,24 +667,27 @@ export class MusicPlayerService {
 		if (this.playlist.length === 0) return null;
 		if (this.playlist.length === 1) return allowCycleReset ? this.currentIndex : null;
 
+		let startedNewCycle = false;
 		while (true) {
 			let nextTrackId = this.shuffleQueue.shift() ?? null;
 			if (!nextTrackId) {
 				if (!allowCycleReset) return null;
+				this.shuffleHistory = [];
 				this.shuffleQueue = this.buildShuffleQueue(this.getCurrentTrackId());
+				startedNewCycle = true;
 				nextTrackId = this.shuffleQueue.shift() ?? null;
 				if (!nextTrackId) {
 					return this.currentIndex;
 				}
 			}
 
-			const nextIndex = this.findTrackIndex(nextTrackId);
+			const nextIndex = this.playlist.findIndex((track) => track.id === nextTrackId);
 			if (nextIndex < 0) {
 				continue;
 			}
 
 			const currentTrackId = this.getCurrentTrackId();
-			if (currentTrackId && currentTrackId !== nextTrackId) {
+			if (!startedNewCycle && currentTrackId && currentTrackId !== nextTrackId) {
 				this.shuffleHistory.push(currentTrackId);
 			}
 			return nextIndex;
@@ -715,6 +714,9 @@ export class MusicPlayerService {
 		return this.getLoopEnabled() ? 0 : null;
 	}
 
+	// Manual skip always wraps at the end of the playlist; the loop setting only
+	// controls automatic end-of-track behavior, keeping manual next symmetrical
+	// with previous().
 	private resolveManualNextIndex(): number {
 		if (this.playlist.length === 0) return 0;
 		if (this.getShuffleEnabled()) {
@@ -731,7 +733,7 @@ export class MusicPlayerService {
 			const previousTrackId = this.shuffleHistory.pop();
 			if (!previousTrackId) break;
 
-			const previousIndex = this.findTrackIndex(previousTrackId);
+			const previousIndex = this.playlist.findIndex((track) => track.id === previousTrackId);
 			if (previousIndex < 0) {
 				continue;
 			}
