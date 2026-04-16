@@ -145,40 +145,40 @@ describe("StatsService.getByPeriod()", () => {
 
 		db.insert(orders)
 			.values([
-					makeOrder({
-						id: "delivered-daily",
-						business_date: businessDate(0),
-						display_no: 1,
-						status: "DELIVERED",
-						created_at: createdDaily,
-						delivered_at: deliveredAtIso,
-					}),
-					makeOrder({
-						id: "delivered-weekly",
-						business_date: businessDate(5),
-						display_no: 2,
-						status: "DELIVERED",
-						created_at: createdWeekly,
-						delivered_at: deliveredAtIso,
-					}),
-					makeOrder({
-						id: "delivered-monthly",
-						business_date: businessDate(20),
-						display_no: 3,
-						status: "DELIVERED",
-						created_at: createdMonthly,
-						delivered_at: deliveredAtIso,
-					}),
-					makeOrder({
-						id: "outside-monthly",
-						business_date: businessDate(31),
-						display_no: 4,
-						status: "DELIVERED",
-						created_at: createdOutsideMonthly,
-						delivered_at: deliveredAtIso,
-					}),
-				])
-				.run();
+				makeOrder({
+					id: "delivered-daily",
+					business_date: businessDate(0),
+					display_no: 1,
+					status: "DELIVERED",
+					created_at: createdDaily,
+					delivered_at: deliveredAtIso,
+				}),
+				makeOrder({
+					id: "delivered-weekly",
+					business_date: businessDate(5),
+					display_no: 2,
+					status: "DELIVERED",
+					created_at: createdWeekly,
+					delivered_at: deliveredAtIso,
+				}),
+				makeOrder({
+					id: "delivered-monthly",
+					business_date: businessDate(20),
+					display_no: 3,
+					status: "DELIVERED",
+					created_at: createdMonthly,
+					delivered_at: deliveredAtIso,
+				}),
+				makeOrder({
+					id: "outside-monthly",
+					business_date: businessDate(31),
+					display_no: 4,
+					status: "DELIVERED",
+					created_at: createdOutsideMonthly,
+					delivered_at: deliveredAtIso,
+				}),
+			])
+			.run();
 
 		const svc = new StatsService(db);
 		expect(svc.getByPeriod("daily").averageDeliverySeconds).toBe(1200);
