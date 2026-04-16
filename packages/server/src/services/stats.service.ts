@@ -31,8 +31,12 @@ export class StatsService {
 
 		let totalOrders = 0;
 		for (const row of counts) {
-			byStatus[row.status as OrderStatus] = row.count;
-			totalOrders += row.count;
+			const status = row.status as OrderStatus;
+			byStatus[status] = row.count;
+			// Operational totals exclude cancelled orders.
+			if (status !== OrderStatus.CANCELLED) {
+				totalOrders += row.count;
+			}
 		}
 
 		// Average preparation time (created_at -> ready_at) in minutes
@@ -43,7 +47,13 @@ export class StatsService {
 				)`,
 			})
 			.from(orders)
-			.where(and(eq(orders.business_date, date), sql`${orders.ready_at} IS NOT NULL`))
+			.where(
+				and(
+					eq(orders.business_date, date),
+					sql`${orders.ready_at} IS NOT NULL`,
+					sql`${orders.status} != ${OrderStatus.CANCELLED}`,
+				),
+			)
 			.get();
 
 		const averagePrepMinutes =
@@ -78,8 +88,12 @@ export class StatsService {
 		};
 		let totalOrders = 0;
 		for (const row of counts) {
-			byStatus[row.status as OrderStatus] = row.count;
-			totalOrders += row.count;
+			const status = row.status as OrderStatus;
+			byStatus[status] = row.count;
+			// Operational totals exclude cancelled orders.
+			if (status !== OrderStatus.CANCELLED) {
+				totalOrders += row.count;
+			}
 		}
 
 		const avgResult = this.db
@@ -89,7 +103,13 @@ export class StatsService {
 				)`,
 			})
 			.from(orders)
-			.where(and(dateFilter, sql`${orders.ready_at} IS NOT NULL`))
+			.where(
+				and(
+					dateFilter,
+					sql`${orders.ready_at} IS NOT NULL`,
+					sql`${orders.status} != ${OrderStatus.CANCELLED}`,
+				),
+			)
 			.get();
 
 		const averagePrepMinutes =
