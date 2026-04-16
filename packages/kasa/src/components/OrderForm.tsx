@@ -187,13 +187,13 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 
 				{/* Hızlı Not Presetleri */}
 				{presets.length > 0 && (
-					<div className="mt-3 flex flex-wrap gap-2">
+					<div className="mt-3 flex flex-wrap items-start gap-2">
 						{presets.map((preset) => (
 							<button
 								key={preset}
 								type="button"
 								onClick={() => handlePresetClick(preset)}
-								className="inline-flex px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-medium hover:bg-emerald-500/30 hover:border-emerald-500 transition-colors active:scale-95 active:bg-emerald-500/40"
+								className="inline-flex max-w-full min-w-0 whitespace-normal px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-left text-emerald-300 text-xs font-medium leading-snug [overflow-wrap:anywhere] [word-break:break-word] hover:bg-emerald-500/30 hover:border-emerald-500 transition-colors active:scale-95 active:bg-emerald-500/40"
 							>
 								{preset}
 							</button>

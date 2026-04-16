@@ -119,9 +119,11 @@ export function NotePresetsCard() {
 							{presets.map((preset, idx) => (
 								<div
 									key={preset}
-									className="flex items-center justify-between bg-slate-950/30 border border-slate-700 rounded-lg px-4 py-3"
+									className="flex items-start justify-between gap-3 bg-slate-950/30 border border-slate-700 rounded-lg px-4 py-3"
 								>
-									<span className="text-sm text-white truncate">{preset}</span>
+									<span className="min-w-0 flex-1 text-sm text-white break-words [overflow-wrap:anywhere] [word-break:break-word]">
+										{preset}
+									</span>
 									<button
 										type="button"
 										onClick={() => handleRemovePreset(idx)}
