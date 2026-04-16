@@ -9,7 +9,7 @@ import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../../db/connection.js";
 import { musicTracks } from "../../db/schema.js";
 import type { MusicPlayerService } from "../../services/music-player.service.js";
-import { getAudioDuration } from "../../utils/audio-metadata.js";
+import { getAudioMetadata, getMusicQualityWarnings } from "../../utils/audio-metadata.js";
 import { requireAdmin } from "../../utils/auth-middleware.js";
 
 const ACCEPTED_MIME_TYPES = new Set(["audio/mpeg", "audio/mp3", "audio/x-mpeg"]);
@@ -189,11 +189,28 @@ export function registerMusicLibraryRoutes(
 				.all()
 				.at(-1)?.sort_order ?? -1;
 
-		const duration = await getAudioDuration(targetPath);
-		if (duration === null) {
+		const metadata = await getAudioMetadata(targetPath);
+		const duration = metadata?.durationSeconds ?? null;
+		if (metadata === null) {
 			request.log.warn(
-				{ event: "music.upload.duration_extraction_failed", filename: data.filename },
-				"Could not extract duration from audio file",
+				{ event: "music.upload.metadata_extraction_failed", filename: data.filename },
+				"Could not extract audio metadata from music file",
+			);
+		}
+		const qualityWarnings = metadata ? getMusicQualityWarnings(metadata) : [];
+		if (qualityWarnings.length > 0 && metadata) {
+			request.log.warn(
+				{
+					event: "music.upload.quality_warning",
+					filename: data.filename,
+					codecName: metadata.codecName,
+					formatName: metadata.formatName,
+					sampleRateHz: metadata.sampleRateHz,
+					bitRateKbps: metadata.bitRateKbps,
+					channels: metadata.channels,
+					qualityWarnings,
+				},
+				"Uploaded music track has potential audio quality issues",
 			);
 		}
 
@@ -215,6 +232,11 @@ export function registerMusicLibraryRoutes(
 				filename: data.filename,
 				file_size: fileSize,
 				duration_seconds: duration,
+				codecName: metadata?.codecName ?? null,
+				formatName: metadata?.formatName ?? null,
+				sampleRateHz: metadata?.sampleRateHz ?? null,
+				bitRateKbps: metadata?.bitRateKbps ?? null,
+				channels: metadata?.channels ?? null,
 			},
 			"Music track uploaded",
 		);

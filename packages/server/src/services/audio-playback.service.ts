@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { detectAudioRuntimeSignals } from "../utils/audio-runtime-signals.js";
 
 interface StructuredLogger {
 	info: (obj: Record<string, unknown>, msg?: string) => void;
@@ -186,7 +187,22 @@ export class AudioPlaybackService {
 		);
 
 		return new Promise<boolean>((resolve) => {
-			const proc = spawn(cmd, args, { stdio: "ignore" });
+			const proc = spawn(cmd, args, { stdio: ["ignore", "ignore", "pipe"] });
+
+			proc.stderr?.on("data", (chunk: Buffer) => {
+				const text = chunk.toString().trim();
+				if (!text) return;
+				const signals = detectAudioRuntimeSignals(text);
+				this.logger.warn(
+					{
+						event: "audio.player.stderr",
+						command: cmd,
+						output: text,
+						signals: signals.length > 0 ? signals : undefined,
+					},
+					"Audio player stderr",
+				);
+			});
 
 			const safetyTimeout = setTimeout(() => {
 				proc.kill();

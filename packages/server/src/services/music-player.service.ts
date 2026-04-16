@@ -6,6 +6,7 @@ import type { MusicStatus, MusicTrackRecord } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings, musicTracks } from "../db/schema.js";
+import { detectAudioRuntimeSignals } from "../utils/audio-runtime-signals.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
 
 interface MusicPlayerLogger {
@@ -338,7 +339,15 @@ export class MusicPlayerService {
 		this.proc.stderr?.on("data", (chunk: Buffer) => {
 			const text = chunk.toString().trim();
 			if (text) {
-				this.logger.warn({ event: "music.mpg123.stderr", output: text }, "mpg123 stderr");
+				const signals = detectAudioRuntimeSignals(text);
+				this.logger.warn(
+					{
+						event: "music.mpg123.stderr",
+						output: text,
+						signals: signals.length > 0 ? signals : undefined,
+					},
+					"mpg123 stderr",
+				);
 			}
 		});
 
@@ -467,7 +476,13 @@ export class MusicPlayerService {
 			this.isPaused = false;
 			this.persistCurrentTrack();
 			this.logger.info(
-				{ event: "music.track.load", trackId: track.id, name: track.display_name },
+				{
+					event: "music.track.load",
+					trackId: track.id,
+					name: track.display_name,
+					durationSeconds: track.duration_seconds,
+					path: track.file_path,
+				},
 				"Loading track",
 			);
 			return;

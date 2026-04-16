@@ -295,3 +295,37 @@ npm run audio:generate   # 400 MP3 üret (macOS, say + ffmpeg gerekli)
 Ses cihazı: `AUDIO_ALSA_DEVICE=hw:2,0` → 3.5mm jack. Cihaz indexi için: `aplay -l`
 
 Ses çıkışını 3.5mm jack'e zorlamak: `sudo raspi-config nonint do_audio 1`
+
+---
+
+## Teslim Öncesi Kontrol Listesi (`--init` sonrası)
+
+`bash scripts/deploy.sh --init`, Pi4 üzerindeki `.env` dosyasını yeniden oluşturur. Bu işlem yeni `CASHIER_TOKEN`, `JWT_SECRET` ve `COOKIE_SECRET` üretir. Bunlardan kasa tarafını doğrudan etkileyen kritik değer `CASHIER_TOKEN`'dır; eski token geçersiz olur. Kasa uygulaması kendi ayarlarını `config.json` içinde tuttuğu için aynı kasa cihazı ve aynı URL kullanılacaksa çoğu durumda sadece token güncellemek yeterlidir.
+
+Teslim öncesi eksiksiz kontrol:
+
+1. Pi4 üzerindeki yeni kasiyer token'ını al:
+
+```bash
+ssh admin@sepetarasi.local "grep CASHIER_TOKEN /opt/sepetarasi/.env"
+```
+
+2. Kasa config ekranında `serverUrl` değerini doğrula:
+
+```text
+http://sepetarasi.local:3000
+```
+
+3. Kasa config ekranına yeni `cashierToken` değerini gir ve kaydet.
+4. Yazıcı kullanılacaksa `printerIp` girildiğini doğrula. Boş bırakılırsa fiş yazdırma devre dışı kalır.
+5. Yeni veya temiz DB ile kurulum yapıldıysa admin şifresini kontrol et. İlk varsayılan şifre `admin123` olur; müşteriye teslim etmeden değiştirmen önerilir.
+6. Son doğrulama olarak Pi4 smoke test çalıştır:
+
+```bash
+bash scripts/pi4-smoke-test.sh
+```
+
+Kısa özet:
+
+- Aynı kasa cihazı ve aynı URL kullanılıyorsa çoğu durumda sadece yeni token girmek yeterlidir.
+- Müşteriye teslim standardı: `cashierToken` kontrolü, admin şifre kontrolü, gerekiyorsa `printerIp`, ardından smoke test.
