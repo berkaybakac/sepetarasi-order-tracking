@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { BrowserWindow, app, globalShortcut, ipcMain } from "electron";
+import { BrowserWindow, app, globalShortcut, ipcMain, nativeImage } from "electron";
 import {
 	type StructuredLogLevel,
 	sanitizeLogValue,
@@ -244,12 +244,32 @@ function friendlyPrintError(err: unknown): string {
 
 let mainWindow: BrowserWindow | null = null;
 
+function resolveRuntimeIconPath(): string | null {
+	const candidates = [
+		join(app.getAppPath(), "build/icon.png"),
+		join(__dirname, "../build/icon.png"),
+		join(process.cwd(), "build/icon.png"),
+		join(process.cwd(), "packages/kasa/build/icon.png"),
+	];
+
+	for (const candidate of candidates) {
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+
+	return null;
+}
+
 function createWindow() {
+	const runtimeIconPath = resolveRuntimeIconPath();
+
 	mainWindow = new BrowserWindow({
 		width: 1024,
 		height: 768,
 		minWidth: 800,
 		minHeight: 600,
+		icon: runtimeIconPath ?? undefined,
 		title: "SEPET ARASI KASA",
 		webPreferences: {
 			preload: join(__dirname, "preload.js"),
@@ -257,6 +277,13 @@ function createWindow() {
 			nodeIntegration: false,
 		},
 	});
+
+	if (process.platform === "darwin" && runtimeIconPath) {
+		const dockIcon = nativeImage.createFromPath(runtimeIconPath);
+		if (!dockIcon.isEmpty() && app.dock) {
+			app.dock.setIcon(dockIcon);
+		}
+	}
 
 	// Dev mode: load from Vite dev server
 	if (process.env.VITE_DEV_SERVER_URL) {

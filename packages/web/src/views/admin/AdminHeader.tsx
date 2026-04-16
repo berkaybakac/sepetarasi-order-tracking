@@ -1,6 +1,6 @@
 import { type SubmitEvent, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { BasketIcon } from "../../components/BasketIcon";
+import { BrandLogo } from "../../components/BrandLogo";
 import { UI_LABELS } from "../../constants/labels";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth.store";
@@ -132,13 +132,13 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 			<header className="bg-slate-900/50 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 transition-all">
 				{/* Top bar: logo + auth buttons */}
 				<div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-3">
-					<div className="flex items-center gap-3">
-						<div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
-							<BasketIcon size={20} className="text-white" strokeWidth={2} />
-						</div>
-						<h1 className="text-xl font-bold text-white tracking-tight">{UI_LABELS.ADMIN_TITLE}</h1>
+					<div className="flex min-w-0 items-center gap-3.5">
+						<BrandLogo variant="dark" className="h-9 w-auto shrink-0" />
+						<h1 className="truncate text-xl font-bold tracking-tight text-white">
+							{UI_LABELS.ADMIN_TITLE}
+						</h1>
 						<span
-							className={`ml-2 w-2.5 h-2.5 rounded-full ${connected ? "bg-brand-success shadow-[0_0_12px_rgba(16,185,129,0.8)] animate-pulse" : "bg-brand-danger shadow-[0_0_12px_rgba(239,68,68,0.8)]"}`}
+							className={`ml-1 h-2.5 w-2.5 shrink-0 rounded-full ${connected ? "bg-brand-success shadow-[0_0_12px_rgba(16,185,129,0.8)] animate-pulse" : "bg-brand-danger shadow-[0_0_12px_rgba(239,68,68,0.8)]"}`}
 							title={connected ? "Bağlı" : "Bağlantı Koptu"}
 						/>
 					</div>
@@ -188,7 +188,12 @@ export function AdminHeader({ connected }: { connected: boolean }) {
 					<div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 						<div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
 							<h3 className="font-semibold text-white text-lg flex items-center gap-2">
-								<BasketIcon size={20} className="text-brand-primary" strokeWidth={2} />
+								<BrandLogo
+									variant="dark"
+									alt=""
+									aria-hidden="true"
+									className="h-6 w-auto shrink-0"
+								/>
 								Güvenlik Ayarları
 							</h3>
 							<button

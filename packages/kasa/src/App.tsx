@@ -1,6 +1,6 @@
 import { WS_CHANNELS, type WsMessage } from "@sepetarasi/shared";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { BasketIcon } from "./components/BasketIcon";
+import { BrandLogo } from "./components/BrandLogo";
 import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
 import { ServerConfig } from "./components/ServerConfig";
@@ -178,8 +178,8 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 			<div className="flex h-screen flex-col overflow-hidden bg-slate-950">
 				<header className="flex-shrink-0 border-b border-white/[0.06] bg-slate-900/90 px-5 py-3 backdrop-blur-sm">
 					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2.5">
-							<BasketIcon size={22} className="text-emerald-500" strokeWidth={2.5} />
+						<div className="flex min-w-0 items-center gap-3">
+							<BrandLogo variant="dark" className="h-9 w-auto shrink-0" />
 							<h1 className="text-lg font-bold tracking-wide text-white">
 								SEPET ARASI <span className="font-semibold text-slate-400">KASA</span>
 							</h1>

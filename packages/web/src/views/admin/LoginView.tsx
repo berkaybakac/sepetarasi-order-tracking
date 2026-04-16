@@ -1,6 +1,6 @@
 import { type SubmitEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BasketIcon } from "../../components/BasketIcon";
+import { BrandLogo } from "../../components/BrandLogo";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { getErrorMessage } from "../../utils/error";
@@ -32,13 +32,14 @@ export function LoginView() {
 		<div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
 			{/* Background Abstract Shapes */}
 			<div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
-			<div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[120px] pointer-events-none" />
+			<div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-500/20 rounded-full blur-[120px] pointer-events-none" />
 
 			<div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative z-10 transition-all duration-300 hover:shadow-blue-500/10 hover:border-white/20">
 				<div className="text-center mb-8">
-					<div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-blue-500/25">
-						<BasketIcon size={40} className="text-white" strokeWidth={2} />
-					</div>
+					<BrandLogo
+						variant="dark"
+						className="mx-auto mb-6 h-auto w-full max-w-[13rem] drop-shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
+					/>
 					<h1 className="text-3xl font-bold text-white tracking-tight">Yönetici Girişi</h1>
 					<p className="text-slate-400 mt-2 text-sm">
 						Sepetarası panelini yönetmek için giriş yapın
