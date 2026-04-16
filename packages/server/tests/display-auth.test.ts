@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { buildApp } from "../src/app.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { tcpListenPort } from "./helpers.js";
+import { TEST_HOST, tcpListenPort } from "./helpers.js";
 
 describe("WebSocket Display Channel (Password-less)", () => {
 	let app: FastifyInstance;
@@ -12,7 +12,7 @@ describe("WebSocket Display Channel (Password-less)", () => {
 	beforeEach(async () => {
 		const db = createTestDb();
 		app = await buildApp({ db, disableWorker: true, disableStatic: true });
-		await app.listen({ port: 0 }); // Listen on random port
+		await app.listen({ port: 0, host: TEST_HOST });
 		port = tcpListenPort(app.server);
 	});
 
@@ -21,7 +21,7 @@ describe("WebSocket Display Channel (Password-less)", () => {
 	});
 
 	it("should accept connection for display channel WITHOUT key", async () => {
-		const ws = new WebSocket(`ws://localhost:${port}/ws?channel=display`);
+		const ws = new WebSocket(`ws://${TEST_HOST}:${port}/ws?channel=display`);
 
 		const isOpen = await new Promise((resolve) => {
 			ws.on("open", () => {
@@ -40,7 +40,7 @@ describe("WebSocket Display Channel (Password-less)", () => {
 	});
 
 	it("should still reject connection for orders channel WITHOUT key", async () => {
-		const ws = new WebSocket(`ws://localhost:${port}/ws?channel=orders`);
+		const ws = new WebSocket(`ws://${TEST_HOST}:${port}/ws?channel=orders`);
 
 		const result = await new Promise((resolve) => {
 			ws.on("message", (data) => {

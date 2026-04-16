@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
+export const TEST_HOST = "127.0.0.1";
+
 /**
  * Extract the port from a Fastify instance's server address.
  * Throws if the server is not listening on a TCP address.

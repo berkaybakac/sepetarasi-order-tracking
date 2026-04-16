@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { buildApp } from "../src/app.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { tcpListenPort } from "./helpers.js";
+import { TEST_HOST, tcpListenPort } from "./helpers.js";
 
 describe("WebSocket Authentication Integration", () => {
 	let app: FastifyInstance;
@@ -12,7 +12,7 @@ describe("WebSocket Authentication Integration", () => {
 	beforeEach(async () => {
 		const db = createTestDb();
 		app = await buildApp({ db, disableWorker: true, disableStatic: true });
-		await app.listen({ port: 0 }); // Listen on random port
+		await app.listen({ port: 0, host: TEST_HOST });
 		port = tcpListenPort(app.server);
 	});
 
@@ -21,7 +21,7 @@ describe("WebSocket Authentication Integration", () => {
 	});
 
 	it("should reject connection with missing key", async () => {
-		const ws = new WebSocket(`ws://localhost:${port}/ws`);
+		const ws = new WebSocket(`ws://${TEST_HOST}:${port}/ws`);
 
 		const result = await new Promise((resolve) => {
 			ws.on("error", () => resolve("error"));
@@ -43,7 +43,7 @@ describe("WebSocket Authentication Integration", () => {
 		const authConfig = (await import("../src/config/auth.js")).AUTH_CONFIG;
 		const correctKey = authConfig.wsAuthKey;
 
-		const ws = new WebSocket(`ws://localhost:${port}/ws?key=${correctKey}`);
+		const ws = new WebSocket(`ws://${TEST_HOST}:${port}/ws?key=${correctKey}`);
 
 		const isOpen = await new Promise((resolve) => {
 			ws.on("open", () => {
@@ -58,7 +58,7 @@ describe("WebSocket Authentication Integration", () => {
 	});
 
 	it("should reject connection with incorrect key", async () => {
-		const ws = new WebSocket(`ws://localhost:${port}/ws?key=wrong-key`);
+		const ws = new WebSocket(`ws://${TEST_HOST}:${port}/ws?key=wrong-key`);
 
 		const result = await new Promise((resolve) => {
 			ws.on("message", (data) => {
