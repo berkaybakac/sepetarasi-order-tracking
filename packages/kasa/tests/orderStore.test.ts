@@ -99,6 +99,8 @@ describe("Kasa orderStore", () => {
 		useOrderStore.getState().setConnected(true);
 		expect(useOrderStore.getState().hasConnectedOnce).toBe(true);
 		expect(useOrderStore.getState().lastReconnectedAt).toBe(0);
+		expect(hydrateSpy).toHaveBeenCalledTimes(1);
+		expect(hydrateSpy).toHaveBeenCalledWith(true);
 
 		// Disconnect
 		useOrderStore.getState().setConnected(false);
@@ -107,6 +109,7 @@ describe("Kasa orderStore", () => {
 		useOrderStore.getState().setConnected(true);
 
 		expect(useOrderStore.getState().lastReconnectedAt).toBeGreaterThan(0);
-		expect(hydrateSpy).toHaveBeenCalledWith(true);
+		expect(hydrateSpy).toHaveBeenCalledTimes(2);
+		expect(hydrateSpy).toHaveBeenLastCalledWith(true);
 	});
 });

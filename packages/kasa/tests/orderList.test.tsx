@@ -28,7 +28,7 @@ function buildOrder(overrides: Partial<Order> = {}): Order {
 	};
 }
 
-describe("Kasa OrderList hydration error state", () => {
+describe("Kasa OrderList empty state", () => {
 	let container: HTMLDivElement;
 	let root: Root;
 
@@ -57,29 +57,16 @@ describe("Kasa OrderList hydration error state", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("shows connection error card and retries hydration when there are no orders", async () => {
-		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(undefined);
+	it("keeps the empty state calm even when the last hydration failed", async () => {
 		useOrderStore.setState({ error: "Sunucuya ulasilamiyor", orders: new Map() });
 
 		await act(async () => {
 			root.render(<OrderList />);
 		});
 
-		expect(container.textContent).toContain("Siparişler alınamadı");
-		expect(container.textContent).toContain("Tekrar dene");
-
-		const retryButton = Array.from(container.querySelectorAll("button")).find((button) =>
-			button.textContent?.includes("Tekrar dene"),
-		);
-		if (!(retryButton instanceof HTMLButtonElement)) {
-			throw new Error("Retry button not found");
-		}
-
-		await act(async () => {
-			retryButton.click();
-		});
-
-		expect(hydrateSpy).toHaveBeenCalledTimes(1);
+		expect(container.textContent).toContain("Aktif sipariş yok");
+		expect(container.textContent).not.toContain("Siparişler alınamadı");
+		expect(container.textContent).not.toContain("Tekrar dene");
 	});
 
 	it("shows empty state when there is no error", async () => {

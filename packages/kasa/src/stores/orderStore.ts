@@ -89,12 +89,14 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 			if (state.hasConnectedOnce) {
 				// Re-connected after being disconnected!
 				set({ lastReconnectedAt: Date.now() });
-				// Silently re-hydrate the state with latest events
-				get().hydrate(true);
 			} else {
 				// First time connection established
 				set({ hasConnectedOnce: true });
 			}
+
+			// Pull the current snapshot whenever the socket comes up so transient startup
+			// failures do not leave the cashier screen in a stale state.
+			void get().hydrate(true);
 		}
 	},
 }));
