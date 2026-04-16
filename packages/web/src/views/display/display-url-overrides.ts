@@ -6,6 +6,9 @@ export interface DisplayUrlOverridesInput {
 	scale: DisplayTextScale | "";
 }
 
+// Admin-side URL builder UI was removed for simplicity. Runtime URL override support stays
+// intentionally so existing display links keep working and the feature can be reintroduced
+// later without rebuilding the parsing/apply path from scratch.
 export function buildDisplayUrl(overrides: DisplayUrlOverridesInput): string {
 	const params = new URLSearchParams();
 	if (overrides.layout && overrides.layout !== "auto") params.set("layout", overrides.layout);

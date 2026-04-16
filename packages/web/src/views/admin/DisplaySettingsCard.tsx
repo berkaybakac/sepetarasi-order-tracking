@@ -18,7 +18,6 @@ import {
 	type DisplayConfig,
 	parseDisplaySettings,
 } from "../display/display-config";
-import { ScreenUrlBuilderCard } from "./ScreenUrlBuilderCard";
 import {
 	LAYOUT_LABELS,
 	PROFILE_LABELS,
@@ -155,9 +154,6 @@ export function DisplaySettingsCard() {
 					{UI_LABELS.DISPLAY_SETTINGS.TITLE}
 				</h3>
 				<p className="text-xs text-slate-500 mt-1">{UI_LABELS.DISPLAY_SETTINGS.DESCRIPTION}</p>
-				<p className="text-[11px] text-slate-500 mt-1">
-					{UI_LABELS.DISPLAY_SETTINGS.URL_OVERRIDE_NOTE}
-				</p>
 			</div>
 
 			{loading ? (
@@ -292,16 +288,6 @@ export function DisplaySettingsCard() {
 					)}
 				</fieldset>
 			)}
-
-			<details className="relative z-10 rounded-2xl border border-slate-700/60 bg-slate-900/35 p-4">
-				<summary className="cursor-pointer select-none text-sm font-medium text-slate-300">
-					{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_TITLE}
-				</summary>
-				<p className="mt-2 text-xs text-slate-500">{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_DESC}</p>
-				<div className="mt-4">
-					<ScreenUrlBuilderCard embedded />
-				</div>
-			</details>
 
 			<div className="relative z-10 flex items-center justify-end gap-3 h-10">
 				<a

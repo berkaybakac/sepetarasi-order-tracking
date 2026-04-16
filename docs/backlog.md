@@ -74,3 +74,17 @@ Bu dosya, feature gelistirmeyi bloklamayan ama teknik borc birikimini kontrol al
   - Cache invalidation tetikleyicileri: `setEnabled`, `setLoop`, `setShuffle`, `setVolume`, `reloadPlaylist`, startup load.
   - `getStatus()` ve track transition akisinda DB yerine cache okumak.
 - Not: Mevcut davranis dogru oldugu icin release bloklayici degil; orta vadeli performans/temizlik isi.
+
+### 7) Display URL Override Runtime Destegi Karari
+- Durum: Backlog (simdilik runtime support korunuyor)
+- Oncelik: P3
+- Kapsam:
+  - `/packages/web/src/views/display/display-url-overrides.ts`
+  - `/packages/web/src/views/display/CustomerDisplay.tsx`
+- Arka Plan:
+  - Admin tarafindaki "ekran bazli URL override" UI'i KISS gerekcesiyle kaldirildi.
+  - Buna ragmen `/display?layout=...&max=...&scale=...` runtime destegi bilerek birakildi; varsa eski display linkleri bozulmasin ve ileride gerekirse feature sifirdan yazilmasin.
+- Sonraki Karar Noktasi:
+  - Urunde tekrar "ekran bazli ozel gorunum" ihtiyaci netlesirse ayni runtime path uzerine daha sade bir UI geri eklenebilir.
+  - Boyle bir ihtiyac cikmazsa bu runtime override destegi tamamen sokulebilir.
+- Not: Geri getirme zor degil; asil parsing/apply mekanizmasi zaten tek yerde ve kucuk kapsamda duruyor.
