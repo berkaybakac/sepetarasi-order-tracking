@@ -136,6 +136,40 @@ journalctl -u sepetarasi -f
 ssh admin@sepetarasi.local "sudo journalctl -u sepetarasi -f"
 ```
 
+## Pi4 Gozlemlenebilirlik (CPU/RAM/Isi)
+
+Reboot sonrasi eski loglarin kaybolmamasi icin kalici journal + sistem metrik logger kur:
+
+```bash
+bash scripts/pi4-enable-observability.sh
+# veya hedefi elle ver
+bash scripts/pi4-enable-observability.sh admin@sepetarasi.local
+```
+
+Kurulumun yaptigi seyler:
+
+- `journald` kalici moda alinir (`Storage=persistent`)
+- Her 1 dakikada bir JSON satir metrik logu yazilir:
+  `/var/log/sepetarasi/system-metrics.log`
+- Boot baslangic/bitis marker'i eklenir (`boot_start`, `boot_stop`)
+- Log boyutu icin logrotate kurulur
+
+Gece analizi ornekleri:
+
+```bash
+# Boot listesi
+ssh admin@sepetarasi.local "journalctl --list-boots --no-pager"
+
+# Kernel tarafinda isi/throttle/oom taramasi
+ssh admin@sepetarasi.local \
+  "journalctl -k --since '2026-04-15 20:00' --until '2026-04-16 08:00' --no-pager \
+   | egrep -i 'thermal|thrott|under-voltage|oom|out of memory|killed process'"
+
+# Uygulama + sistem metrik JSON logu (cpu_temp_c, throttled_raw, mem_available_kb, server_rss_kb)
+ssh admin@sepetarasi.local \
+  "awk '\$0 ~ /\"ts\":\"2026-04-15|\"ts\":\"2026-04-16/ {print}' /var/log/sepetarasi/system-metrics.log"
+```
+
 ---
 
 ## Sorun Giderme
