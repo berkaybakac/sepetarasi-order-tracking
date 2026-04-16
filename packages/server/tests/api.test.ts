@@ -642,7 +642,21 @@ describe("GET /health", () => {
 	it("should return ok", async () => {
 		const res = await app.inject({ method: "GET", url: "/health" });
 		expect(res.statusCode).toBe(200);
-		expect(res.json().ok).toBe(true);
+		expect(res.json()).toMatchObject({
+			ok: true,
+			data: {
+				services: {
+					db: { ok: true },
+					worker: { status: "disabled" },
+				},
+				websocket: {
+					activeClientCount: 0,
+				},
+				disk: null,
+			},
+		});
+		expect(res.json().data.timestamp).toEqual(expect.any(String));
+		expect(res.json().data.uptime_s).toEqual(expect.any(Number));
 	});
 
 	it("should include CORS headers on normal response", async () => {

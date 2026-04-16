@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, statfsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyCookie from "@fastify/cookie";
@@ -59,6 +59,8 @@ export interface AppOptions {
 	announcementsPath?: string;
 	/** Path to uploaded music files directory */
 	musicPath?: string;
+	/** Optional filesystem path to inspect in health responses (e.g. DB directory). */
+	healthDiskPath?: string;
 	/** ALSA device for mpg123 on Linux (e.g. "hw:2,0"). Reads AUDIO_ALSA_DEVICE env var. */
 	alsaDevice?: string;
 	/** Disable static file serving (useful for tests) */
@@ -69,6 +71,7 @@ export interface AppOptions {
 
 export async function buildApp(opts: AppOptions) {
 	const app = Fastify({ logger: true });
+	const startedAt = Date.now();
 	const broadcaster = new Broadcaster();
 	const wsAlive = new WeakMap<WebSocket, boolean>();
 	const wsMeta = new WeakMap<
@@ -283,9 +286,6 @@ export async function buildApp(opts: AppOptions) {
 	registerStatsRoutes(app, opts.db);
 	registerSettingsRoutes(app, opts.db);
 
-	// Health check
-	app.get("/health", async () => ({ ok: true }));
-
 	// Music player
 	const musicPath = opts.musicPath ?? join(__dirname, "../assets/music");
 	const legacyMusicPath = join(__dirname, "../../assets/music");
@@ -354,6 +354,69 @@ export async function buildApp(opts: AppOptions) {
 			worker?.stop();
 		});
 	}
+
+	// Health check
+	app.get("/health", async (_request, reply) => {
+		let dbOk = true;
+		let dbError: string | undefined;
+		try {
+			opts.db.select({ key: appSettings.key }).from(appSettings).limit(1).all();
+		} catch (error) {
+			dbOk = false;
+			dbError = error instanceof Error ? error.message : String(error);
+		}
+
+		let disk: {
+			ok: boolean;
+			path: string;
+			freeBytes?: number;
+			totalBytes?: number;
+			usedBytes?: number;
+			error?: string;
+		} | null = null;
+		if (opts.healthDiskPath) {
+			try {
+				const stats = statfsSync(opts.healthDiskPath);
+				const totalBytes = stats.bsize * stats.blocks;
+				const freeBytes = stats.bsize * stats.bavail;
+				disk = {
+					ok: true,
+					path: opts.healthDiskPath,
+					freeBytes,
+					totalBytes,
+					usedBytes: totalBytes - freeBytes,
+				};
+			} catch (error) {
+				disk = {
+					ok: false,
+					path: opts.healthDiskPath,
+					error: error instanceof Error ? error.message : String(error),
+				};
+			}
+		}
+
+		const body = {
+			ok: dbOk,
+			data: {
+				timestamp: new Date().toISOString(),
+				uptime_s: Math.round((Date.now() - startedAt) / 1000),
+				services: {
+					db: dbOk ? { ok: true } : { ok: false, error: dbError },
+					worker: {
+						status: worker ? (worker.isRunning() ? "running" : "stopped") : "disabled",
+					},
+				},
+				websocket: wsStatsSnapshot(broadcaster),
+				disk,
+			},
+		};
+
+		if (!dbOk) {
+			return reply.status(503).send(body);
+		}
+
+		return body;
+	});
 
 	// Music API routes (available even without worker, returns null player gracefully)
 	registerMusicRoutes(app, opts.db, musicPath, musicPlayer, musicUploadMaxBytes);

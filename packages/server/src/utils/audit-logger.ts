@@ -53,6 +53,16 @@ function createAuditRecord(action: string, details: string, context: AuditLogCon
 	};
 }
 
+function createAuditLoggerPayload(action: string, details: string, context: AuditLogContext) {
+	return {
+		component: "audit",
+		event: action,
+		action,
+		details,
+		...context,
+	};
+}
+
 function writeFallbackLog(level: "info" | "error", payload: Record<string, unknown>) {
 	const stream = level === "error" ? process.stderr : process.stdout;
 	stream.write(`${JSON.stringify(payload)}\n`);
@@ -65,10 +75,11 @@ export function auditLog(
 	logger?: AuditLogger,
 ) {
 	const payload = createAuditRecord(action, details, context);
+	const loggerPayload = createAuditLoggerPayload(action, details, context);
 	const logFilePath = resolveLogFilePath();
 
 	if (logger) {
-		logger.info(payload, details);
+		logger.info(loggerPayload, details);
 	} else {
 		writeFallbackLog("info", payload);
 	}
@@ -78,8 +89,6 @@ export function auditLog(
 		appendFileSync(logFilePath, `${JSON.stringify(payload)}\n`, "utf-8");
 	} catch (error) {
 		const failurePayload = {
-			timestamp: new Date().toISOString(),
-			level: "error",
 			component: "audit",
 			event: "audit_log_write_failed",
 			logFilePath,

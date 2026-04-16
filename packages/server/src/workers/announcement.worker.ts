@@ -84,6 +84,10 @@ export class AnnouncementWorker {
 		}
 	}
 
+	isRunning(): boolean {
+		return this.timer !== null;
+	}
+
 	/** Process one announcement if available */
 	private async poll() {
 		if (this.processing) return;
