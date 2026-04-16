@@ -40,7 +40,6 @@ describe("Kasa OrderList hydration error state", () => {
 
 		useOrderStore.setState({
 			orders: new Map(),
-			stats: null,
 			connected: false,
 			loading: false,
 			error: null,

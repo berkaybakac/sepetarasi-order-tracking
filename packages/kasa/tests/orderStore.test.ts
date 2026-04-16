@@ -1,5 +1,3 @@
-import { OrderStatus } from "@sepetarasi/shared";
-import type { DayStats, Order } from "@sepetarasi/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../src/lib/api";
 import { useOrderStore } from "../src/stores/orderStore";
@@ -8,7 +6,6 @@ import { useOrderStore } from "../src/stores/orderStore";
 vi.mock("../src/lib/api", () => ({
 	api: {
 		listOrders: vi.fn(),
-		getStats: vi.fn(),
 	},
 	ApiError: class ApiError extends Error {
 		code: string;
@@ -29,7 +26,6 @@ describe("Kasa orderStore", () => {
 		// Reset the store state before each test
 		useOrderStore.setState({
 			orders: new Map(),
-			stats: null,
 			connected: false,
 			loading: false,
 			error: null,
@@ -50,7 +46,6 @@ describe("Kasa orderStore", () => {
 
 	it("should set loading and isHydrating during hydration", async () => {
 		vi.mocked(api.listOrders).mockResolvedValueOnce([]);
-		vi.mocked(api.getStats).mockResolvedValueOnce({ totalOrders: 0 } as DayStats);
 
 		const hydratePromise = useOrderStore.getState().hydrate();
 
@@ -65,7 +60,6 @@ describe("Kasa orderStore", () => {
 
 	it("should guard against concurrent hydration calls", async () => {
 		vi.mocked(api.listOrders).mockResolvedValueOnce([]);
-		vi.mocked(api.getStats).mockResolvedValueOnce({ totalOrders: 0 } as DayStats);
 
 		const p1 = useOrderStore.getState().hydrate();
 		const p2 = useOrderStore.getState().hydrate();

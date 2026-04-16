@@ -1,11 +1,10 @@
 import { type OrderStatus, applyOrderWsEvent } from "@sepetarasi/shared";
-import type { DayStats, Order, WsMessage } from "@sepetarasi/shared";
+import type { Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
 import { ApiError, api } from "../lib/api";
 
 interface OrderState {
 	orders: Map<string, Order>;
-	stats: DayStats | null;
 	connected: boolean;
 	loading: boolean;
 	error: string | null;
@@ -23,7 +22,6 @@ const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 export const useOrderStore = create<OrderState>((set, get) => ({
 	orders: new Map(),
-	stats: null,
 	connected: false,
 	loading: false,
 	error: null,
@@ -42,12 +40,12 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 		while (attempt <= retries) {
 			try {
-				const [orderList, stats] = await Promise.all([api.listOrders(), api.getStats()]);
+				const orderList = await api.listOrders();
 				const orders = new Map<string, Order>();
 				for (const order of orderList) {
 					orders.set(order.id, order);
 				}
-				set({ orders, stats, loading: false, isHydrating: false, error: null });
+				set({ orders, loading: false, isHydrating: false, error: null });
 				return;
 			} catch (err) {
 				attempt++;

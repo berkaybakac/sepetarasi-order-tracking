@@ -8,12 +8,11 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
 
-function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
+export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 	const hydrate = useOrderStore((s) => s.hydrate);
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);
 	const connected = useOrderStore((s) => s.connected);
-	const stats = useOrderStore((s) => s.stats);
 	const loading = useOrderStore((s) => s.loading);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
@@ -49,18 +48,6 @@ function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 						</h1>
 					</div>
 					<div className="flex items-center gap-2">
-						{stats && (
-							<>
-								<span className="bg-slate-800 text-slate-300 text-sm px-3 py-1 rounded-full">
-									{stats.totalOrders} sipariş
-								</span>
-								{stats.averagePrepMinutes != null && (
-									<span className="bg-slate-800 text-slate-300 text-sm px-3 py-1 rounded-full">
-										ort. {stats.averagePrepMinutes} dk
-									</span>
-								)}
-							</>
-						)}
 						<button
 							type="button"
 							onClick={onReconfigure}

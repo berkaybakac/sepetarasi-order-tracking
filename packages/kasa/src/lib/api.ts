@@ -1,6 +1,6 @@
 // ADR: intentionally separate from web/api.ts — see docs/dev-notes.md "Intentional Separations"
 import { API_ROUTES } from "@sepetarasi/shared";
-import type { CreateOrderInput, DayStats, Order, UpdateStatusInput } from "@sepetarasi/shared";
+import type { CreateOrderInput, Order, UpdateStatusInput } from "@sepetarasi/shared";
 
 let baseUrl = "http://localhost:3000";
 let terminalId = "";
@@ -83,8 +83,6 @@ export const api = {
 
 	changeStatus: (orderId: string, input: UpdateStatusInput) =>
 		request<Order>("PATCH", API_ROUTES.V1.ORDER_STATUS(orderId), input),
-
-	getStats: () => request<DayStats>("GET", API_ROUTES.V1.STATS_TODAY),
 
 	getPublicSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS_PUBLIC),
 };

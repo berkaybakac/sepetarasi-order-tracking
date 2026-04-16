@@ -136,44 +136,49 @@ describe("StatsService.getByPeriod()", () => {
 
 	it("calculates averageDeliverySeconds with daily, weekly, and monthly filters", () => {
 		const db = createTestDb();
-		const deliveredAt = new Date("2026-04-16T12:00:00.000Z").toISOString();
+		const deliveredAt = new Date();
+		const deliveredAtIso = deliveredAt.toISOString();
+		const createdDaily = new Date(deliveredAt.getTime() - 20 * 60 * 1000).toISOString();
+		const createdWeekly = new Date(deliveredAt.getTime() - 10 * 60 * 1000).toISOString();
+		const createdMonthly = new Date(deliveredAt.getTime() - 5 * 60 * 1000).toISOString();
+		const createdOutsideMonthly = new Date(deliveredAt.getTime() - 60 * 60 * 1000).toISOString();
 
 		db.insert(orders)
 			.values([
-				makeOrder({
-					id: "delivered-daily",
-					business_date: businessDate(0),
-					display_no: 1,
-					status: "DELIVERED",
-					created_at: new Date("2026-04-16T11:40:00.000Z").toISOString(),
-					delivered_at: deliveredAt,
-				}),
-				makeOrder({
-					id: "delivered-weekly",
-					business_date: businessDate(5),
-					display_no: 2,
-					status: "DELIVERED",
-					created_at: new Date("2026-04-16T11:50:00.000Z").toISOString(),
-					delivered_at: deliveredAt,
-				}),
-				makeOrder({
-					id: "delivered-monthly",
-					business_date: businessDate(20),
-					display_no: 3,
-					status: "DELIVERED",
-					created_at: new Date("2026-04-16T11:55:00.000Z").toISOString(),
-					delivered_at: deliveredAt,
-				}),
-				makeOrder({
-					id: "outside-monthly",
-					business_date: businessDate(31),
-					display_no: 4,
-					status: "DELIVERED",
-					created_at: new Date("2026-04-16T11:00:00.000Z").toISOString(),
-					delivered_at: deliveredAt,
-				}),
-			])
-			.run();
+					makeOrder({
+						id: "delivered-daily",
+						business_date: businessDate(0),
+						display_no: 1,
+						status: "DELIVERED",
+						created_at: createdDaily,
+						delivered_at: deliveredAtIso,
+					}),
+					makeOrder({
+						id: "delivered-weekly",
+						business_date: businessDate(5),
+						display_no: 2,
+						status: "DELIVERED",
+						created_at: createdWeekly,
+						delivered_at: deliveredAtIso,
+					}),
+					makeOrder({
+						id: "delivered-monthly",
+						business_date: businessDate(20),
+						display_no: 3,
+						status: "DELIVERED",
+						created_at: createdMonthly,
+						delivered_at: deliveredAtIso,
+					}),
+					makeOrder({
+						id: "outside-monthly",
+						business_date: businessDate(31),
+						display_no: 4,
+						status: "DELIVERED",
+						created_at: createdOutsideMonthly,
+						delivered_at: deliveredAtIso,
+					}),
+				])
+				.run();
 
 		const svc = new StatsService(db);
 		expect(svc.getByPeriod("daily").averageDeliverySeconds).toBe(1200);
