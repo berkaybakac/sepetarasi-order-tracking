@@ -38,6 +38,11 @@ async function getAdminHash(db: AppDatabase): Promise<string> {
 	return defaultHash;
 }
 
+async function verifyAdminPassword(db: AppDatabase, password?: string): Promise<boolean> {
+	const hash = await getAdminHash(db);
+	return bcrypt.compare(password ?? "", hash);
+}
+
 export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 	// POST /api/v1/auth/login
 	app.post<{ Body: { password?: string } }>(
@@ -57,9 +62,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 		},
 		async (request, reply) => {
 			const { password } = request.body;
-			const hash = await getAdminHash(db);
-
-			const match = await bcrypt.compare(password ?? "", hash);
+			const match = await verifyAdminPassword(db, password);
 			if (!match) {
 				auditLog(
 					"LOGIN_FAILED",
@@ -102,6 +105,57 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			});
 
 			return { ok: true, data: { message: "Logged in successfully" } };
+		},
+	);
+
+	// POST /api/v1/auth/verify-password
+	app.post<{ Body: { password?: string } }>(
+		API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+		{
+			schema: {
+				body: {
+					type: "object",
+					properties: { password: { type: "string" } },
+					required: ["password"],
+				},
+			},
+			config: {
+				rateLimit: { max: 100, timeWindow: "1 minute" },
+			},
+		},
+		async (request, reply) => {
+			const { password } = request.body;
+			const match = await verifyAdminPassword(db, password);
+
+			if (!match) {
+				auditLog(
+					"RECONFIG_UNLOCK_FAILED",
+					"Invalid admin password for kasa config unlock",
+					{
+						actor: "admin_unlock",
+						ip: request.ip,
+						requestId: request.id,
+						path: request.url,
+					},
+					request.log,
+				);
+				return reply
+					.code(401)
+					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
+			}
+
+			auditLog(
+				"RECONFIG_UNLOCK_SUCCESS",
+				"Admin password verified for kasa config unlock",
+				{
+					actor: "admin_unlock",
+					ip: request.ip,
+					requestId: request.id,
+					path: request.url,
+				},
+				request.log,
+			);
+			return { ok: true, data: null };
 		},
 	);
 
@@ -160,9 +214,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			}
 
 			const { currentPassword, newPassword } = request.body;
-			const hash = await getAdminHash(db);
-
-			const match = await bcrypt.compare(currentPassword ?? "", hash);
+			const match = await verifyAdminPassword(db, currentPassword);
 			if (!match) {
 				return reply.code(400).send({
 					ok: false,

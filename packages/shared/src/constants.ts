@@ -109,6 +109,7 @@ export const API_ROUTES = {
 			LOGIN: "/api/v1/auth/login",
 			LOGOUT: "/api/v1/auth/logout",
 			ME: "/api/v1/auth/me",
+			VERIFY_PASSWORD: "/api/v1/auth/verify-password",
 			CHANGE_PASSWORD: "/api/v1/auth/change-password",
 		},
 	},

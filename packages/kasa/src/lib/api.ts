@@ -85,4 +85,7 @@ export const api = {
 		request<Order>("PATCH", API_ROUTES.V1.ORDER_STATUS(orderId), input),
 
 	getPublicSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS_PUBLIC),
+
+	verifyAdminPassword: (password: string) =>
+		request<null>("POST", API_ROUTES.V1.AUTH.VERIFY_PASSWORD, { password }),
 };

@@ -1,6 +1,10 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { API_ROUTES } from "@sepetarasi/shared";
+import bcrypt from "bcrypt";
 import type { FastifyInstance } from "fastify";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -22,6 +26,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
 	await app.close();
+	vi.restoreAllMocks();
 });
 
 function firstSetCookieValue(res: { headers: Record<string, unknown> }) {
@@ -55,6 +60,31 @@ describe("Auth routes contract", () => {
 		expect(res.statusCode).toBe(401);
 		expect(res.json().ok).toBe(false);
 		expect(res.json().error.code).toBe("UNAUTHORIZED");
+	});
+
+	it("POST /auth/verify-password accepts the current admin password without setting a cookie", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+			payload: { password: "admin123" },
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+		expect(res.headers["set-cookie"]).toBeUndefined();
+	});
+
+	it("POST /auth/verify-password rejects invalid passwords without creating a session", async () => {
+		const res = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+			payload: { password: "wrong-password" },
+		});
+
+		expect(res.statusCode).toBe(401);
+		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("UNAUTHORIZED");
+		expect(res.headers["set-cookie"]).toBeUndefined();
 	});
 
 	it("GET /auth/me returns 401 for anonymous", async () => {
@@ -189,5 +219,70 @@ describe("Auth routes contract", () => {
 			payload: { password: "new-password-1" },
 		});
 		expect(newPasswordLogin.statusCode).toBe(200);
+
+		const oldPasswordVerify = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+			payload: { password: "admin123" },
+		});
+		expect(oldPasswordVerify.statusCode).toBe(401);
+
+		const newPasswordVerify = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+			payload: { password: "new-password-1" },
+		});
+		expect(newPasswordVerify.statusCode).toBe(200);
+	});
+
+	it("POST /auth/verify-password writes unlock success and failure audit events", async () => {
+		const originalLogPath = process.env.LOG_PATH;
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-auth-test-"));
+		const logPath = join(tempDir, "audit.log");
+		process.env.LOG_PATH = logPath;
+
+		try {
+			await app.inject({
+				method: "POST",
+				url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+				payload: { password: "wrong-password" },
+			});
+			await app.inject({
+				method: "POST",
+				url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+				payload: { password: "admin123" },
+			});
+
+			const logContents = readFileSync(logPath, "utf-8");
+			expect(logContents).toContain('"event":"RECONFIG_UNLOCK_FAILED"');
+			expect(logContents).toContain('"event":"RECONFIG_UNLOCK_SUCCESS"');
+		} finally {
+			if (originalLogPath === undefined) {
+				Reflect.deleteProperty(process.env, "LOG_PATH");
+			} else {
+				process.env.LOG_PATH = originalLogPath;
+			}
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("POST /auth/verify-password is rate limited like login", async () => {
+		vi.spyOn(bcrypt, "compare").mockResolvedValue(false);
+
+		for (let i = 0; i < 100; i += 1) {
+			const res = await app.inject({
+				method: "POST",
+				url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+				payload: { password: "wrong-password" },
+			});
+			expect(res.statusCode).toBe(401);
+		}
+
+		const limited = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,
+			payload: { password: "wrong-password" },
+		});
+		expect(limited.statusCode).toBe(429);
 	});
 });

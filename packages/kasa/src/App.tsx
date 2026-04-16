@@ -1,12 +1,105 @@
 import { WS_CHANNELS, type WsMessage } from "@sepetarasi/shared";
-import { useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { BasketIcon } from "./components/BasketIcon";
 import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
 import { ServerConfig } from "./components/ServerConfig";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
+import { ApiError, api, setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
+
+function getUnlockErrorMessage(error: unknown): string {
+	if (error instanceof ApiError && error.code === "UNAUTHORIZED") {
+		return "Yönetici şifresi hatalı.";
+	}
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
+	return "Şifre doğrulanamadı. Bağlantıyı kontrol edip tekrar deneyin.";
+}
+
+interface AdminUnlockModalProps {
+	error: string | null;
+	isOpen: boolean;
+	isSubmitting: boolean;
+	onClose: () => void;
+	onPasswordChange: (value: string) => void;
+	onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+	password: string;
+}
+
+function AdminUnlockModal({
+	error,
+	isOpen,
+	isSubmitting,
+	onClose,
+	onPasswordChange,
+	onSubmit,
+	password,
+}: AdminUnlockModalProps) {
+	if (!isOpen) return null;
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4">
+			<div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-slate-900 shadow-2xl shadow-black/50">
+				<div className="border-b border-white/[0.06] px-6 py-5">
+					<h2 className="text-xl font-bold text-white tracking-wide">Yönetici Şifresi</h2>
+					<p className="mt-1 text-sm text-slate-400">
+						Ayarları değiştirmek için yönetici parolasını girin.
+					</p>
+				</div>
+
+				<form onSubmit={onSubmit} className="space-y-4 px-6 py-5">
+					<div>
+						<label
+							htmlFor="admin-unlock-password"
+							className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400"
+						>
+							Parola
+						</label>
+						<input
+							id="admin-unlock-password"
+							type="password"
+							value={password}
+							onChange={(event) => onPasswordChange(event.target.value)}
+							className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-base text-white transition-colors focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+							placeholder="Yönetici parolasını girin"
+							autoComplete="current-password"
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					{error ? (
+						<div
+							role="alert"
+							className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+						>
+							{error}
+						</div>
+					) : null}
+
+					<div className="flex gap-3 pt-1">
+						<button
+							type="button"
+							onClick={onClose}
+							className="flex-1 rounded-lg border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-slate-500 hover:text-white disabled:opacity-50"
+							disabled={isSubmitting}
+						>
+							Vazgeç
+						</button>
+						<button
+							type="submit"
+							className="flex-1 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
+							disabled={isSubmitting || password.trim().length === 0}
+						>
+							{isSubmitting ? "Doğrulanıyor..." : "Ayarları Aç"}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
+}
 
 export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 	const hydrate = useOrderStore((s) => s.hydrate);
@@ -14,6 +107,10 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 	const setConnected = useOrderStore((s) => s.setConnected);
 	const connected = useOrderStore((s) => s.connected);
 	const loading = useOrderStore((s) => s.loading);
+	const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+	const [unlockPassword, setUnlockPassword] = useState("");
+	const [unlockError, setUnlockError] = useState<string | null>(null);
+	const [unlocking, setUnlocking] = useState(false);
 
 	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
 
@@ -36,56 +133,104 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 		hydrate();
 	}, [hydrate]);
 
+	const closeUnlockModal = useCallback(() => {
+		if (unlocking) return;
+		setUnlockModalOpen(false);
+		setUnlockPassword("");
+		setUnlockError(null);
+	}, [unlocking]);
+
+	const handleReconfigureClick = useCallback(() => {
+		if (!connected) {
+			onReconfigure();
+			return;
+		}
+
+		setUnlockPassword("");
+		setUnlockError(null);
+		setUnlockModalOpen(true);
+	}, [connected, onReconfigure]);
+
+	const handleUnlockSubmit = useCallback(
+		async (event: FormEvent<HTMLFormElement>) => {
+			event.preventDefault();
+			if (!unlockPassword.trim()) return;
+
+			setUnlocking(true);
+			setUnlockError(null);
+
+			try {
+				await api.verifyAdminPassword(unlockPassword);
+				setUnlockModalOpen(false);
+				setUnlockPassword("");
+				onReconfigure();
+			} catch (error) {
+				setUnlockError(getUnlockErrorMessage(error));
+			} finally {
+				setUnlocking(false);
+			}
+		},
+		[onReconfigure, unlockPassword],
+	);
+
 	return (
-		<div className="flex flex-col h-screen bg-slate-950 overflow-hidden">
-			{/* Header */}
-			<header className="flex-shrink-0 bg-slate-900/90 backdrop-blur-sm border-b border-white/[0.06] px-5 py-3">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2.5">
-						<BasketIcon size={22} className="text-emerald-500" strokeWidth={2.5} />
-						<h1 className="text-lg font-bold tracking-wide text-white">
-							SEPET ARASI <span className="text-slate-400 font-semibold">KASA</span>
-						</h1>
-					</div>
-					<div className="flex items-center gap-2">
-						<button
-							type="button"
-							onClick={onReconfigure}
-							className="flex items-center gap-1.5 ml-1 px-3 py-1 rounded-full bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors"
-							title={
-								connected ? "Bağlı — ayarları değiştir" : "Bağlantı kesildi — ayarları değiştir"
-							}
-						>
-							<span
-								className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`}
-							/>
-							<span className={`text-sm ${connected ? "text-emerald-400" : "text-red-400"}`}>
-								{connected ? "Bağlı" : "Bağlantı kesildi"}
-							</span>
-						</button>
-					</div>
-				</div>
-			</header>
-
-			{/* Body */}
-			<div className="flex flex-1 overflow-hidden min-w-0">
-				{/* Main */}
-				<main className="flex-1 min-w-0 overflow-y-auto">
-					{loading ? (
-						<div className="flex items-center justify-center py-24">
-							<div className="w-8 h-8 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin" />
+		<>
+			<div className="flex h-screen flex-col overflow-hidden bg-slate-950">
+				<header className="flex-shrink-0 border-b border-white/[0.06] bg-slate-900/90 px-5 py-3 backdrop-blur-sm">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-2.5">
+							<BasketIcon size={22} className="text-emerald-500" strokeWidth={2.5} />
+							<h1 className="text-lg font-bold tracking-wide text-white">
+								SEPET ARASI <span className="font-semibold text-slate-400">KASA</span>
+							</h1>
 						</div>
-					) : (
-						<OrderList />
-					)}
-				</main>
+						<div className="flex items-center gap-2">
+							<button
+								type="button"
+								onClick={handleReconfigureClick}
+								className="ml-1 flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 transition-colors hover:bg-slate-700"
+								title={
+									connected ? "Bağlı — ayarları değiştir" : "Bağlantı kesildi — ayarları değiştir"
+								}
+							>
+								<span
+									className={`h-2 w-2 flex-shrink-0 rounded-full ${connected ? "bg-emerald-500" : "animate-pulse bg-red-500"}`}
+								/>
+								<span className={`text-sm ${connected ? "text-emerald-400" : "text-red-400"}`}>
+									{connected ? "Bağlı" : "Bağlantı kesildi"}
+								</span>
+							</button>
+						</div>
+					</div>
+				</header>
 
-				{/* Sidebar — right side for right-handed cashiers */}
-				<aside className="w-80 flex-shrink-0 bg-slate-900/80 border-l border-white/[0.06] overflow-y-auto">
-					<OrderForm />
-				</aside>
+				<div className="flex min-w-0 flex-1 overflow-hidden">
+					<main className="min-w-0 flex-1 overflow-y-auto">
+						{loading ? (
+							<div className="flex items-center justify-center py-24">
+								<div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-slate-400" />
+							</div>
+						) : (
+							<OrderList />
+						)}
+					</main>
+
+					<aside className="w-80 flex-shrink-0 overflow-y-auto border-l border-white/[0.06] bg-slate-900/80">
+						<OrderForm />
+					</aside>
+				</div>
 			</div>
-		</div>
+
+			<AdminUnlockModal
+				error={unlockError}
+				isOpen={unlockModalOpen}
+				isSubmitting={unlocking}
+				onClose={closeUnlockModal}
+				onPasswordChange={setUnlockPassword}
+				onSubmit={handleUnlockSubmit}
+				password={unlockPassword}
+			/>
+		</>
 	);
 }
 
@@ -115,7 +260,6 @@ export default function App() {
 				setCashierToken(config.cashierToken);
 			}
 
-			// Step 1: try saved/default URL
 			const primaryOk = await (async () => {
 				try {
 					const res = await fetch(`${serverUrl.replace(/\/$/, "")}/health`);
@@ -132,7 +276,6 @@ export default function App() {
 				return;
 			}
 
-			// Step 2: auto-discovery (Electron only)
 			if (!window.electronAPI) return;
 
 			setDiscovering(true);
@@ -157,9 +300,9 @@ export default function App() {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-slate-950">
 				<div className="text-center">
-					<div className="inline-block w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
-					<p className="text-white text-lg font-medium">Sunucu aranıyor...</p>
-					<p className="text-slate-400 text-sm mt-1">Ağ taranıyor, lütfen bekleyin</p>
+					<div className="mb-4 inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-500/30 border-t-emerald-500" />
+					<p className="text-lg font-medium text-white">Sunucu aranıyor...</p>
+					<p className="mt-1 text-sm text-slate-400">Ağ taranıyor, lütfen bekleyin</p>
 				</div>
 			</div>
 		);
