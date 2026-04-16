@@ -87,13 +87,13 @@ describe("MusicPlayerService pause/play semantics", () => {
 		expect(internal.resolveNextIndex()).toBe(0);
 	});
 
-	it("shuffle mode picks a different next track", () => {
+	it("shuffle mode consumes each queued track once before stopping", () => {
 		const db = createTestDb();
 		db.insert(appSettings)
 			.values([
 				{
 					key: SETTING_KEYS.MUSIC_LOOP_ENABLED,
-					value: "1",
+					value: "0",
 					updated_at: new Date().toISOString(),
 				},
 				{
@@ -108,19 +108,22 @@ describe("MusicPlayerService pause/play semantics", () => {
 		const internal = player as unknown as {
 			playlist: Array<{ id: string }>;
 			currentIndex: number;
+			shuffleQueue: string[];
 			resolveNextIndex: () => number | null;
 		};
 		internal.playlist = [{ id: "a" }, { id: "b" }, { id: "c" }];
 		internal.currentIndex = 0;
+		internal.shuffleQueue = ["c", "b"];
 
-		const randomSpy = vi.spyOn(Math, "random");
-		randomSpy.mockReturnValueOnce(0.01); // -> 0 (same, retry)
-		randomSpy.mockReturnValueOnce(0.7); // -> 2 (different)
-		const next = internal.resolveNextIndex();
-		randomSpy.mockRestore();
+		const firstNext = internal.resolveNextIndex();
+		internal.currentIndex = firstNext ?? 0;
+		const secondNext = internal.resolveNextIndex();
+		internal.currentIndex = secondNext ?? 0;
+		const finalNext = internal.resolveNextIndex();
 
-		expect(next).not.toBe(0);
-		expect(next).toBe(2);
+		expect(firstNext).toBe(2);
+		expect(secondNext).toBe(1);
+		expect(finalNext).toBeNull();
 	});
 
 	it("non-loop mode returns null when at end of playlist", () => {
@@ -195,10 +198,14 @@ type InternalPlayer = {
 	} | null;
 	playlist: Array<{ id: string; file_path: string; display_name: string }>;
 	currentIndex: number;
+	shuffleQueue: string[];
+	shuffleHistory: string[];
 	isPlaying: boolean;
 	isPaused: boolean;
 	isDucked: boolean;
 	fadeTimers: ReturnType<typeof setTimeout>[];
+	lastLoadAt?: number;
+	handleMpg123Line?: (line: string) => void;
 };
 
 function withMockedProc(player: MusicPlayerService, playing = false) {
@@ -208,6 +215,8 @@ function withMockedProc(player: MusicPlayerService, playing = false) {
 	internal.isPlaying = playing;
 	internal.isPaused = false;
 	internal.isDucked = false;
+	internal.shuffleQueue = [];
+	internal.shuffleHistory = [];
 	return { internal, write };
 }
 
@@ -237,7 +246,7 @@ describe("MusicPlayerService — stop / play / skip / previous", () => {
 		expect(broadcast).not.toHaveBeenCalled();
 	});
 
-	it("skip() with no-loop end of playlist sends STOP and broadcasts", () => {
+	it("skip() wraps to first track at playlist end even when loop is off", () => {
 		const db = createTestDb();
 		db.insert(appSettings)
 			.values([
@@ -252,14 +261,28 @@ describe("MusicPlayerService — stop / play / skip / previous", () => {
 
 		const { player, broadcast } = buildPlayer(db);
 		const { internal, write } = withMockedProc(player, true);
-		internal.playlist = [{ id: "a", file_path: "/a.mp3", display_name: "A" }];
-		internal.currentIndex = 0; // only one track, no loop → nextIndex = null
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-skip-wrap-"));
+		const firstTrackPath = join(tempDir, "a.mp3");
+		const secondTrackPath = join(tempDir, "b.mp3");
+		writeFileSync(firstTrackPath, "fake-mp3-a");
+		writeFileSync(secondTrackPath, "fake-mp3-b");
 
-		player.skip();
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: firstTrackPath, display_name: "A" },
+				{ id: "b", file_path: secondTrackPath, display_name: "B" },
+			];
+			internal.currentIndex = 1; // last track, no loop → manual next should wrap
 
-		expect(write).toHaveBeenCalledWith(expect.stringContaining("STOP\n"));
-		expect(broadcast).toHaveBeenCalled();
-		expect(internal.isPlaying).toBe(false);
+			player.skip();
+
+			expect(internal.currentIndex).toBe(0);
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${firstTrackPath}\n`));
+			expect(broadcast).toHaveBeenCalled();
+			expect(internal.isPlaying).toBe(true);
+		} finally {
+			rmSync(tempDir, { recursive: true, force: true });
+		}
 	});
 
 	it("previous() decrements index in linear mode when not at start", () => {
@@ -288,10 +311,291 @@ describe("MusicPlayerService — stop / play / skip / previous", () => {
 		expect(internal.currentIndex).toBe(0);
 	});
 
+	it("previous() wraps to last track when current track is the first one", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "0",
+					updated_at: new Date().toISOString(),
+				},
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "0", updated_at: new Date().toISOString() },
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const internal = player as unknown as InternalPlayer;
+		internal.playlist = [
+			{ id: "a", file_path: "/a.mp3", display_name: "A" },
+			{ id: "b", file_path: "/b.mp3", display_name: "B" },
+		];
+		internal.currentIndex = 0;
+		internal.proc = null;
+
+		player.previous();
+		expect(internal.currentIndex).toBe(1);
+	});
+
 	it("previous() with empty playlist is a no-op", () => {
 		const db = createTestDb();
 		const { player } = buildPlayer(db);
 		expect(() => player.previous()).not.toThrow();
+	});
+
+	it("shuffle previous() goes back through played history", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "1", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-shuffle-prev-"));
+		const trackAPath = join(tempDir, "a.mp3");
+		const trackBPath = join(tempDir, "b.mp3");
+		const trackCPath = join(tempDir, "c.mp3");
+		writeFileSync(trackAPath, "fake-mp3-a");
+		writeFileSync(trackBPath, "fake-mp3-b");
+		writeFileSync(trackCPath, "fake-mp3-c");
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: trackAPath, display_name: "A" },
+				{ id: "b", file_path: trackBPath, display_name: "B" },
+				{ id: "c", file_path: trackCPath, display_name: "C" },
+			];
+			internal.currentIndex = 2;
+			internal.shuffleHistory = ["a", "b"];
+			internal.shuffleQueue = [];
+
+			player.previous();
+
+			expect(internal.currentIndex).toBe(1);
+			expect(internal.shuffleHistory).toEqual(["a"]);
+			expect(internal.shuffleQueue).toEqual(["c"]);
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackBPath}\n`));
+		} finally {
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("shuffle next() starts a new shuffled cycle when the queue is exhausted", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "0", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-shuffle-next-cycle-"));
+		const trackAPath = join(tempDir, "a.mp3");
+		const trackBPath = join(tempDir, "b.mp3");
+		const trackCPath = join(tempDir, "c.mp3");
+		writeFileSync(trackAPath, "fake-mp3-a");
+		writeFileSync(trackBPath, "fake-mp3-b");
+		writeFileSync(trackCPath, "fake-mp3-c");
+
+		const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.9);
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: trackAPath, display_name: "A" },
+				{ id: "b", file_path: trackBPath, display_name: "B" },
+				{ id: "c", file_path: trackCPath, display_name: "C" },
+			];
+			internal.currentIndex = 2;
+			internal.shuffleQueue = [];
+
+			player.skip();
+
+			expect(internal.currentIndex).toBe(0);
+			expect(internal.isPlaying).toBe(true);
+			expect(internal.shuffleHistory).toContain("c");
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackAPath}\n`));
+		} finally {
+			randomSpy.mockRestore();
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("MusicPlayerService — automatic end-of-track transitions", () => {
+	it("stops advancing at the end when both loop and shuffle are off", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "0", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "0",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player, broadcast } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		internal.playlist = [
+			{ id: "a", file_path: "/a.mp3", display_name: "A" },
+			{ id: "b", file_path: "/b.mp3", display_name: "B" },
+		];
+		internal.currentIndex = 1;
+		internal.lastLoadAt = Date.now() - 1000;
+
+		internal.handleMpg123Line?.("@P 0");
+
+		expect(internal.currentIndex).toBe(1);
+		expect(internal.isPlaying).toBe(false);
+		expect(internal.isPaused).toBe(false);
+		expect(write).not.toHaveBeenCalled();
+		expect(broadcast).toHaveBeenCalled();
+	});
+
+	it("wraps to the first track at the end when loop is on", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "1", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "0",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-auto-loop-"));
+		const firstTrackPath = join(tempDir, "a.mp3");
+		const secondTrackPath = join(tempDir, "b.mp3");
+		writeFileSync(firstTrackPath, "fake-mp3-a");
+		writeFileSync(secondTrackPath, "fake-mp3-b");
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: firstTrackPath, display_name: "A" },
+				{ id: "b", file_path: secondTrackPath, display_name: "B" },
+			];
+			internal.currentIndex = 1;
+			internal.lastLoadAt = Date.now() - 1000;
+
+			internal.handleMpg123Line?.("@P 0");
+
+			expect(internal.currentIndex).toBe(0);
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${firstTrackPath}\n`));
+			expect(internal.isPlaying).toBe(true);
+		} finally {
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("stops after the shuffle queue is exhausted when loop is off", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "0", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-auto-shuffle-"));
+		const firstTrackPath = join(tempDir, "a.mp3");
+		const secondTrackPath = join(tempDir, "b.mp3");
+		const thirdTrackPath = join(tempDir, "c.mp3");
+		writeFileSync(firstTrackPath, "fake-mp3-a");
+		writeFileSync(secondTrackPath, "fake-mp3-b");
+		writeFileSync(thirdTrackPath, "fake-mp3-c");
+
+		const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1); // -> index 0
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: firstTrackPath, display_name: "A" },
+				{ id: "b", file_path: secondTrackPath, display_name: "B" },
+				{ id: "c", file_path: thirdTrackPath, display_name: "C" },
+			];
+			internal.currentIndex = 2;
+			internal.shuffleQueue = [];
+			internal.lastLoadAt = Date.now() - 1000;
+
+			internal.handleMpg123Line?.("@P 0");
+
+			expect(internal.currentIndex).toBe(2);
+			expect(write).not.toHaveBeenCalled();
+			expect(internal.isPlaying).toBe(false);
+		} finally {
+			randomSpy.mockRestore();
+			rmSync(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	it("starts a new shuffled cycle when both loop and shuffle are on", () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "1", updated_at: new Date().toISOString() },
+				{
+					key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED,
+					value: "1",
+					updated_at: new Date().toISOString(),
+				},
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, true);
+		const tempDir = mkdtempSync(join(tmpdir(), "sepetarasi-auto-shuffle-loop-"));
+		const trackAPath = join(tempDir, "a.mp3");
+		const trackBPath = join(tempDir, "b.mp3");
+		const trackCPath = join(tempDir, "c.mp3");
+		writeFileSync(trackAPath, "fake-mp3-a");
+		writeFileSync(trackBPath, "fake-mp3-b");
+		writeFileSync(trackCPath, "fake-mp3-c");
+
+		const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.9);
+
+		try {
+			internal.playlist = [
+				{ id: "a", file_path: trackAPath, display_name: "A" },
+				{ id: "b", file_path: trackBPath, display_name: "B" },
+				{ id: "c", file_path: trackCPath, display_name: "C" },
+			];
+			internal.currentIndex = 2;
+			internal.shuffleQueue = [];
+			internal.lastLoadAt = Date.now() - 1000;
+
+			internal.handleMpg123Line?.("@P 0");
+
+			expect(internal.currentIndex).toBe(0);
+			expect(internal.isPlaying).toBe(true);
+			expect(internal.shuffleHistory).toContain("c");
+			expect(write).toHaveBeenCalledWith(expect.stringContaining(`LOAD ${trackAPath}\n`));
+		} finally {
+			randomSpy.mockRestore();
+			rmSync(tempDir, { recursive: true, force: true });
+		}
 	});
 });
 

@@ -69,6 +69,8 @@ export class MusicPlayerService {
 	private proc: ChildProcess | null = null;
 	private playlist: MusicTrackRecord[] = [];
 	private currentIndex = 0;
+	private shuffleQueue: string[] = [];
+	private shuffleHistory: string[] = [];
 	private isPlaying = false;
 	private isPaused = false;
 	private isDucked = false;
@@ -115,6 +117,7 @@ export class MusicPlayerService {
 		}
 
 		this.currentIndex = this.resolveStartIndex();
+		this.syncShuffleState();
 		this.spawnProcess();
 	}
 
@@ -168,12 +171,7 @@ export class MusicPlayerService {
 
 	skip(): void {
 		if (this.playlist.length === 0) return;
-		const nextIndex = this.resolveNextIndex();
-		if (nextIndex === null) {
-			this.stop();
-			return;
-		}
-		this.currentIndex = nextIndex;
+		this.currentIndex = this.resolveManualNextIndex();
 		this.persistCurrentTrack();
 		if (this.proc && !this.isDucked) {
 			this.loadCurrentTrack();
@@ -183,9 +181,8 @@ export class MusicPlayerService {
 
 	previous(): void {
 		if (this.playlist.length === 0) return;
-		// Manuel geri: shuffle açıksa rastgele, değilse her zaman döngüsel geri al
 		if (this.getShuffleEnabled()) {
-			this.currentIndex = this.pickRandomIndexExcludingCurrent();
+			this.currentIndex = this.resolveManualPreviousIndex();
 		} else {
 			this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.playlist.length - 1;
 		}
@@ -209,7 +206,12 @@ export class MusicPlayerService {
 		this.broadcastStatus();
 	}
 
-	setShuffle(_shuffleEnabled: boolean): void {
+	setShuffle(shuffleEnabled: boolean): void {
+		if (shuffleEnabled) {
+			this.syncShuffleState();
+		} else {
+			this.clearShuffleState();
+		}
 		this.broadcastStatus();
 	}
 
@@ -301,6 +303,7 @@ export class MusicPlayerService {
 		// Try to keep current track position
 		const newIndex = this.playlist.findIndex((t) => t.id === oldTrackId);
 		this.currentIndex = newIndex >= 0 ? newIndex : 0;
+		this.syncShuffleState();
 		this.broadcastStatus();
 	}
 
@@ -463,6 +466,7 @@ export class MusicPlayerService {
 					},
 					"Music track file is missing at load time; removing from runtime playlist",
 				);
+				this.removeTrackFromShuffleState(track.id);
 				this.playlist.splice(this.currentIndex, 1);
 				if (this.currentIndex >= this.playlist.length) {
 					this.currentIndex = 0;
@@ -560,6 +564,45 @@ export class MusicPlayerService {
 		return 0;
 	}
 
+	private syncShuffleState(): void {
+		if (!this.getShuffleEnabled() || this.playlist.length === 0) {
+			this.clearShuffleState();
+			return;
+		}
+
+		this.shuffleQueue = this.buildShuffleQueue(this.getCurrentTrackId());
+		this.shuffleHistory = [];
+	}
+
+	private clearShuffleState(): void {
+		this.shuffleQueue = [];
+		this.shuffleHistory = [];
+	}
+
+	private buildShuffleQueue(excludeTrackId: string | null): string[] {
+		const queue = this.playlist
+			.map((track) => track.id)
+			.filter((trackId) => trackId !== excludeTrackId);
+
+		for (let i = queue.length - 1; i > 0; i -= 1) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[queue[i], queue[j]] = [queue[j], queue[i]];
+		}
+
+		return queue;
+	}
+
+	private removeTrackFromShuffleState(trackId: string): void {
+		this.shuffleQueue = this.shuffleQueue.filter((queuedTrackId) => queuedTrackId !== trackId);
+		this.shuffleHistory = this.shuffleHistory.filter(
+			(historyTrackId) => historyTrackId !== trackId,
+		);
+	}
+
+	private findTrackIndex(trackId: string): number {
+		return this.playlist.findIndex((track) => track.id === trackId);
+	}
+
 	private persistCurrentTrack(): void {
 		const trackId = this.getCurrentTrackId();
 		if (!trackId) return;
@@ -624,6 +667,34 @@ export class MusicPlayerService {
 		return row?.value === "1";
 	}
 
+	private getNextShuffleIndex(allowCycleReset: boolean): number | null {
+		if (this.playlist.length === 0) return null;
+		if (this.playlist.length === 1) return allowCycleReset ? this.currentIndex : null;
+
+		while (true) {
+			let nextTrackId = this.shuffleQueue.shift() ?? null;
+			if (!nextTrackId) {
+				if (!allowCycleReset) return null;
+				this.shuffleQueue = this.buildShuffleQueue(this.getCurrentTrackId());
+				nextTrackId = this.shuffleQueue.shift() ?? null;
+				if (!nextTrackId) {
+					return this.currentIndex;
+				}
+			}
+
+			const nextIndex = this.findTrackIndex(nextTrackId);
+			if (nextIndex < 0) {
+				continue;
+			}
+
+			const currentTrackId = this.getCurrentTrackId();
+			if (currentTrackId && currentTrackId !== nextTrackId) {
+				this.shuffleHistory.push(currentTrackId);
+			}
+			return nextIndex;
+		}
+	}
+
 	private pickRandomIndexExcludingCurrent(): number {
 		if (this.playlist.length <= 1) return this.currentIndex;
 		let next = this.currentIndex;
@@ -636,12 +707,45 @@ export class MusicPlayerService {
 	private resolveNextIndex(): number | null {
 		if (this.playlist.length === 0) return null;
 		if (this.getShuffleEnabled()) {
-			return this.pickRandomIndexExcludingCurrent();
+			return this.getNextShuffleIndex(this.getLoopEnabled());
 		}
 
 		const next = this.currentIndex + 1;
 		if (next < this.playlist.length) return next;
 		return this.getLoopEnabled() ? 0 : null;
+	}
+
+	private resolveManualNextIndex(): number {
+		if (this.playlist.length === 0) return 0;
+		if (this.getShuffleEnabled()) {
+			return this.getNextShuffleIndex(true) ?? this.currentIndex;
+		}
+
+		const next = this.currentIndex + 1;
+		return next < this.playlist.length ? next : 0;
+	}
+
+	private resolveManualPreviousIndex(): number {
+		const currentTrackId = this.getCurrentTrackId();
+		while (this.shuffleHistory.length > 0) {
+			const previousTrackId = this.shuffleHistory.pop();
+			if (!previousTrackId) break;
+
+			const previousIndex = this.findTrackIndex(previousTrackId);
+			if (previousIndex < 0) {
+				continue;
+			}
+
+			if (currentTrackId && currentTrackId !== previousTrackId) {
+				this.shuffleQueue = [
+					currentTrackId,
+					...this.shuffleQueue.filter((queuedTrackId) => queuedTrackId !== currentTrackId),
+				];
+			}
+			return previousIndex;
+		}
+
+		return this.pickRandomIndexExcludingCurrent();
 	}
 
 	private broadcastStatus(): void {
