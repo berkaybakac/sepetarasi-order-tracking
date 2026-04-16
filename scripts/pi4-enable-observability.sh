@@ -40,11 +40,18 @@ echo "[2/4] journald kalicilik + systemd timer + logrotate kuruluyor..."
 ssh "$TARGET" "bash -s" <<'REMOTE'
 set -euo pipefail
 
+APP_USER="$(id -un)"
+APP_GROUP="$(id -gn)"
+
 sudo install -m 0755 /tmp/sepetarasi-metrics-logger.sh /usr/local/bin/sepetarasi-metrics-logger.sh
 rm -f /tmp/sepetarasi-metrics-logger.sh
 
 sudo mkdir -p /var/log/sepetarasi
+sudo chown "$APP_USER:$APP_GROUP" /var/log/sepetarasi
 sudo chmod 0755 /var/log/sepetarasi
+sudo touch /var/log/sepetarasi/audit.log
+sudo chown "$APP_USER:$APP_GROUP" /var/log/sepetarasi/audit.log
+sudo chmod 0644 /var/log/sepetarasi/audit.log
 
 sudo mkdir -p /var/log/journal
 sudo chown root:systemd-journal /var/log/journal
@@ -104,7 +111,7 @@ WantedBy=multi-user.target
 EOF_BOOT
 
 sudo tee /etc/logrotate.d/sepetarasi-metrics > /dev/null <<'EOF_ROTATE'
-/var/log/sepetarasi/system-metrics.log {
+/var/log/sepetarasi/system-metrics.log /var/log/sepetarasi/audit.log {
     daily
     rotate 14
     compress
@@ -133,6 +140,7 @@ ssh "$TARGET" "systemctl is-active sepetarasi-boot-marker.service && systemctl i
 echo ""
 echo "[4/4] Son metrik satirlari:"
 ssh "$TARGET" "tail -n 6 /var/log/sepetarasi/system-metrics.log"
+ssh "$TARGET" "ls -l /var/log/sepetarasi/audit.log"
 
 echo ""
 echo "Tamamlandi."
@@ -140,3 +148,4 @@ echo "Gece analiz komutlari:"
 echo "  ssh $TARGET \"journalctl --list-boots --no-pager\""
 echo "  ssh $TARGET \"journalctl -k --since '2026-04-15 20:00' --until '2026-04-16 08:00' --no-pager\""
 echo "  ssh $TARGET \"awk '\$0 ~ /\\\"ts\\\":\\\"2026-04-15|\\\"ts\\\":\\\"2026-04-16/ {print}' /var/log/sepetarasi/system-metrics.log\""
+echo "  ssh $TARGET \"tail -n 20 /var/log/sepetarasi/audit.log\""

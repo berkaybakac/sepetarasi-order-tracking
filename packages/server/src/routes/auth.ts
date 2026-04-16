@@ -61,12 +61,17 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 
 			const match = await bcrypt.compare(password ?? "", hash);
 			if (!match) {
-				auditLog("LOGIN_FAILED", "Invalid admin password", {
-					actor: "admin",
-					ip: request.ip,
-					requestId: request.id,
-					path: request.url,
-				});
+				auditLog(
+					"LOGIN_FAILED",
+					"Invalid admin password",
+					{
+						actor: "admin",
+						ip: request.ip,
+						requestId: request.id,
+						path: request.url,
+					},
+					request.log,
+				);
 				return reply
 					.code(401)
 					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
@@ -75,12 +80,17 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			const token = app.jwt.sign({ role: "admin" }, { expiresIn: "7d" });
 			const secureCookie = AUTH_CONFIG.cookieSecure && isHttpsRequest(request);
 
-			auditLog("LOGIN_SUCCESS", "Admin logged in", {
-				actor: "admin",
-				ip: request.ip,
-				requestId: request.id,
-				path: request.url,
-			});
+			auditLog(
+				"LOGIN_SUCCESS",
+				"Admin logged in",
+				{
+					actor: "admin",
+					ip: request.ip,
+					requestId: request.id,
+					path: request.url,
+				},
+				request.log,
+			);
 
 			// Send http-only secure cookie
 			reply.setCookie(ADMIN_COOKIE_NAME, token, {
@@ -98,12 +108,17 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 	// POST /api/v1/auth/logout
 	app.post(API_ROUTES.V1.AUTH.LOGOUT, async (request, reply) => {
 		reply.clearCookie(ADMIN_COOKIE_NAME, { path: "/" });
-		auditLog("LOGOUT", "Admin logged out", {
-			actor: "admin",
-			ip: request.ip,
-			requestId: request.id,
-			path: request.url,
-		});
+		auditLog(
+			"LOGOUT",
+			"Admin logged out",
+			{
+				actor: "admin",
+				ip: request.ip,
+				requestId: request.id,
+				path: request.url,
+			},
+			request.log,
+		);
 		return { ok: true, data: null };
 	});
 
@@ -168,12 +183,17 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				})
 				.run();
 
-			auditLog("PASSWORD_CHANGED", "Admin password changed", {
-				actor: "admin",
-				ip: request.ip,
-				requestId: request.id,
-				path: request.url,
-			});
+			auditLog(
+				"PASSWORD_CHANGED",
+				"Admin password changed",
+				{
+					actor: "admin",
+					ip: request.ip,
+					requestId: request.id,
+					path: request.url,
+				},
+				request.log,
+			);
 			return { ok: true, data: { message: "Password updated successfully" } };
 		},
 	);

@@ -32,6 +32,8 @@ if [ -z "$TARGET" ]; then
   exit 1
 fi
 APP_DIR="/opt/sepetarasi"
+AUDIT_LOG_DIR="/var/log/sepetarasi"
+AUDIT_LOG_PATH="$AUDIT_LOG_DIR/audit.log"
 HOST="${TARGET#*@}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -71,6 +73,15 @@ if [ "$INIT" = "--init" ]; then
     echo "[init] Uygulama dizini olusturuluyor..."
     ssh "$TARGET" "sudo mkdir -p $APP_DIR && sudo chown \$USER:\$USER $APP_DIR"
 
+    echo "[init] Audit log dizini hazirlaniyor..."
+    ssh "$TARGET" "
+        sudo mkdir -p $AUDIT_LOG_DIR
+        sudo chown \$(id -un):\$(id -gn) $AUDIT_LOG_DIR
+        sudo chmod 0755 $AUDIT_LOG_DIR
+        touch $AUDIT_LOG_PATH
+        chmod 0644 $AUDIT_LOG_PATH
+    "
+
     echo "[init] .env dosyasi olusturuluyor..."
     CASHIER_TOKEN="$(openssl rand -hex 16)"
     JWT_SECRET="$(openssl rand -hex 32)"
@@ -86,6 +97,7 @@ CASHIER_TOKEN=$CASHIER_TOKEN
 JWT_SECRET=$JWT_SECRET
 COOKIE_SECRET=$COOKIE_SECRET
 WS_AUTH_KEY=dev-ws-auth-key
+LOG_PATH=$AUDIT_LOG_PATH
 ENVEOF"
 
     ssh "$TARGET" "mkdir -p $APP_DIR/packages/server/assets/announcements"
@@ -104,6 +116,7 @@ rsync -az --delete \
     --exclude node_modules \
     --exclude .git \
     --exclude 'packages/kasa' \
+    --exclude 'data/*.log' \
     --exclude '*.db' \
     --exclude '*.db-wal' \
     --exclude '*.db-shm' \
@@ -131,6 +144,18 @@ ssh "$TARGET" "
 
     # Migration
     DB_PATH=$APP_DIR/data/sepetarasi.db node packages/server/dist/db/migrate.js
+"
+
+ssh "$TARGET" "
+    sudo mkdir -p $AUDIT_LOG_DIR
+    sudo chown \$(id -un):\$(id -gn) $AUDIT_LOG_DIR
+    sudo chmod 0755 $AUDIT_LOG_DIR
+    touch $AUDIT_LOG_PATH
+    chmod 0644 $AUDIT_LOG_PATH
+
+    if [ -f $APP_DIR/.env ] && ! grep -q '^LOG_PATH=' $APP_DIR/.env; then
+        printf '\nLOG_PATH=$AUDIT_LOG_PATH\n' >> $APP_DIR/.env
+    fi
 "
 
 # Seed sadece ilk kurulumda
@@ -257,6 +282,16 @@ done
 if [ "$HEALTH_OK" != "1" ]; then
     echo "BASARISIZ - kontrol: ssh $TARGET 'sudo journalctl -u sepetarasi -n 20'"
     exit 1
+fi
+
+if [ "$INIT" = "--init" ]; then
+    echo ""
+    echo "[init] Pi4 observability kuruluyor..."
+    bash "$SCRIPT_DIR/pi4-enable-observability.sh" "$TARGET"
+elif ! ssh "$TARGET" "systemctl is-enabled sepetarasi-metrics.timer >/dev/null 2>&1"; then
+    echo ""
+    echo "[uyari] Pi4 observability kurulu gorunmuyor."
+    echo "[uyari] Calistir: bash scripts/pi4-enable-observability.sh $TARGET"
 fi
 
 echo ""

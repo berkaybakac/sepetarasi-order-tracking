@@ -36,6 +36,13 @@ function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
 	return request.ip || request.socket?.remoteAddress || undefined;
 }
 
+function wsStatsSnapshot(broadcaster: Broadcaster) {
+	return {
+		activeClientCount: broadcaster.getAllClients().size,
+		channelClientCounts: broadcaster.getStats(),
+	};
+}
+
 export interface AppOptions {
 	db: AppDatabase;
 	/** Disable announcement worker (useful for tests) */
@@ -122,6 +129,16 @@ export async function buildApp(opts: AppOptions) {
 			const connectionId = randomUUID().slice(0, 8);
 			const remoteAddress = wsClientRemoteAddress(request);
 			wsMeta.set(ws, { connectionId, channels: [channel], remoteAddress });
+			app.log.info(
+				{
+					event: "ws.connection.open",
+					channel,
+					connectionId,
+					remoteAddress,
+					...wsStatsSnapshot(broadcaster),
+				},
+				"WS connection opened",
+			);
 
 			wsAlive.set(ws, true);
 			ws.on("pong", () => {
@@ -136,8 +153,48 @@ export async function buildApp(opts: AppOptions) {
 						ws.send(JSON.stringify({ event: "pong", timestamp: new Date().toISOString() }));
 					}
 				} catch (err) {
-					request.log.warn({ err }, "Invalid WS message received");
+					const meta = wsMeta.get(ws);
+					request.log.warn(
+						{
+							err,
+							event: "ws.message.invalid",
+							channel,
+							connectionId: meta?.connectionId,
+							remoteAddress: meta?.remoteAddress,
+						},
+						"Invalid WS message received",
+					);
 				}
+			});
+			ws.on("error", (err) => {
+				const meta = wsMeta.get(ws);
+				app.log.warn(
+					{
+						err,
+						event: "ws.connection.error",
+						channel,
+						connectionId: meta?.connectionId,
+						remoteAddress: meta?.remoteAddress,
+						...wsStatsSnapshot(broadcaster),
+					},
+					"WS connection error",
+				);
+			});
+			ws.on("close", (code, reasonBuffer) => {
+				const meta = wsMeta.get(ws);
+				const closeReason = reasonBuffer.toString() || undefined;
+				app.log.info(
+					{
+						event: "ws.connection.closed",
+						channel,
+						connectionId: meta?.connectionId,
+						remoteAddress: meta?.remoteAddress,
+						closeCode: code,
+						closeReason,
+						...wsStatsSnapshot(broadcaster),
+					},
+					"WS connection closed",
+				);
 			});
 		});
 	});

@@ -111,6 +111,7 @@ ssh admin@sepetarasi.local "grep CASHIER /opt/sepetarasi/.env"
 ```
 
 `deploy.sh` sırasıyla: Mac'te build → rsync ile Pi4'e gönder → migration → servis restart → `/health` kontrolü.
+`deploy.sh --init` bunlara ek olarak audit log path'ini hazırlar ve Pi4 observability kurulumunu otomatik tetikler.
 
 `--init` Pi4 hostname'ini `sepetarasi` yapar → `sepetarasi.local:3000` ile erişim, IP değişse de çalışır.
 
@@ -138,7 +139,7 @@ ssh admin@sepetarasi.local "sudo journalctl -u sepetarasi -f"
 
 ## Pi4 Gozlemlenebilirlik (CPU/RAM/Isi)
 
-Reboot sonrasi eski loglarin kaybolmamasi icin kalici journal + sistem metrik logger kur:
+`bash scripts/deploy.sh --init` bunu otomatik kurar. Eski kurulmus Pi4'lerde veya yeniden kurmak istiyorsan manuel de calistirabilirsin:
 
 ```bash
 bash scripts/pi4-enable-observability.sh
@@ -151,6 +152,8 @@ Kurulumun yaptigi seyler:
 - `journald` kalici moda alinir (`Storage=persistent`)
 - Her 1 dakikada bir JSON satir metrik logu yazilir:
   `/var/log/sepetarasi/system-metrics.log`
+- Audit log dosyasi proje klasoru disina alinip korunur:
+  `/var/log/sepetarasi/audit.log`
 - Boot baslangic/bitis marker'i eklenir (`boot_start`, `boot_stop`)
 - Log boyutu icin logrotate kurulur
 
@@ -168,6 +171,9 @@ ssh admin@sepetarasi.local \
 # Uygulama + sistem metrik JSON logu (cpu_temp_c, throttled_raw, mem_available_kb, server_rss_kb)
 ssh admin@sepetarasi.local \
   "awk '\$0 ~ /\"ts\":\"2026-04-15|\"ts\":\"2026-04-16/ {print}' /var/log/sepetarasi/system-metrics.log"
+
+# Audit logu (login/order/status vb.)
+ssh admin@sepetarasi.local "tail -n 20 /var/log/sepetarasi/audit.log"
 ```
 
 ---

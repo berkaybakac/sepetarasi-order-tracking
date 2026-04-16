@@ -31,14 +31,19 @@ export function registerOrderRoutes(
 		async (request, reply) => {
 			try {
 				const order = orderCommand.create(request.body);
-				auditLog("ORDER_CREATED", "Order created", {
-					actor: "cashier_or_admin",
-					ip: request.ip,
-					requestId: request.id,
-					path: request.url,
-					orderId: order.id,
-					displayNo: order.display_no,
-				});
+				auditLog(
+					"ORDER_CREATED",
+					"Order created",
+					{
+						actor: "cashier_or_admin",
+						ip: request.ip,
+						requestId: request.id,
+						path: request.url,
+						orderId: order.id,
+						displayNo: order.display_no,
+					},
+					request.log,
+				);
 
 				broadcaster.broadcast(
 					[WS_CHANNELS.ORDERS, WS_CHANNELS.DISPLAY],
@@ -116,6 +121,7 @@ export function registerOrderRoutes(
 						orderId: order.id,
 						displayNo: order.display_no,
 					},
+					request.log,
 				);
 
 				broadcaster.broadcast(
@@ -162,14 +168,19 @@ export function registerOrderRoutes(
 			const { id } = request.params;
 			try {
 				const order = orderCommand.delete(id);
-				auditLog("ORDER_DELETED", "Order deleted", {
-					actor: "admin",
-					ip: request.ip,
-					requestId: request.id,
-					path: request.url,
-					orderId: id,
-					displayNo: order.display_no,
-				});
+				auditLog(
+					"ORDER_DELETED",
+					"Order deleted",
+					{
+						actor: "admin",
+						ip: request.ip,
+						requestId: request.id,
+						path: request.url,
+						orderId: id,
+						displayNo: order.display_no,
+					},
+					request.log,
+				);
 
 				// Provide real-time update that an order was removed
 				const stats = statsService.getToday();
