@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { SETTING_KEYS } from "@sepetarasi/shared";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDatabase } from "../src/db/connection.js";
@@ -365,40 +368,120 @@ describe("MusicPlayerService — getStatus / reloadPlaylist", () => {
 		const db = createTestDb();
 		const { player } = buildPlayer(db);
 		const internal = player as unknown as InternalPlayer;
+		const musicDir = mkdtempSync(join(tmpdir(), "sepetarasi-music-player-"));
+		const trackAPath = join(musicDir, "a.mp3");
+		const trackBPath = join(musicDir, "b.mp3");
+		writeFileSync(trackAPath, "a");
+		writeFileSync(trackBPath, "b");
 
-		const now = new Date().toISOString();
-		db.insert(musicTracks)
-			.values([
-				{
-					id: "t1",
-					filename: "a.mp3",
-					display_name: "A",
-					file_path: "/a.mp3",
-					file_size: 100,
-					sort_order: 0,
-					uploaded_at: now,
-				},
-				{
-					id: "t2",
-					filename: "b.mp3",
-					display_name: "B",
-					file_path: "/b.mp3",
-					file_size: 100,
-					sort_order: 1,
-					uploaded_at: now,
-				},
-			])
-			.run();
+		try {
+			const now = new Date().toISOString();
+			db.insert(musicTracks)
+				.values([
+					{
+						id: "t1",
+						filename: "a.mp3",
+						display_name: "A",
+						file_path: trackAPath,
+						file_size: 100,
+						sort_order: 0,
+						uploaded_at: now,
+					},
+					{
+						id: "t2",
+						filename: "b.mp3",
+						display_name: "B",
+						file_path: trackBPath,
+						file_size: 100,
+						sort_order: 1,
+						uploaded_at: now,
+					},
+				])
+				.run();
 
-		internal.playlist = [
-			{ id: "t1", file_path: "/a.mp3", display_name: "A" },
-			{ id: "t2", file_path: "/b.mp3", display_name: "B" },
-		];
-		internal.currentIndex = 1; // currently on t2
+			internal.playlist = [
+				{ id: "t1", file_path: trackAPath, display_name: "A" },
+				{ id: "t2", file_path: trackBPath, display_name: "B" },
+			];
+			internal.currentIndex = 1; // currently on t2
 
-		player.reloadPlaylist();
+			player.reloadPlaylist();
 
-		// After reload, currentIndex should still point to t2
-		expect(internal.currentIndex).toBe(1);
+			// After reload, currentIndex should still point to t2
+			expect(internal.currentIndex).toBe(1);
+		} finally {
+			rmSync(musicDir, { recursive: true, force: true });
+		}
+	});
+
+	it("reloadPlaylist() skips DB rows whose files are missing", () => {
+		const db = createTestDb();
+		const { player } = buildPlayer(db);
+		const internal = player as unknown as InternalPlayer;
+		const musicDir = mkdtempSync(join(tmpdir(), "sepetarasi-music-player-"));
+		const trackAPath = join(musicDir, "a.mp3");
+		writeFileSync(trackAPath, "a");
+
+		try {
+			const now = new Date().toISOString();
+			db.insert(musicTracks)
+				.values([
+					{
+						id: "t1",
+						filename: "a.mp3",
+						display_name: "A",
+						file_path: trackAPath,
+						file_size: 100,
+						sort_order: 0,
+						uploaded_at: now,
+					},
+					{
+						id: "t2",
+						filename: "missing.mp3",
+						display_name: "Missing",
+						file_path: join(musicDir, "missing.mp3"),
+						file_size: 100,
+						sort_order: 1,
+						uploaded_at: now,
+					},
+				])
+				.run();
+
+			player.reloadPlaylist();
+
+			expect(internal.playlist).toHaveLength(1);
+			expect(internal.playlist[0]?.id).toBe("t1");
+			expect(internal.currentIndex).toBe(0);
+		} finally {
+			rmSync(musicDir, { recursive: true, force: true });
+		}
+	});
+
+	it("loadCurrentTrack() skips missing runtime files and loads the next playable track", () => {
+		const db = createTestDb();
+		const { player } = buildPlayer(db);
+		const musicDir = mkdtempSync(join(tmpdir(), "sepetarasi-music-player-"));
+		const validTrackPath = join(musicDir, "valid.mp3");
+		writeFileSync(validTrackPath, "valid");
+
+		try {
+			const { internal, write } = withMockedProc(player, false);
+			const loadCurrentTrack = (
+				player as unknown as { loadCurrentTrack: () => void }
+			).loadCurrentTrack.bind(player);
+			internal.playlist = [
+				{ id: "missing", file_path: join(musicDir, "missing.mp3"), display_name: "Missing" },
+				{ id: "valid", file_path: validTrackPath, display_name: "Valid" },
+			];
+			internal.currentIndex = 0;
+
+			loadCurrentTrack();
+
+			expect(internal.playlist).toHaveLength(1);
+			expect(internal.playlist[0]?.id).toBe("valid");
+			expect(write).toHaveBeenCalledWith(`LOAD ${validTrackPath}\n`);
+		} finally {
+			rmSync(musicDir, { recursive: true, force: true });
+		}
 	});
 });

@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { MusicStatus, MusicTrackRecord } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
@@ -436,17 +437,47 @@ export class MusicPlayerService {
 	}
 
 	private loadCurrentTrack(): void {
-		const track = this.playlist[this.currentIndex];
-		if (!track) return;
-		this.lastLoadAt = Date.now();
-		this.sendCommand(`LOAD ${track.file_path}`);
-		this.isPlaying = true;
-		this.isPaused = false;
-		this.persistCurrentTrack();
-		this.logger.info(
-			{ event: "music.track.load", trackId: track.id, name: track.display_name },
-			"Loading track",
+		while (this.playlist.length > 0) {
+			const track = this.playlist[this.currentIndex];
+			if (!track) {
+				this.currentIndex = 0;
+				continue;
+			}
+
+			if (!existsSync(track.file_path)) {
+				this.logger.warn(
+					{
+						event: "music.track.file_missing",
+						trackId: track.id,
+						name: track.display_name,
+						path: track.file_path,
+					},
+					"Music track file is missing at load time; removing from runtime playlist",
+				);
+				this.playlist.splice(this.currentIndex, 1);
+				if (this.currentIndex >= this.playlist.length) {
+					this.currentIndex = 0;
+				}
+				continue;
+			}
+
+			this.lastLoadAt = Date.now();
+			this.sendCommand(`LOAD ${track.file_path}`);
+			this.isPlaying = true;
+			this.isPaused = false;
+			this.persistCurrentTrack();
+			this.logger.info(
+				{ event: "music.track.load", trackId: track.id, name: track.display_name },
+				"Loading track",
+			);
+			return;
+		}
+
+		this.logger.warn(
+			{ event: "music.playlist.empty_runtime" },
+			"No playable tracks remain in runtime playlist",
 		);
+		this.stop();
 	}
 
 	private sendCommand(cmd: string): void {
@@ -462,11 +493,42 @@ export class MusicPlayerService {
 	}
 
 	private loadPlaylistFromDb(): MusicTrackRecord[] {
-		return this.db
+		const tracks = this.db
 			.select()
 			.from(musicTracks)
 			.orderBy(musicTracks.sort_order, musicTracks.uploaded_at)
 			.all() as MusicTrackRecord[];
+		if (tracks.length === 0) {
+			return tracks;
+		}
+
+		const playableTracks: MusicTrackRecord[] = [];
+		const missingTracks: Array<Pick<MusicTrackRecord, "id" | "display_name" | "file_path">> = [];
+		for (const track of tracks) {
+			if (existsSync(track.file_path)) {
+				playableTracks.push(track);
+				continue;
+			}
+			missingTracks.push({
+				id: track.id,
+				display_name: track.display_name,
+				file_path: track.file_path,
+			});
+		}
+
+		if (missingTracks.length > 0) {
+			this.logger.warn(
+				{
+					event: "music.playlist.missing_files",
+					missingTrackCount: missingTracks.length,
+					playableTrackCount: playableTracks.length,
+					missingTracks,
+				},
+				"Music playlist contains missing files; unavailable tracks were skipped",
+			);
+		}
+
+		return playableTracks;
 	}
 
 	private resolveStartIndex(): number {

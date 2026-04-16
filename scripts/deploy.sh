@@ -32,6 +32,8 @@ if [ -z "$TARGET" ]; then
   exit 1
 fi
 APP_DIR="/opt/sepetarasi"
+MUSIC_DIR="$APP_DIR/packages/server/assets/music"
+ANNOUNCEMENTS_DIR="$APP_DIR/packages/server/assets/announcements"
 AUDIT_LOG_DIR="/var/log/sepetarasi"
 AUDIT_LOG_PATH="$AUDIT_LOG_DIR/audit.log"
 HOST="${TARGET#*@}"
@@ -91,7 +93,8 @@ NODE_ENV=production
 PORT=3000
 DB_PATH=$APP_DIR/data/sepetarasi.db
 STORE_TIMEZONE=Europe/Istanbul
-ANNOUNCEMENTS_PATH=$APP_DIR/packages/server/assets/announcements
+ANNOUNCEMENTS_PATH=$ANNOUNCEMENTS_DIR
+MUSIC_PATH=$MUSIC_DIR
 AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0
 CASHIER_TOKEN=$CASHIER_TOKEN
 JWT_SECRET=$JWT_SECRET
@@ -100,7 +103,7 @@ WS_AUTH_KEY=dev-ws-auth-key
 LOG_PATH=$AUDIT_LOG_PATH
 ENVEOF"
 
-    ssh "$TARGET" "mkdir -p $APP_DIR/packages/server/assets/announcements"
+    ssh "$TARGET" "mkdir -p $ANNOUNCEMENTS_DIR $MUSIC_DIR"
 fi
 
 # --- 1. Mac'te build ---
@@ -116,6 +119,7 @@ rsync -az --delete \
     --exclude node_modules \
     --exclude .git \
     --exclude 'packages/kasa' \
+    --exclude 'packages/server/assets/music/***' \
     --exclude 'data/*.log' \
     --exclude '*.db' \
     --exclude '*.db-wal' \
@@ -156,6 +160,10 @@ ssh "$TARGET" "
     if [ -f $APP_DIR/.env ] && ! grep -q '^LOG_PATH=' $APP_DIR/.env; then
         printf '\nLOG_PATH=$AUDIT_LOG_PATH\n' >> $APP_DIR/.env
     fi
+    if [ -f $APP_DIR/.env ] && ! grep -q '^MUSIC_PATH=' $APP_DIR/.env; then
+        printf '\nMUSIC_PATH=$MUSIC_DIR\n' >> $APP_DIR/.env
+    fi
+    mkdir -p $ANNOUNCEMENTS_DIR $MUSIC_DIR
 "
 
 # Seed sadece ilk kurulumda

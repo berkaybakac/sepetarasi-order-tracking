@@ -112,6 +112,7 @@ ssh admin@sepetarasi.local "grep CASHIER /opt/sepetarasi/.env"
 
 `deploy.sh` sırasıyla: Mac'te build → rsync ile Pi4'e gönder → migration → servis restart → `/health` kontrolü.
 `deploy.sh --init` bunlara ek olarak audit log path'ini hazırlar ve Pi4 observability kurulumunu otomatik tetikler.
+Deploy, Pi4 uzerindeki runtime muzik kutuphanesini (`packages/server/assets/music`) korur; yuklenen MP3'ler yeni release yayinlarken silinmez.
 
 `--init` Pi4 hostname'ini `sepetarasi` yapar → `sepetarasi.local:3000` ile erişim, IP değişse de çalışır.
 
