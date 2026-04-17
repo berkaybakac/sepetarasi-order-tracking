@@ -6,6 +6,18 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png?v=20260416" />
     <link rel="shortcut icon" href="/favicon.png?v=20260416" />
     <title>Sepetarasi</title>
+    <script>
+      (function () {
+        try {
+          var path = window.location.pathname;
+          if (path === "/display" || path === "/display/") {
+            var root = document.documentElement;
+            root.setAttribute("data-display-shell", "instant");
+            root.setAttribute("data-app-shell", "ready");
+          }
+        } catch (error) {}
+      })();
+    </script>
     <style>
       html,
       body {
@@ -44,6 +56,13 @@
         transform: none;
       }
 
+      html[data-display-shell="instant"] #root {
+        opacity: 1;
+        filter: none;
+        transform: none;
+        transition: none;
+      }
+
       #app-boot {
         position: fixed;
         inset: 0;
@@ -63,6 +82,10 @@
 
       #app-boot[data-state="hidden"] {
         display: none;
+      }
+
+      html[data-display-shell="instant"] #app-boot {
+        display: none !important;
       }
 
       .boot-shell {

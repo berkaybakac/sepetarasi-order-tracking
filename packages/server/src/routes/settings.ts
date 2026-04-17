@@ -17,6 +17,13 @@ import { appSettings } from "../db/schema.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
 
+function setNoStoreHeaders(reply: { header: (name: string, value: string) => unknown }) {
+	reply.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+	reply.header("Pragma", "no-cache");
+	reply.header("Expires", "0");
+	reply.header("Surrogate-Control", "no-store");
+}
+
 function getBroadcastChannelsForSetting(key: string): string[] {
 	const channels = new Set<string>();
 
@@ -79,7 +86,8 @@ export function registerSettingsRoutes(
 	const PRIVATE_ADMIN_KEYS = new Set<string>([SETTING_KEYS.ADMIN_PASSWORD_HASH]);
 
 	// GET /api/v1/settings/public - authentication gerektirmeyen, ekrana acik ayarlar
-	app.get(API_ROUTES.V1.SETTINGS_PUBLIC, async () => {
+	app.get(API_ROUTES.V1.SETTINGS_PUBLIC, async (_request, reply) => {
+		setNoStoreHeaders(reply);
 		const rows = db.select().from(appSettings).all();
 		return { ok: true, data: toPublicSettings(rows) };
 	});

@@ -509,6 +509,18 @@ export async function buildApp(opts: AppOptions) {
 				wildcard: false,
 			});
 
+			const sendDisplayShell = async (_request: FastifyRequest, reply: FastifyReply) => {
+				setNoStoreHeaders(reply);
+				return reply.sendFile("index.html", {
+					cacheControl: false,
+					etag: false,
+					lastModified: false,
+				});
+			};
+
+			app.get("/display", sendDisplayShell);
+			app.get("/display/", sendDisplayShell);
+
 			// SPA fallback: serve index.html for non-API, non-WS routes
 			app.setNotFoundHandler((request, reply) => {
 				if (request.url.startsWith("/api/") || request.url.startsWith("/ws")) {

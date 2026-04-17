@@ -14,6 +14,7 @@ let removeTimerId: number | null = null;
 interface BootScreenOptions {
 	minVisibleMs?: number;
 	maxVisibleMs?: number;
+	disabled?: boolean;
 }
 
 function getTimestamp() {
@@ -32,6 +33,14 @@ function getBootElement() {
 function markShellReady() {
 	if (typeof document === "undefined") return;
 	document.documentElement.setAttribute(APP_SHELL_STATE, "ready");
+}
+
+function removeBootElementImmediately() {
+	const bootElement = getBootElement();
+	if (!bootElement) return;
+	bootElement.setAttribute("data-state", "hidden");
+	bootElement.setAttribute("aria-hidden", "true");
+	bootElement.remove();
 }
 
 export function hideBootScreen({
@@ -69,10 +78,17 @@ export function useBootScreenReady(
 	{
 		minVisibleMs = DEFAULT_MIN_VISIBLE_MS,
 		maxVisibleMs = DEFAULT_MAX_VISIBLE_MS,
+		disabled = false,
 	}: BootScreenOptions = {},
 ) {
 	useEffect(() => {
 		if (typeof window === "undefined") return undefined;
+
+		if (disabled) {
+			markShellReady();
+			removeBootElementImmediately();
+			return undefined;
+		}
 
 		const remainingUntilFallback = Math.max(0, maxVisibleMs - getElapsedMs());
 		const fallbackTimerId = window.setTimeout(() => {
@@ -86,7 +102,7 @@ export function useBootScreenReady(
 		return () => {
 			window.clearTimeout(fallbackTimerId);
 		};
-	}, [maxVisibleMs, minVisibleMs, ready]);
+	}, [disabled, maxVisibleMs, minVisibleMs, ready]);
 }
 
 export function resetBootScreenForTests() {

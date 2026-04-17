@@ -432,6 +432,12 @@ describe("GET /api/v1/settings/public", () => {
 		});
 
 		expect(res.statusCode).toBe(200);
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.headers.pragma).toBe("no-cache");
+		expect(res.headers.expires).toBe("0");
+		expect(res.headers["surrogate-control"]).toBe("no-store");
 		const body = res.json();
 		expect(body.ok).toBe(true);
 		expect(body.data.restaurant_name).toBe("Sepetarasi Mutfak");
@@ -846,6 +852,31 @@ describe("GET /health", () => {
 });
 
 describe("connectivity test pages", () => {
+	it("serves /display as no-store HTML shell", async () => {
+		const res = await app.inject({ method: "GET", url: "/display" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.headers.pragma).toBe("no-cache");
+		expect(res.headers.expires).toBe("0");
+		expect(res.headers["surrogate-control"]).toBe("no-store");
+		expect(res.body).toContain('<div id="root"></div>');
+	});
+
+	it("serves /display/ as the same no-store HTML shell", async () => {
+		const res = await app.inject({ method: "GET", url: "/display/" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.body).toContain('<div id="root"></div>');
+	});
+
 	it("serves /test.html as plain HTML with no-store headers", async () => {
 		const res = await app.inject({ method: "GET", url: "/test.html" });
 

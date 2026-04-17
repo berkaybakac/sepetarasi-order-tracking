@@ -84,4 +84,23 @@ describe("useBootScreenReady", () => {
 		expect(document.documentElement.getAttribute("data-app-shell")).toBe("ready");
 		expect(document.getElementById("app-boot")).toBeNull();
 	});
+
+	it("reveals the app immediately when disabled for display mode", async () => {
+		function DisabledHarness() {
+			useBootScreenReady(false, {
+				disabled: true,
+				minVisibleMs: 650,
+				maxVisibleMs: 2600,
+			});
+
+			return <div>Display harness</div>;
+		}
+
+		await act(async () => {
+			root.render(<DisabledHarness />);
+		});
+
+		expect(document.documentElement.getAttribute("data-app-shell")).toBe("ready");
+		expect(document.getElementById("app-boot")).toBeNull();
+	});
 });
