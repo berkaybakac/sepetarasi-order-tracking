@@ -177,6 +177,18 @@ async function main() {
 		dbPath,
 	});
 
+	if (disableAudio) {
+		logProcessEvent(
+			"warn",
+			"audio.disabled_by_env",
+			"Audio playback is disabled by DISABLE_AUDIO=true",
+			{
+				event: "audio.disabled_by_env",
+				envVar: "DISABLE_AUDIO",
+			},
+		);
+	}
+
 	await app.listen({ port, host: "0.0.0.0" });
 	const lanIp = getLanIp();
 	app.log.info(

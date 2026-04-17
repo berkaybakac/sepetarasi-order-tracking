@@ -55,6 +55,8 @@ Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkl
 
 Kasa Electron uygulaması bu bilgileri `config.json`'a kaydeder — deploy sonrası tekrar girilmesine gerek yok.
 
+> Yazıcı fişinde Türkçe karakterler bozuk görünürse kasa config ekranındaki `Code Page` ve `Encoding` alanlarını kontrol et. Varsayılan `cp857` + `61`; sorun devam ederse `cp1254` + `24` deneyin.
+
 ### Commit Öncesi
 
 ```bash

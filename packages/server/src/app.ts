@@ -405,6 +405,11 @@ export async function buildApp(opts: AppOptions) {
 					worker: {
 						status: worker ? (worker.isRunning() ? "running" : "stopped") : "disabled",
 					},
+					audio: {
+						disabled: opts.disableAudio ?? false,
+						ttsFallbackEnabled: opts.enableTtsFallback ?? false,
+						alsaDevice: opts.alsaDevice ?? null,
+					},
 				},
 				websocket: wsStatsSnapshot(broadcaster),
 				disk,

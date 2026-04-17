@@ -648,6 +648,11 @@ describe("GET /health", () => {
 				services: {
 					db: { ok: true },
 					worker: { status: "disabled" },
+					audio: {
+						disabled: false,
+						ttsFallbackEnabled: false,
+						alsaDevice: null,
+					},
 				},
 				websocket: {
 					activeClientCount: 0,
@@ -686,5 +691,27 @@ describe("GET /health", () => {
 		expect(res.headers["access-control-allow-headers"]).toBe(
 			"Content-Type, Authorization, x-cashier-token",
 		);
+	});
+
+	it("should expose audio runtime flags in health", async () => {
+		const localApp = await buildApp({
+			db,
+			disableWorker: true,
+			disableAudio: true,
+			enableTtsFallback: true,
+			alsaDevice: "plughw:CARD=Headphones,DEV=0",
+		});
+
+		try {
+			const res = await localApp.inject({ method: "GET", url: "/health" });
+			expect(res.statusCode).toBe(200);
+			expect(res.json().data.services.audio).toEqual({
+				disabled: true,
+				ttsFallbackEnabled: true,
+				alsaDevice: "plughw:CARD=Headphones,DEV=0",
+			});
+		} finally {
+			await localApp.close();
+		}
 	});
 });

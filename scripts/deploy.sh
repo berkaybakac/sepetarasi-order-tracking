@@ -216,6 +216,13 @@ ssh "$TARGET" "
         exit 1
     fi
 
+    DISABLE_AUDIO_VALUE=\$(grep '^DISABLE_AUDIO=' $APP_DIR/.env | tail -n 1 | cut -d= -f2- | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+    if [ \"\$DISABLE_AUDIO_VALUE\" = \"1\" ] || [ \"\$DISABLE_AUDIO_VALUE\" = \"true\" ] || [ \"\$DISABLE_AUDIO_VALUE\" = \"yes\" ] || [ \"\$DISABLE_AUDIO_VALUE\" = \"on\" ]; then
+        echo \"[audio-check] FAIL: DISABLE_AUDIO aktif. Admin panelde ses acik gorunse bile hoparlorden ses cikmaz\"
+        echo \"[audio-check] cozum: $APP_DIR/.env icinde DISABLE_AUDIO satirini sil veya false yap\"
+        exit 1
+    fi
+
     EXPECTED_AUDIO_DEVICE=\$(grep '^AUDIO_ALSA_DEVICE=' $APP_DIR/.env | tail -n 1 | cut -d= -f2- | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
     if [ -z \"\$EXPECTED_AUDIO_DEVICE\" ]; then
         echo \"[audio-check] FAIL: .env icinde AUDIO_ALSA_DEVICE zorunlu\"
