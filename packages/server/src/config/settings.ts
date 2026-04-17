@@ -1,4 +1,6 @@
 import {
+	DELIVERY_TARGET_MAX,
+	DELIVERY_TARGET_MIN,
 	DISPLAY_EDITABLE_SETTING_KEYS,
 	DISPLAY_PUBLIC_SETTING_KEYS,
 	SETTING_KEYS,
@@ -11,6 +13,7 @@ const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.MUSIC_VOLUME,
 	SETTING_KEYS.MUSIC_ENABLED,
 	SETTING_KEYS.NOTE_PRESETS,
+	SETTING_KEYS.DELIVERY_TARGET_MINUTES,
 	...DISPLAY_EDITABLE_SETTING_KEYS,
 	"announcement_delay_ms",
 	"business_name",
@@ -24,6 +27,7 @@ const EDITABLE_SETTING_KEYS = [
 const PUBLIC_SETTING_KEYS = new Set<string>([
 	...DISPLAY_PUBLIC_SETTING_KEYS,
 	SETTING_KEYS.NOTE_PRESETS as string,
+	SETTING_KEYS.DELIVERY_TARGET_MINUTES as string,
 ]);
 
 const editableSettings = new Set<string>(EDITABLE_SETTING_KEYS);
@@ -65,6 +69,13 @@ export function validateSettingValue(key: string, value: string): string | null 
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < 0 || num > 100) {
 				return "music_volume must be an integer between 0 and 100";
+			}
+			return null;
+		}
+		case SETTING_KEYS.DELIVERY_TARGET_MINUTES: {
+			const num = Number(value);
+			if (!Number.isInteger(num) || num < DELIVERY_TARGET_MIN || num > DELIVERY_TARGET_MAX) {
+				return `delivery_target_minutes must be an integer between ${DELIVERY_TARGET_MIN} and ${DELIVERY_TARGET_MAX}`;
 			}
 			return null;
 		}

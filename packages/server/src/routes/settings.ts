@@ -1,15 +1,40 @@
-import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
+import {
+	API_ROUTES,
+	SETTING_KEYS,
+	WS_CHANNELS,
+	WS_EVENTS,
+	isDisplaySettingKey,
+} from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import {
 	isEditableSettingKey,
+	isPublicSettingKey,
 	toPublicSettings,
 	validateSettingValue,
 } from "../config/settings.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
+import type { Broadcaster } from "../ws/broadcaster.js";
 
-export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
+function getBroadcastChannelsForSetting(key: string): string[] {
+	const channels = new Set<string>();
+
+	if (key === SETTING_KEYS.DELIVERY_TARGET_MINUTES || key === SETTING_KEYS.NOTE_PRESETS) {
+		channels.add(WS_CHANNELS.ORDERS);
+	}
+	if (isDisplaySettingKey(key)) {
+		channels.add(WS_CHANNELS.DISPLAY);
+	}
+
+	return [...channels];
+}
+
+export function registerSettingsRoutes(
+	app: FastifyInstance,
+	db: AppDatabase,
+	broadcaster: Broadcaster,
+) {
 	const PRIVATE_ADMIN_KEYS = new Set<string>([SETTING_KEYS.ADMIN_PASSWORD_HASH]);
 
 	// GET /api/v1/settings/public - authentication gerektirmeyen, ekrana acik ayarlar
@@ -113,6 +138,13 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 				);
 			}
 
+			for (const key of changedKeys) {
+				if (!isPublicSettingKey(key)) continue;
+				const channels = getBroadcastChannelsForSetting(key);
+				if (channels.length === 0) continue;
+				broadcaster.broadcast(channels, WS_EVENTS.SETTINGS_UPDATED, { key });
+			}
+
 			return { ok: true, data: null };
 		},
 	);
@@ -164,6 +196,14 @@ export function registerSettingsRoutes(app: FastifyInstance, db: AppDatabase) {
 				},
 				"Setting updated",
 			);
+
+			if (isPublicSettingKey(key)) {
+				const channels = getBroadcastChannelsForSetting(key);
+				if (channels.length > 0) {
+					broadcaster.broadcast(channels, WS_EVENTS.SETTINGS_UPDATED, { key });
+				}
+			}
+
 			return { ok: true, data: null };
 		},
 	);

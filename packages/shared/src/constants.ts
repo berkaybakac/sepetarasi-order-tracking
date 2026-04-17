@@ -58,6 +58,7 @@ export const WS_EVENTS = {
 	ORDER_CREATED: "order:created",
 	ORDER_STATUS_CHANGED: "order:status_changed",
 	STATS_UPDATED: "stats:updated",
+	SETTINGS_UPDATED: "settings:updated",
 	ANNOUNCEMENT_NOW_PLAYING: "announcement:now_playing",
 	ANNOUNCEMENT_FINISHED: "announcement:finished",
 	MUSIC_STATUS_CHANGED: "music:status_changed",
@@ -87,7 +88,18 @@ export const SETTING_KEYS = {
 	MUSIC_LOOP_ENABLED: "music_loop_enabled",
 	MUSIC_SHUFFLE_ENABLED: "music_shuffle_enabled",
 	NOTE_PRESETS: "note_presets",
+	DELIVERY_TARGET_MINUTES: "delivery_target_minutes",
 } as const;
+
+/** Delivery target defaults (SSoT) */
+export const DELIVERY_TARGET_DEFAULT_MINUTES = 20;
+/**
+ * Hedef süreye bu kadar dakika kala sipariş kartı "warning" (sarı) rozete geçer.
+ * İş kuralı: operatöre son X dakikaya girildiğinde haber ver. 1–3 dk arası ayarlanabilir.
+ */
+export const DELIVERY_WARNING_BUFFER_MINUTES = 2;
+export const DELIVERY_TARGET_MIN = 1;
+export const DELIVERY_TARGET_MAX = 120;
 
 /** İstatistik Periyotları Seçenekleri (SSoT) */
 export const STAT_PERIODS = ["daily", "weekly", "monthly"] as const;
@@ -101,6 +113,7 @@ export const API_ROUTES = {
 		ORDER_STATUS: (id: string | number) => `/api/v1/orders/${id}/status`,
 		STATS_TODAY: "/api/v1/stats/today",
 		STATS: "/api/v1/stats",
+		STATS_DELIVERY_ANALYTICS: "/api/v1/stats/delivery-analytics",
 		SETTINGS: "/api/v1/settings",
 		SETTINGS_BULK: "/api/v1/settings/bulk",
 		SETTINGS_PUBLIC: "/api/v1/settings/public",

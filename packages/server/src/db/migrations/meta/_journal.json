@@ -43,6 +43,13 @@
       "when": 1775280000000,
       "tag": "0005_add_music_tracks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1775290000000,
+      "tag": "0006_seed_delivery_target",
+      "breakpoints": true
     }
   ]
 }

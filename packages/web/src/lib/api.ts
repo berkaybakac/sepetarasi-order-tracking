@@ -1,6 +1,12 @@
 // ADR: intentionally separate from kasa/api.ts — see docs/dev-notes.md "Intentional Separations"
 import { API_ROUTES } from "@sepetarasi/shared";
-import type { DayStats, MusicStatus, MusicTrack, Order } from "@sepetarasi/shared";
+import type {
+	DayStats,
+	DeliveryAnalyticsResult,
+	MusicStatus,
+	MusicTrack,
+	Order,
+} from "@sepetarasi/shared";
 
 const baseUrl = "";
 const cashierToken = import.meta.env.VITE_CASHIER_TOKEN?.trim();
@@ -50,6 +56,11 @@ export const api = {
 	getStats: () => request<DayStats>("GET", API_ROUTES.V1.STATS_TODAY),
 	getStatsByPeriod: (period: "daily" | "weekly" | "monthly") =>
 		request<DayStats>("GET", `${API_ROUTES.V1.STATS}?period=${period}`),
+	getDeliveryAnalytics: (from: string, to: string) =>
+		request<DeliveryAnalyticsResult>(
+			"GET",
+			`${API_ROUTES.V1.STATS_DELIVERY_ANALYTICS}?from=${from}&to=${to}`,
+		),
 	getSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS),
 	getPublicSettings: () => request<Record<string, string>>("GET", API_ROUTES.V1.SETTINGS_PUBLIC),
 	updateSettingsBulk: (settings: Record<string, string>) =>

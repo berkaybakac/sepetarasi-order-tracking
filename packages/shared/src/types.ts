@@ -77,6 +77,53 @@ export interface DayStats {
 	averageDeliverySeconds: number | null;
 }
 
+// --- Delivery Analytics ---
+
+export type DeliveryAnalyticsGranularity = "hour" | "day";
+
+export interface DeliveryAnalyticsSummary {
+	averageDeliveryMinutes: number;
+	totalDelivered: number;
+	targetMinutes: number;
+	previousPeriodAvgMinutes: number;
+	trendPercent: number;
+	onTargetRate: number;
+	onTargetCount: number;
+}
+
+export interface DeliveryAnalyticsTimeSeriesPoint {
+	bucket: string;
+	averageDeliveryMinutes: number;
+	deliveredCount: number;
+}
+
+export interface DeliveryAnalyticsTimeSeries {
+	granularity: DeliveryAnalyticsGranularity;
+	points: DeliveryAnalyticsTimeSeriesPoint[];
+}
+
+export interface DeliveryAnalyticsDistributionBucket {
+	bucket: string;
+	count: number;
+}
+
+export interface DeliveryAnalyticsByOrderType {
+	orderType: OrderType;
+	averageDeliveryMinutes: number;
+	deliveredCount: number;
+}
+
+export interface DeliveryAnalyticsResult {
+	range: {
+		from: string;
+		to: string;
+	};
+	summary: DeliveryAnalyticsSummary;
+	timeSeries: DeliveryAnalyticsTimeSeries;
+	distribution: DeliveryAnalyticsDistributionBucket[];
+	byOrderType: DeliveryAnalyticsByOrderType[];
+}
+
 // --- API ---
 
 export interface ApiResponse<T = unknown> {
@@ -135,6 +182,10 @@ export interface OrderStatusChangedPayload {
 export interface AnnouncementPayload {
 	order_id: string;
 	display_no: number;
+}
+
+export interface SettingsUpdatedPayload {
+	key: string;
 }
 
 // --- Music ---
