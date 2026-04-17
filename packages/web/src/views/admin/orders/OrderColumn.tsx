@@ -1,6 +1,9 @@
 import { OrderStatus } from "@sepetarasi/shared";
+import { AnimatePresence } from "framer-motion";
+import { OrdersIcon } from "../../../components/icons";
 import { UI_LABELS } from "../../../constants/labels";
 import { useOrdersByStatus } from "../../../stores/orderStore";
+import { EmptyState } from "../ui/primitives";
 import { OrderCard } from "./OrderCard";
 
 /**
@@ -36,45 +39,34 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 	const orders = useOrdersByStatus(status);
 
 	return (
-		<div className="min-w-0 flex flex-col gap-3">
-			{/* Sütun Başlığı */}
-			<div className="flex items-center justify-between px-1 gap-2 min-w-0">
-				<div className="flex items-center gap-2">
+		<div className="min-w-0 rounded-[1.4rem] border border-border-subtle bg-surface-3/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+			<div className="mb-4 flex items-center justify-between gap-2 px-1">
+				<div className="flex min-w-0 items-center gap-2">
 					<span className={`w-2 h-2 rounded-full ${dotClass}`} />
-					<h2 className="text-sm font-semibold text-dark-text tracking-wide uppercase min-w-0 truncate">
+					<h2 className="min-w-0 truncate text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">
 						{title}
 					</h2>
 				</div>
 				<span
-					className={`text-xs font-bold px-2 py-0.5 rounded-full border shrink-0 ${countClass}`}
+					className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-bold ${countClass}`}
 				>
 					{orders.length}
 				</span>
 			</div>
 
-			{/* Sipariş Kartları */}
 			<div className="space-y-3">
-				{orders.map((order) => (
-					<OrderCard key={order.id} order={order} status={status} />
-				))}
+				<AnimatePresence initial={false}>
+					{orders.map((order) => (
+						<OrderCard key={order.id} order={order} status={status} />
+					))}
+				</AnimatePresence>
 				{orders.length === 0 && (
-					<div className="flex flex-col items-center justify-center py-12 rounded-2xl border border-dashed border-white/5">
-						<svg
-							className="w-8 h-8 text-white/10 mb-2"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={1.5}
-								d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-							/>
-						</svg>
-						<p className="text-xs text-dark-muted">{UI_LABELS.ORDERS.EMPTY}</p>
-					</div>
+					<EmptyState
+						title={`${title} akışı şu an boş`}
+						description="Bağlantı açıksa yeni siparişler bu alanda otomatik belirecek."
+						icon={<OrdersIcon className="h-5 w-5" />}
+						compact
+					/>
 				)}
 			</div>
 		</div>

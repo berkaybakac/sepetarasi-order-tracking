@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { UI_LABELS } from "../../../constants/labels";
 import { api } from "../../../lib/api";
+import { logger } from "../../../lib/logger";
 import { useMusicStore } from "../../../stores/musicStore";
 
 export function MusicPlayerCard() {
@@ -11,40 +12,48 @@ export function MusicPlayerCard() {
 		api
 			.getMusicStatus()
 			.then(setStatus)
-			.catch((err) => console.error("[MusicPlayerCard] getMusicStatus failed:", err));
+			.catch((error) => logger.error("MusicPlayerCard", "Failed to fetch music status.", error));
 	}, [setStatus]);
 
 	const refreshStatus = () =>
 		api
 			.getMusicStatus()
 			.then(setStatus)
-			.catch((err) => console.error("[MusicPlayerCard] refresh failed:", err));
+			.catch((error) => logger.error("MusicPlayerCard", "Failed to refresh music status.", error));
 
 	const handlePlayPause = () => {
 		const action = status?.isPlaying ? api.musicPause() : api.musicPlay();
-		action.then(refreshStatus).catch(console.error);
+		action
+			.then(refreshStatus)
+			.catch((error) => logger.error("MusicPlayerCard", "Play/pause failed.", error));
 	};
 
 	const handleSkip = () => {
-		api.musicSkip().then(refreshStatus).catch(console.error);
+		api
+			.musicSkip()
+			.then(refreshStatus)
+			.catch((error) => logger.error("MusicPlayerCard", "Skip failed.", error));
 	};
 
 	const handlePrevious = () => {
-		api.musicPrevious().then(refreshStatus).catch(console.error);
+		api
+			.musicPrevious()
+			.then(refreshStatus)
+			.catch((error) => logger.error("MusicPlayerCard", "Previous track failed.", error));
 	};
 
 	const handleToggleLoop = () => {
 		api
 			.setMusicMode({ loop: !(status?.loop ?? true) })
 			.then(refreshStatus)
-			.catch(console.error);
+			.catch((error) => logger.error("MusicPlayerCard", "Loop toggle failed.", error));
 	};
 
 	const handleToggleShuffle = () => {
 		api
 			.setMusicMode({ shuffle: !(status?.shuffle ?? false) })
 			.then(refreshStatus)
-			.catch(console.error);
+			.catch((error) => logger.error("MusicPlayerCard", "Shuffle toggle failed.", error));
 	};
 
 	const statusLabel = useMemo(() => {

@@ -1,24 +1,27 @@
 import { parseNotePresets, serializeNotePresets } from "@sepetarasi/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { NotesIcon, PlusIcon } from "../../components/icons";
 import { UI_LABELS } from "../../constants/labels";
+import { useActionFeedback } from "../../hooks/useActionFeedback";
 import { api } from "../../lib/api";
+import { logger } from "../../lib/logger";
+import {
+	ActionButton,
+	EmptyState,
+	Field,
+	InlineAlert,
+	SectionCard,
+	SkeletonBlock,
+	TextInput,
+} from "./ui/primitives";
 
 export function NotePresetsCard() {
 	const [presets, setPresets] = useState<string[]>([]);
 	const [savedPresets, setSavedPresets] = useState<string[]>([]);
 	const [newPreset, setNewPreset] = useState("");
 	const [loading, setLoading] = useState(true);
-	const [saving, setSaving] = useState(false);
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	const [saveLabel, setSaveLabel] = useState<"idle" | "saved">("idle");
-	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	useEffect(
-		() => () => {
-			if (timerRef.current) clearTimeout(timerRef.current);
-		},
-		[],
-	);
+	const [loadError, setLoadError] = useState<string | null>(null);
+	const feedback = useActionFeedback();
 
 	useEffect(() => {
 		api
@@ -27,11 +30,11 @@ export function NotePresetsCard() {
 				const parsed = parseNotePresets(settings);
 				setPresets(parsed);
 				setSavedPresets(parsed);
-				setErrorMessage(null);
+				setLoadError(null);
 			})
-			.catch((err) => {
-				console.error("[NotePresetsCard] getSettings failed:", err);
-				setErrorMessage(UI_LABELS.NOTE_PRESETS.LOAD_ERROR);
+			.catch((error) => {
+				logger.error("NotePresetsCard", "Failed to load note presets.", error);
+				setLoadError(UI_LABELS.NOTE_PRESETS.LOAD_ERROR);
 			})
 			.finally(() => setLoading(false));
 	}, []);
@@ -41,141 +44,143 @@ export function NotePresetsCard() {
 	const handleAddPreset = () => {
 		const trimmed = newPreset.trim();
 		if (!trimmed) {
-			setErrorMessage(UI_LABELS.NOTE_PRESETS.EMPTY_ERROR);
+			feedback.setError(
+				new Error(UI_LABELS.NOTE_PRESETS.EMPTY_ERROR),
+				UI_LABELS.NOTE_PRESETS.EMPTY_ERROR,
+			);
 			return;
 		}
 		if (trimmed.length > 50) {
-			setErrorMessage(UI_LABELS.NOTE_PRESETS.MAX_LENGTH_ERROR);
+			feedback.setError(
+				new Error(UI_LABELS.NOTE_PRESETS.MAX_LENGTH_ERROR),
+				UI_LABELS.NOTE_PRESETS.MAX_LENGTH_ERROR,
+			);
 			return;
 		}
 		if (presets.length >= 20) {
-			setErrorMessage(UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR);
+			feedback.setError(
+				new Error(UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR),
+				UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR,
+			);
 			return;
 		}
 		if (presets.includes(trimmed)) {
-			setErrorMessage("Bu not zaten ekli");
+			feedback.setError(new Error("Bu not zaten ekli"), "Bu not zaten ekli");
 			return;
 		}
 		setPresets([...presets, trimmed]);
 		setNewPreset("");
-		setErrorMessage(null);
+		feedback.reset();
 	};
 
 	const handleRemovePreset = (idx: number) => {
 		setPresets(presets.filter((_, i) => i !== idx));
 	};
 
-	const handleSave = () => {
-		setSaving(true);
-		setErrorMessage(null);
-		api
-			.updateSettingsBulk(serializeNotePresets(presets))
-			.then(() => {
-				setSavedPresets(presets);
-				setSaveLabel("saved");
-				if (timerRef.current) clearTimeout(timerRef.current);
-				timerRef.current = setTimeout(() => setSaveLabel("idle"), 2000);
-			})
-			.catch((err) => {
-				console.error("[NotePresetsCard] updateSetting failed:", err);
-				setErrorMessage(UI_LABELS.NOTE_PRESETS.SAVE_ERROR);
-			})
-			.finally(() => setSaving(false));
+	const handleSave = async () => {
+		feedback.setPending();
+		try {
+			await api.updateSettingsBulk(serializeNotePresets(presets));
+			setSavedPresets(presets);
+			feedback.setSuccess(UI_LABELS.SAVED);
+		} catch (error) {
+			logger.error("NotePresetsCard", "Failed to save note presets.", error);
+			feedback.setError(error, UI_LABELS.NOTE_PRESETS.SAVE_ERROR);
+		}
 	};
 
 	return (
-		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 relative overflow-hidden group hover:border-white/10 transition-colors flex flex-col gap-4">
-			<div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-			<div className="relative z-10">
-				<h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-					{UI_LABELS.NOTE_PRESETS.TITLE}
-				</h3>
-				<p className="text-xs text-slate-500 mt-1">{UI_LABELS.NOTE_PRESETS.DESCRIPTION}</p>
-			</div>
-
-			{errorMessage && (
-				<div className="relative z-10 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-300">
-					{errorMessage}
-				</div>
-			)}
-
+		<SectionCard
+			title={UI_LABELS.NOTE_PRESETS.TITLE}
+			description="Bu notlar kasa tarafında hazır chip olarak görünür. Kısa ve tekrar eden notlar için kullanın."
+			icon={<NotesIcon className="h-4 w-4" />}
+		>
 			{loading ? (
-				<div className="relative z-10 flex justify-center py-6">
-					<div className="w-6 h-6 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+				<div className="space-y-4">
+					<SkeletonBlock className="h-11 w-full" />
+					<SkeletonBlock className="h-24 w-full" />
+					<SkeletonBlock className="h-24 w-full" />
 				</div>
 			) : (
-				<fieldset disabled={saving} className="relative z-10 flex flex-col gap-4">
-					{/* Mevcut presetler */}
+				<fieldset disabled={feedback.isPending} className="flex flex-col gap-4">
+					{loadError ? <InlineAlert tone="danger">{loadError}</InlineAlert> : null}
+					{feedback.isError && feedback.message ? (
+						<InlineAlert tone="danger">{feedback.message}</InlineAlert>
+					) : null}
+
 					{presets.length === 0 ? (
-						<div className="text-center py-6">
-							<p className="text-slate-400 text-sm">{UI_LABELS.NOTE_PRESETS.EMPTY_STATE}</p>
-							<p className="text-slate-500 text-xs mt-1">
-								{UI_LABELS.NOTE_PRESETS.EMPTY_STATE_HINT}
-							</p>
-						</div>
+						<EmptyState
+							title={UI_LABELS.NOTE_PRESETS.EMPTY_STATE}
+							description="İlk notu ekleyin; kasa ekranında tek dokunuşla kullanılabilir hale gelsin."
+							icon={<NotesIcon className="h-5 w-5" />}
+							compact
+						/>
 					) : (
-						<div className="space-y-2 max-h-64 overflow-y-auto">
+						<div className="max-h-72 space-y-2 overflow-y-auto">
 							{presets.map((preset, idx) => (
 								<div
 									key={preset}
-									className="flex items-start justify-between gap-3 bg-slate-950/30 border border-slate-700 rounded-lg px-4 py-3"
+									className="flex items-start justify-between gap-3 rounded-[1rem] border border-border-subtle bg-surface-1 px-4 py-3"
 								>
-									<span className="min-w-0 flex-1 text-sm text-white break-words [overflow-wrap:anywhere] [word-break:break-word]">
+									<span className="min-w-0 flex-1 break-words text-sm text-text-strong [overflow-wrap:anywhere] [word-break:break-word]">
 										{preset}
 									</span>
-									<button
-										type="button"
+									<ActionButton
+										tone="ghost"
+										className="h-9 px-3 text-xs"
 										onClick={() => handleRemovePreset(idx)}
-										className="ml-2 px-2 py-1 text-xs text-red-300 hover:text-red-200 hover:bg-red-500/10 rounded border border-red-500/20 hover:border-red-500/50 transition-colors flex-shrink-0"
 									>
 										{UI_LABELS.NOTE_PRESETS.REMOVE_BUTTON}
-									</button>
+									</ActionButton>
 								</div>
 							))}
 						</div>
 					)}
 
-					{/* Yeni preset input */}
-					<div className="flex gap-2">
-						<input
-							type="text"
-							placeholder={UI_LABELS.NOTE_PRESETS.PLACEHOLDER}
-							value={newPreset}
-							onChange={(e) => setNewPreset(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === "Enter") {
-									e.preventDefault();
-									handleAddPreset();
-								}
-							}}
-							maxLength={50}
-							className="flex-1 px-3 py-2 rounded-xl bg-slate-950/50 border border-slate-700 text-white placeholder:text-slate-600 text-sm focus:outline-none focus:border-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
-						/>
-						<button
-							type="button"
+					<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+						<Field
+							htmlFor="note-preset-input"
+							label="Yeni Hızlı Not"
+							hint="Maksimum 50 karakter. Enter ile hemen eklenir."
+						>
+							<TextInput
+								id="note-preset-input"
+								type="text"
+								placeholder={UI_LABELS.NOTE_PRESETS.PLACEHOLDER}
+								value={newPreset}
+								onChange={(event) => setNewPreset(event.target.value)}
+								onKeyDown={(event) => {
+									if (event.key === "Enter") {
+										event.preventDefault();
+										handleAddPreset();
+									}
+								}}
+								maxLength={50}
+							/>
+						</Field>
+						<ActionButton
+							tone="secondary"
+							className="md:w-auto"
+							leadingIcon={<PlusIcon className="h-4 w-4" />}
 							onClick={handleAddPreset}
-							className="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-medium hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							{UI_LABELS.NOTE_PRESETS.ADD_BUTTON}
-						</button>
+						</ActionButton>
 					</div>
 
-					{/* Kaydet butonu */}
-					<button
-						type="button"
-						onClick={handleSave}
-						disabled={!dirty || saving}
-						className="w-full mt-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:from-slate-500 disabled:to-slate-500 text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{saving
-							? "Kaydediliyor..."
-							: saveLabel === "saved"
-								? `${UI_LABELS.SAVE} ✓`
-								: UI_LABELS.SAVE}
-					</button>
+					<div className="flex items-center justify-end gap-3 border-t border-border-subtle pt-4">
+						<ActionButton
+							tone="primary"
+							onClick={handleSave}
+							busy={feedback.isPending}
+							success={feedback.isSuccess}
+							disabled={!dirty}
+						>
+							{feedback.isSuccess ? UI_LABELS.SAVED : UI_LABELS.SAVE}
+						</ActionButton>
+					</div>
 				</fieldset>
 			)}
-		</div>
+		</SectionCard>
 	);
 }

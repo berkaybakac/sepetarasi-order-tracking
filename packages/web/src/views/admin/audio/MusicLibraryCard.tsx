@@ -2,6 +2,7 @@ import type { MusicTrack } from "@sepetarasi/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UI_LABELS } from "../../../constants/labels";
 import { api } from "../../../lib/api";
+import { logger } from "../../../lib/logger";
 import { useMusicStore } from "../../../stores/musicStore";
 
 interface UploadItem {
@@ -63,7 +64,7 @@ export function MusicLibraryCard() {
 		api
 			.getMusicTracks()
 			.then(setTracks)
-			.catch((err) => console.error("[MusicLibraryCard] getMusicTracks failed:", err))
+			.catch((error) => logger.error("MusicLibraryCard", "Failed to load music tracks.", error))
 			.finally(() => setLoading(false));
 		refreshDisk();
 	}, [refreshDisk]);
@@ -111,7 +112,7 @@ export function MusicLibraryCard() {
 				refreshMusicStatus();
 				refreshDisk();
 			})
-			.catch((err) => console.error("[MusicLibraryCard] deleteMusicTrack failed:", err))
+			.catch((error) => logger.error("MusicLibraryCard", "Failed to delete music track.", error))
 			.finally(() => setDeletingId(null));
 	};
 
@@ -155,7 +156,7 @@ export function MusicLibraryCard() {
 					return next;
 				});
 			} catch (err) {
-				console.error("[MusicLibraryCard] bulk delete failed for", id, err);
+				logger.error("MusicLibraryCard", `Bulk delete failed for track ${id}.`, err);
 			}
 		}
 

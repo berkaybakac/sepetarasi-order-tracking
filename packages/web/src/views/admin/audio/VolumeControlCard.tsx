@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { UI_LABELS } from "../../../constants/labels";
+import { logger } from "../../../lib/logger";
 
 type ColorScheme = "blue" | "purple";
 
@@ -63,7 +64,9 @@ export function VolumeControlCard({
 				setSavedVolume(v);
 				if (en !== undefined) setEnabled(en);
 			})
-			.catch(console.error);
+			.catch((error) =>
+				logger.error("VolumeControlCard", "Failed to load volume settings.", error),
+			);
 	}, []);
 
 	const handleSave = () => {
@@ -75,7 +78,7 @@ export function VolumeControlCard({
 				if (timerRef.current) clearTimeout(timerRef.current);
 				timerRef.current = setTimeout(() => setSaveLabel("idle"), 2000);
 			})
-			.catch(console.error)
+			.catch((error) => logger.error("VolumeControlCard", "Failed to save volume.", error))
 			.finally(() => setSaving(false));
 	};
 
@@ -86,7 +89,7 @@ export function VolumeControlCard({
 		enabledToggle
 			.onToggle(next)
 			.then(() => setEnabled(next))
-			.catch(console.error)
+			.catch((error) => logger.error("VolumeControlCard", "Failed to toggle enabled state.", error))
 			.finally(() => setTogglingEnabled(false));
 	};
 

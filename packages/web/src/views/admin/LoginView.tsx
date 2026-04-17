@@ -1,11 +1,17 @@
 import { type SubmitEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BrandLogo } from "../../components/BrandLogo";
+import { LockIcon } from "../../components/icons";
+import { useBootScreenReady } from "../../hooks/useBootScreenReady";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { getErrorMessage } from "../../utils/error";
+import { AuthShell } from "./ui/AuthShell";
+import { ActionButton, Field, InlineAlert, PasswordInput } from "./ui/primitives";
 
 export function LoginView() {
+	useBootScreenReady(true);
+
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
@@ -29,124 +35,99 @@ export function LoginView() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-			{/* Background Abstract Shapes */}
-			<div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
-			<div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-500/20 rounded-full blur-[120px] pointer-events-none" />
+		<AuthShell
+			aside={
+				<section className="hidden rounded-[2.2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,18,31,0.82),rgba(8,14,24,0.72))] p-10 shadow-[0_24px_72px_rgba(2,6,23,0.26)] backdrop-blur-sm lg:flex lg:min-h-[35rem] lg:flex-col">
+					<p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-text-subtle/90">
+						Sepetarası
+					</p>
 
-			<div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative z-10 transition-all duration-300 hover:shadow-blue-500/10 hover:border-white/20">
-				<div className="text-center mb-8">
 					<BrandLogo
 						variant="dark"
-						className="mx-auto mb-6 h-auto w-full max-w-[13rem] drop-shadow-[0_18px_40px_rgba(15,23,42,0.45)]"
+						className="mt-8 h-auto w-full max-w-[13.5rem] drop-shadow-[0_20px_42px_rgba(15,23,42,0.35)]"
 					/>
-					<h1 className="text-3xl font-bold text-white tracking-tight">Yönetici Girişi</h1>
-					<p className="text-slate-400 mt-2 text-sm">
-						Sepetarası panelini yönetmek için giriş yapın
+
+					<div className="mt-10 max-w-[34rem]">
+						<h1 className="text-[clamp(2.3rem,3.7vw,3.8rem)] font-semibold leading-[0.96] tracking-tight text-text-strong">
+							Mağaza operasyonu
+							<span className="block">tek panelde.</span>
+						</h1>
+
+						<p className="mt-5 max-w-[31rem] text-[1.04rem] leading-8 text-text-muted">
+							Sipariş akışını, müşteri ekranını ve mağaza içi ses davranışını tek merkezden yönetin.
+						</p>
+					</div>
+
+					<div className="mt-auto flex flex-wrap gap-3 pt-10">
+						<span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-text-muted">
+							Canlı sipariş akışı
+						</span>
+						<span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-text-muted">
+							Müşteri ekranı
+						</span>
+						<span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-text-muted">
+							Mağaza içi ses
+						</span>
+					</div>
+				</section>
+			}
+		>
+			<section className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(10,18,31,0.94),rgba(8,14,25,0.9))] p-6 shadow-[0_24px_64px_rgba(2,6,23,0.32)] backdrop-blur-xl sm:p-8">
+				<div className="lg:hidden">
+					<BrandLogo
+						variant="dark"
+						className="h-auto w-full max-w-[5rem] drop-shadow-[0_16px_32px_rgba(15,23,42,0.28)]"
+					/>
+					<p className="mt-4 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-text-subtle/90">
+						Sepetarası
 					</p>
 				</div>
 
-				<form onSubmit={handleLogin} className="space-y-6">
+				<div className="mt-6 flex items-center gap-3 lg:mt-0">
+					<span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] text-brand-primary">
+						<LockIcon className="h-5 w-5" />
+					</span>
 					<div>
-						<label
-							htmlFor="admin-password"
-							className="block text-sm font-medium text-slate-300 mb-2"
-						>
-							Yönetici Parolası
-						</label>
-						<div className="relative">
-							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-								<svg
-									className="h-5 w-5 text-slate-500"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth="2"
-										d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-									/>
-								</svg>
-							</div>
-							<input
-								id="admin-password"
-								type="password"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								className="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-700 text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder-slate-500"
-								placeholder="Parolanızı girin..."
-								autoComplete="current-password"
-								required
-							/>
-						</div>
+						<p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-brand-primary/85">
+							Yönetici erişimi
+						</p>
+						<h2 className="mt-1 text-[1.72rem] font-semibold tracking-tight text-text-strong">
+							Giriş yapın
+						</h2>
 					</div>
+				</div>
 
-					{error && (
-						<div
-							role="alert"
-							aria-live="polite"
-							className="bg-brand-danger/10 border border-brand-danger/20 text-brand-danger text-sm rounded-xl p-3 flex items-start gap-2"
-						>
-							<svg
-								className="w-5 h-5 shrink-0 mt-0.5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth="2"
-									d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-							<span>{error}</span>
-						</div>
-					)}
+				<p className="mt-4 text-sm leading-7 text-text-subtle">
+					Bu alan yalnızca yetkili yönetici parolasıyla açılır. Oturum bilgisi güvenli çerezlerle
+					korunur.
+				</p>
 
-					<button
+				<form onSubmit={handleLogin} className="mt-7 space-y-5">
+					<Field htmlFor="admin-password" label="Yönetici Parolası">
+						<PasswordInput
+							id="admin-password"
+							value={password}
+							onChange={(event) => setPassword(event.target.value)}
+							placeholder="Parolanızı girin"
+							autoComplete="current-password"
+							autoFocus
+							required
+						/>
+					</Field>
+
+					{error ? <InlineAlert tone="danger">{error}</InlineAlert> : null}
+
+					<ActionButton
 						type="submit"
-						disabled={isLoading || !password}
-						className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-blue-500/25 flex justify-center items-center gap-2"
+						tone="primary"
+						busy={isLoading}
+						className="h-12 w-full [background:linear-gradient(180deg,rgba(92,214,232,0.92),rgba(38,166,190,0.9))] shadow-[0_16px_36px_rgba(34,211,238,0.14)] hover:brightness-[1.04]"
+						disabled={!password}
 					>
-						{isLoading ? (
-							<>
-								<svg
-									className="animate-spin h-5 w-5 text-white"
-									fill="none"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<circle
-										className="opacity-25"
-										cx="12"
-										cy="12"
-										r="10"
-										stroke="currentColor"
-										strokeWidth="4"
-									/>
-									<path
-										className="opacity-75"
-										fill="currentColor"
-										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-									/>
-								</svg>
-								Giriş Yapılıyor...
-							</>
-						) : (
-							"Giriş Yap"
-						)}
-					</button>
+						{isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+					</ActionButton>
 				</form>
-			</div>
-
-			<div className="absolute bottom-6 text-center w-full text-slate-500 text-sm font-medium">
-				Sepetarası • MVP v1.0 • Otonom Sipariş Takip
-			</div>
-		</div>
+			</section>
+		</AuthShell>
 	);
 }

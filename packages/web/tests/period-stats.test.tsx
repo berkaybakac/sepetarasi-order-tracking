@@ -56,6 +56,14 @@ function setInputValue(input: HTMLInputElement, value: string) {
 	input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function getDateInputs(container: HTMLDivElement) {
+	const inputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="date"]'));
+	if (inputs.length !== 2) {
+		throw new Error(`Expected 2 date inputs, received ${inputs.length}`);
+	}
+	return { fromInput: inputs[0], toInput: inputs[1] };
+}
+
 describe("PeriodStats — delivery analytics dashboard", () => {
 	let container: HTMLDivElement;
 	let root: Root;
@@ -66,6 +74,8 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 		document.body.appendChild(container);
 		root = createRoot(container);
 		vi.clearAllMocks();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-04-17T14:17:00.000Z"));
 		useSettingsStore.setState({ deliveryTargetMinutes: 20, loaded: true });
 	});
 
@@ -74,6 +84,7 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 			root.unmount();
 		});
 		container.remove();
+		vi.useRealTimers();
 	});
 
 	it("renders KPI cards, target hint, presets, distribution", async () => {
@@ -88,7 +99,7 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 
 		const text = container.textContent ?? "";
 		expect(text).toContain("Ortalama Teslim Süresi");
-		expect(text).toContain("Hedef:");
+		expect(text).toContain("Hedef 20 dk");
 		expect(text).toContain("20 dk");
 		expect(text).toContain("8.5 dk");
 		expect(text).toContain("42");
@@ -253,5 +264,97 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 
 		expect(api.updateSetting).toHaveBeenCalledWith(SETTING_KEYS.DELIVERY_TARGET_MINUTES, "25");
 		expect(container.textContent).toContain("Teslim hedefi kaydedilemedi");
+	});
+
+	it("fetches analytics only once when range changes after wsTrigger becomes truthy", async () => {
+		vi.mocked(api.getDeliveryAnalytics).mockResolvedValue(buildAnalytics());
+
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={0} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(1);
+
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={1} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(2);
+
+		const { fromInput } = getDateInputs(container);
+
+		await act(async () => {
+			setInputValue(fromInput, "2026-04-09");
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(3);
+		expect(api.getDeliveryAnalytics).toHaveBeenLastCalledWith("2026-04-09", fromInput.max);
+	});
+
+	it("throttles silent ws-triggered analytics refreshes", async () => {
+		vi.mocked(api.getDeliveryAnalytics).mockResolvedValue(buildAnalytics());
+
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={0} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(1);
+
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={1} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(2);
+
+		vi.setSystemTime(new Date("2026-04-17T14:17:05.000Z"));
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={2} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(2);
+	});
+
+	it("keeps previous analytics visible when a silent refresh is rate-limited", async () => {
+		vi.mocked(api.getDeliveryAnalytics)
+			.mockResolvedValueOnce(buildAnalytics())
+			.mockRejectedValueOnce(new Error("Çok fazla deneme. 1 dakika bekleyin."));
+
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={0} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(container.textContent).toContain("8.5 dk");
+
+		vi.setSystemTime(new Date("2026-04-17T14:17:20.000Z"));
+		await act(async () => {
+			root.render(<PeriodStats wsTrigger={1} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(container.textContent).toContain("8.5 dk");
+		expect(container.textContent).not.toContain("Çok fazla deneme. 1 dakika bekleyin.");
 	});
 });

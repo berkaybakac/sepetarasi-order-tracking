@@ -96,23 +96,23 @@ describe("Admin OrderCard delivery timer", () => {
 			root.render(<OrderCard order={order} status={OrderStatus.PREPARING} />);
 		});
 
-		const card = container.querySelector("div.bg-dark-surface") as HTMLElement;
+		const card = container.querySelector("article") as HTMLElement;
 		expect(card).not.toBeNull();
 		// 15 dk: normal (hedef 20, warning buffer 2 → 18 dk'dan sonra warning)
-		expect(card.className).toContain("border-brand-warning/30");
-		expect(card.className).not.toContain("border-brand-danger/60");
+		expect(card.className).toContain("border-brand-warning/25");
+		expect(card.className).not.toContain("border-brand-danger/55");
 
 		// Parent tick 30s aralıklı; 3 dk + 1 tick kadar ilerlet → 18 dk elapsed → warning
 		await act(async () => {
 			vi.advanceTimersByTime(3 * 60 * 1000 + 1_000);
 		});
-		expect(card.className).toContain("border-brand-warning/60");
+		expect(card.className).toContain("border-brand-warning/50");
 
 		// 5 dk daha ileri → 23 dk elapsed → overdue + glow
 		await act(async () => {
 			vi.advanceTimersByTime(5 * 60 * 1000);
 		});
-		expect(card.className).toContain("border-brand-danger/60");
-		expect(card.className).toContain("shadow-[0_0_18px_rgba(239,68,68,0.15)]");
+		expect(card.className).toContain("border-brand-danger/55");
+		expect(card.className).toContain("shadow-[0_0_24px_rgba(239,68,68,0.18)]");
 	});
 });
