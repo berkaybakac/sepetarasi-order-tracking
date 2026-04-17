@@ -30,6 +30,47 @@ function getBroadcastChannelsForSetting(key: string): string[] {
 	return [...channels];
 }
 
+type SettingEntry = [key: string, value: string];
+
+function validateSettingEntry(key: string, value: string) {
+	if (!isEditableSettingKey(key)) {
+		return {
+			code: "INVALID_SETTING_KEY" as const,
+			message: `Unknown or non-editable setting key: ${key}`,
+		};
+	}
+
+	const validationError = validateSettingValue(key, value);
+	if (validationError) {
+		return {
+			code: "INVALID_SETTING_VALUE" as const,
+			message: validationError,
+		};
+	}
+
+	return null;
+}
+
+function upsertSettings(db: AppDatabase, entries: SettingEntry[], now: string) {
+	db.transaction((tx) => {
+		for (const [key, value] of entries) {
+			tx.insert(appSettings)
+				.values({ key, value, updated_at: now })
+				.onConflictDoUpdate({ target: appSettings.key, set: { value, updated_at: now } })
+				.run();
+		}
+	});
+}
+
+function broadcastPublicSettingUpdates(broadcaster: Broadcaster, keys: string[]) {
+	for (const key of keys) {
+		if (!isPublicSettingKey(key)) continue;
+		const channels = getBroadcastChannelsForSetting(key);
+		if (channels.length === 0) continue;
+		broadcaster.broadcast(channels, WS_EVENTS.SETTINGS_UPDATED, { key });
+	}
+}
+
 export function registerSettingsRoutes(
 	app: FastifyInstance,
 	db: AppDatabase,
@@ -74,37 +115,30 @@ export function registerSettingsRoutes(
 			},
 		},
 		async (request, reply) => {
-			const entries = Object.entries(request.body.settings);
+			const entries = Object.entries(request.body.settings) as SettingEntry[];
 
 			for (const [key, value] of entries) {
-				if (!isEditableSettingKey(key)) {
+				const validationError = validateSettingEntry(key, value);
+				if (!validationError) continue;
+
+				if (validationError.code === "INVALID_SETTING_KEY") {
 					return reply.code(400).send({
 						ok: false,
 						error: {
-							code: "INVALID_SETTING_KEY",
-							message: `Unknown or non-editable setting key: ${key}`,
+							code: validationError.code,
+							message: validationError.message,
 						},
 					});
 				}
 
-				const validationError = validateSettingValue(key, value);
-				if (validationError) {
-					return reply.code(400).send({
-						ok: false,
-						error: { code: "INVALID_SETTING_VALUE", message: `${key}: ${validationError}` },
-					});
-				}
+				return reply.code(400).send({
+					ok: false,
+					error: { code: validationError.code, message: `${key}: ${validationError.message}` },
+				});
 			}
 
 			const now = new Date().toISOString();
-			db.transaction((tx) => {
-				for (const [key, value] of entries) {
-					tx.insert(appSettings)
-						.values({ key, value, updated_at: now })
-						.onConflictDoUpdate({ target: appSettings.key, set: { value, updated_at: now } })
-						.run();
-				}
-			});
+			upsertSettings(db, entries, now);
 
 			const changedKeys = entries.map(([key]) => key).sort();
 			request.log.info(
@@ -138,12 +172,7 @@ export function registerSettingsRoutes(
 				);
 			}
 
-			for (const key of changedKeys) {
-				if (!isPublicSettingKey(key)) continue;
-				const channels = getBroadcastChannelsForSetting(key);
-				if (channels.length === 0) continue;
-				broadcaster.broadcast(channels, WS_EVENTS.SETTINGS_UPDATED, { key });
-			}
+			broadcastPublicSettingUpdates(broadcaster, changedKeys);
 
 			return { ok: true, data: null };
 		},
@@ -163,29 +192,26 @@ export function registerSettingsRoutes(
 			const { key } = request.params;
 			const { value } = request.body;
 
-			if (!isEditableSettingKey(key)) {
+			const validationError = validateSettingEntry(key, value);
+			if (validationError?.code === "INVALID_SETTING_KEY") {
 				return reply.code(400).send({
 					ok: false,
 					error: {
-						code: "INVALID_SETTING_KEY",
-						message: `Unknown or non-editable setting key: ${key}`,
+						code: validationError.code,
+						message: validationError.message,
 					},
 				});
 			}
 
-			const validationError = validateSettingValue(key, value);
 			if (validationError) {
 				return reply.code(400).send({
 					ok: false,
-					error: { code: "INVALID_SETTING_VALUE", message: validationError },
+					error: { code: validationError.code, message: validationError.message },
 				});
 			}
 
 			const now = new Date().toISOString();
-			db.insert(appSettings)
-				.values({ key, value, updated_at: now })
-				.onConflictDoUpdate({ target: appSettings.key, set: { value, updated_at: now } })
-				.run();
+			upsertSettings(db, [[key, value]], now);
 
 			request.log.info(
 				{
@@ -197,12 +223,7 @@ export function registerSettingsRoutes(
 				"Setting updated",
 			);
 
-			if (isPublicSettingKey(key)) {
-				const channels = getBroadcastChannelsForSetting(key);
-				if (channels.length > 0) {
-					broadcaster.broadcast(channels, WS_EVENTS.SETTINGS_UPDATED, { key });
-				}
-			}
+			broadcastPublicSettingUpdates(broadcaster, [key]);
 
 			return { ok: true, data: null };
 		},
