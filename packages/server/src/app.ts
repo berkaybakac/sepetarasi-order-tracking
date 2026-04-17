@@ -10,7 +10,7 @@ import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import { SETTING_KEYS, WS_CHANNELS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
-import Fastify, { type FastifyRequest } from "fastify";
+import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
 import type { AppDatabase } from "./db/connection.js";
@@ -31,6 +31,45 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const HEARTBEAT_INTERVAL = 60000;
 const HEARTBEAT_INTERVAL_LABEL = "60s";
 const MAX_MUSIC_UPLOAD_BYTES = 500 * 1024 * 1024;
+
+function parseRetryAfterSeconds(value: unknown): number | undefined {
+	if (Array.isArray(value)) {
+		return parseRetryAfterSeconds(value[0]);
+	}
+
+	if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+		return Math.trunc(value);
+	}
+
+	if (typeof value !== "string") return undefined;
+
+	const numeric = Number.parseInt(value, 10);
+	if (Number.isFinite(numeric) && numeric >= 0) {
+		return numeric;
+	}
+
+	const dateValue = Date.parse(value);
+	if (Number.isNaN(dateValue)) return undefined;
+
+	return Math.max(1, Math.ceil((dateValue - Date.now()) / 1000));
+}
+
+function formatRateLimitMessage(retryAfterSeconds?: number) {
+	if (!retryAfterSeconds || retryAfterSeconds <= 0) {
+		return "İstek sınırına ulaşıldı. Kısa süre sonra tekrar deneyin.";
+	}
+
+	if (retryAfterSeconds < 60) {
+		return `İstek sınırına ulaşıldı. Yaklaşık ${retryAfterSeconds} sn sonra tekrar deneyin.`;
+	}
+
+	const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+	return `İstek sınırına ulaşıldı. Yaklaşık ${minutes} dk sonra tekrar deneyin.`;
+}
+
+function replyRetryAfterSeconds(reply: FastifyReply) {
+	return parseRetryAfterSeconds(reply.getHeader("retry-after"));
+}
 
 function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
 	return request.ip || request.socket?.remoteAddress || undefined;
@@ -260,6 +299,19 @@ export async function buildApp(opts: AppOptions) {
 					error: { code: "VALIDATION_ERROR", message: error.message },
 				});
 			}
+
+			if ((error.statusCode ?? 500) === 429) {
+				const retryAfterSeconds = replyRetryAfterSeconds(reply);
+				return reply.status(429).send({
+					ok: false,
+					error: {
+						code: "RATE_LIMITED",
+						message: formatRateLimitMessage(retryAfterSeconds),
+					},
+					retryAfterSeconds,
+				});
+			}
+
 			reply.send(error);
 		},
 	);

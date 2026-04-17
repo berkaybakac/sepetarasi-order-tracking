@@ -197,7 +197,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 					type: "object",
 					properties: {
 						currentPassword: { type: "string" },
-						newPassword: { type: "string", minLength: 6 },
+						newPassword: { type: "string", minLength: 8 },
 					},
 					required: ["currentPassword", "newPassword"],
 				},

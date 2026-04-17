@@ -121,6 +121,43 @@ describe("Music routes", () => {
 		}
 	});
 
+	it("keeps music upload available after the generic API rate limit is exhausted", async () => {
+		for (let i = 0; i < 100; i++) {
+			const res = await app.inject({
+				method: "GET",
+				url: "/api/v1/auth/me",
+				headers: { cookie: adminCookie },
+			});
+			expect(res.statusCode).toBe(200);
+		}
+
+		const limitedRes = await app.inject({
+			method: "GET",
+			url: "/api/v1/auth/me",
+			headers: { cookie: adminCookie },
+		});
+		expect(limitedRes.statusCode).toBe(429);
+
+		const fileBuffer = Buffer.alloc(1024, 0x7);
+		const { boundary, payload } = buildMultipartPayload(
+			"rate-limit-bypass.mp3",
+			"audio/mpeg",
+			fileBuffer,
+		);
+		const uploadRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/music/tracks",
+			headers: {
+				cookie: adminCookie,
+				"content-type": `multipart/form-data; boundary=${boundary}`,
+			},
+			payload,
+		});
+
+		expect(uploadRes.statusCode).toBe(201);
+		expect(uploadRes.json().data.file_size).toBe(fileBuffer.length);
+	});
+
 	it("does not expose removed download endpoints", async () => {
 		const postRes = await app.inject({
 			method: "POST",

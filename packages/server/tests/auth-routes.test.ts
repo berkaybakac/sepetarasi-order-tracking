@@ -196,6 +196,19 @@ describe("Auth routes contract", () => {
 		expect(wrongCurrent.json().error.code).toBe("INVALID_CURRENT_PASSWORD");
 	});
 
+	it("POST /auth/change-password rejects too-short new passwords", async () => {
+		const adminCookie = await loginAsAdmin(app);
+		const tooShort = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.CHANGE_PASSWORD,
+			headers: { cookie: adminCookie },
+			payload: { currentPassword: "admin123", newPassword: "short7" },
+		});
+
+		expect(tooShort.statusCode).toBe(400);
+		expect(tooShort.json().error.code).toBe("VALIDATION_ERROR");
+	});
+
 	it("password change invalidates old password and accepts new password", async () => {
 		const adminCookie = await loginAsAdmin(app);
 		const changeRes = await app.inject({

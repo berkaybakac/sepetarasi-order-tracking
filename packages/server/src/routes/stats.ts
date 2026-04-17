@@ -5,6 +5,8 @@ import type { AppDatabase } from "../db/connection.js";
 import { InvalidDeliveryAnalyticsRangeError, StatsService } from "../services/stats.service.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
 
+const DELIVERY_ANALYTICS_RATE_LIMIT = { max: 300, timeWindow: "1 minute" } as const;
+
 export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 	const statsService = new StatsService(db);
 
@@ -37,7 +39,12 @@ export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 
 	app.get<{ Querystring: { from?: string; to?: string } }>(
 		API_ROUTES.V1.STATS_DELIVERY_ANALYTICS,
-		{ preHandler: requireAdmin },
+		{
+			preHandler: requireAdmin,
+			config: {
+				rateLimit: DELIVERY_ANALYTICS_RATE_LIMIT,
+			},
+		},
 		async (request, reply) => {
 			const { from, to } = request.query;
 			if (!from || !to) {
