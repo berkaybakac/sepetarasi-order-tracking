@@ -1,7 +1,8 @@
-import { OrderStatus } from "@sepetarasi/shared";
+import { OrderStatus, getOrderUrgency } from "@sepetarasi/shared";
 import type { Order } from "@sepetarasi/shared";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useSettingsStore } from "../stores/settingsStore";
 import { StatusButton } from "./StatusButton";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -49,16 +50,19 @@ export function OrderCard({ order }: OrderCardProps) {
 	const isTerminal = order.status === "DELIVERED" || order.status === "CANCELLED";
 	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
-	// Track elapsed minutes — update every 30s for accurate 18/20-min boundary detection
+	const targetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
+
+	// Track elapsed minutes — update every 30s so warning/overdue state reacts promptly.
 	const [mins, setMins] = useState(() => elapsedMins(order.created_at));
 	useEffect(() => {
 		const id = setInterval(() => setMins(elapsedMins(order.created_at)), 30_000);
 		return () => clearInterval(id);
 	}, [order.created_at]);
 
-	// Urgency states (only for active orders)
-	const isWarning = !isTerminal && mins >= 18 && mins < 20;
-	const isCritical = !isTerminal && mins >= 20;
+	// Shared helper: hedef - 2dk → warning, hedef aşıldı → overdue.
+	const urgency = !isTerminal ? getOrderUrgency(mins, targetMinutes) : "normal";
+	const isWarning = urgency === "warning";
+	const isCritical = urgency === "overdue";
 
 	// Left border color — urgency overrides status color for active orders
 	const borderColor = isCritical

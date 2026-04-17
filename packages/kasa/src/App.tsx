@@ -1,4 +1,10 @@
-import { WS_CHANNELS, type WsMessage } from "@sepetarasi/shared";
+import {
+	SETTING_KEYS,
+	type SettingsUpdatedPayload,
+	WS_CHANNELS,
+	WS_EVENTS,
+	type WsMessage,
+} from "@sepetarasi/shared";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { BrandLogo } from "./components/BrandLogo";
 import { OrderForm } from "./components/OrderForm";
@@ -7,6 +13,7 @@ import { ServerConfig } from "./components/ServerConfig";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { ApiError, api, setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
 import { useOrderStore } from "./stores/orderStore";
+import { useSettingsStore } from "./stores/settingsStore";
 
 function getUnlockErrorMessage(error: unknown): string {
 	if (error instanceof ApiError && error.code === "UNAUTHORIZED") {
@@ -107,12 +114,24 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 	const setConnected = useOrderStore((s) => s.setConnected);
 	const connected = useOrderStore((s) => s.connected);
 	const loading = useOrderStore((s) => s.loading);
+	const hydrateSettings = useSettingsStore((s) => s.hydrate);
 	const [unlockModalOpen, setUnlockModalOpen] = useState(false);
 	const [unlockPassword, setUnlockPassword] = useState("");
 	const [unlockError, setUnlockError] = useState<string | null>(null);
 	const [unlocking, setUnlocking] = useState(false);
 
-	const onMessage = useCallback((msg: WsMessage) => applyWsEvent(msg), [applyWsEvent]);
+	const onMessage = useCallback(
+		(msg: WsMessage) => {
+			applyWsEvent(msg);
+			if (msg.event === WS_EVENTS.SETTINGS_UPDATED) {
+				const payload = msg.data as SettingsUpdatedPayload | undefined;
+				if (payload?.key === SETTING_KEYS.DELIVERY_TARGET_MINUTES) {
+					void hydrateSettings();
+				}
+			}
+		},
+		[applyWsEvent, hydrateSettings],
+	);
 
 	const onConnect = useCallback(() => {
 		setConnected(true);
@@ -131,7 +150,8 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 
 	useEffect(() => {
 		hydrate();
-	}, [hydrate]);
+		hydrateSettings();
+	}, [hydrate, hydrateSettings]);
 
 	const closeUnlockModal = useCallback(() => {
 		if (unlocking) return;
