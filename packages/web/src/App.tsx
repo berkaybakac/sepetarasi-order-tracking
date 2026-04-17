@@ -1,11 +1,18 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { api } from "./lib/api";
+import { ApiError, api } from "./lib/api";
 import { useAuthStore } from "./stores/auth.store";
 import { AdminView } from "./views/admin/AdminView";
 import { LoginView } from "./views/admin/LoginView";
+import { AdminBootSplash } from "./views/admin/ui/LoadingStates";
 import { CustomerDisplay } from "./views/display/CustomerDisplay";
+
+const AUTH_CHECK_RETRY_DELAYS_MS = [350, 900, 1800] as const;
+
+function isRecoverableAuthCheckError(error: unknown) {
+	return error instanceof ApiError && error.recoverable && error.status !== 401;
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
 	const { isAdmin, setAuthStatus } = useAuthStore();
@@ -14,20 +21,55 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 	const [verifying, setVerifying] = useState(true);
 
 	useEffect(() => {
-		api
-			.authCheck()
-			.then(() => setAuthStatus(true))
-			.catch(() => setAuthStatus(false))
-			.finally(() => setVerifying(false));
-	}, [setAuthStatus]);
+		let cancelled = false;
+		let retryTimeoutId: number | null = null;
+
+		const verifyAuth = async (attempt = 0) => {
+			try {
+				await api.authCheck();
+				if (cancelled) return;
+				setAuthStatus(true);
+				setVerifying(false);
+			} catch (error) {
+				if (cancelled) return;
+
+				if (isRecoverableAuthCheckError(error)) {
+					const retryDelay = AUTH_CHECK_RETRY_DELAYS_MS[attempt];
+					if (retryDelay !== undefined) {
+						retryTimeoutId = window.setTimeout(() => {
+							void verifyAuth(attempt + 1);
+						}, retryDelay);
+						return;
+					}
+
+					// Dev reload / transient backend restarts should not force a visible logout.
+					if (isAdmin) {
+						setVerifying(false);
+						return;
+					}
+				}
+
+				setAuthStatus(false);
+				setVerifying(false);
+			}
+		};
+
+		void verifyAuth();
+
+		return () => {
+			cancelled = true;
+			if (retryTimeoutId !== null) {
+				window.clearTimeout(retryTimeoutId);
+			}
+		};
+	}, [isAdmin, setAuthStatus]);
 
 	// Auth doğrulaması tamamlanmadan korumalı ekranı render etme.
 	if (verifying) {
-		return (
-			<div className="min-h-screen bg-slate-900 flex items-center justify-center">
-				<div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-			</div>
-		);
+		if (isAdmin) {
+			return children;
+		}
+		return <AdminBootSplash />;
 	}
 
 	if (!isAdmin) {

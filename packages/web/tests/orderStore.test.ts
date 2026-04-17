@@ -23,6 +23,7 @@ describe("Web orderStore", () => {
 			hasConnectedOnce: false,
 			isHydrating: false,
 			lastReconnectedAt: 0,
+			lastSyncedAt: 0,
 			nowPlaying: null,
 		});
 		vi.clearAllMocks();
@@ -48,6 +49,7 @@ describe("Web orderStore", () => {
 
 		expect(useOrderStore.getState().loading).toBe(false);
 		expect(useOrderStore.getState().isHydrating).toBe(false);
+		expect(useOrderStore.getState().lastSyncedAt).toBeGreaterThan(0);
 	});
 
 	it("should guard against concurrent hydration calls", async () => {
@@ -66,6 +68,7 @@ describe("Web orderStore", () => {
 	it("should retry 3 times in silent mode before failing", async () => {
 		vi.useFakeTimers();
 		vi.mocked(api.listOrders).mockRejectedValue(new Error("Transient Error"));
+		vi.mocked(api.getStats).mockResolvedValue({ totalOrders: 0 } as DayStats);
 
 		const hydratePromise = useOrderStore.getState().hydrate(true);
 
@@ -112,6 +115,26 @@ describe("Web orderStore", () => {
 		expect(state.orders.get(order.id)?.display_no).toBe(1);
 		expect(state.loading).toBe(false);
 		expect(state.isHydrating).toBe(false);
+	});
+
+	it("should request stats in parallel with orders during hydration", async () => {
+		let resolveOrders: ((orders: Order[]) => void) | null = null;
+
+		vi.mocked(api.listOrders).mockImplementationOnce(
+			() =>
+				new Promise<Order[]>((resolve) => {
+					resolveOrders = resolve;
+				}),
+		);
+		vi.mocked(api.getStats).mockResolvedValueOnce({ totalOrders: 0 } as DayStats);
+
+		const hydratePromise = useOrderStore.getState().hydrate();
+
+		expect(api.listOrders).toHaveBeenCalledTimes(1);
+		expect(api.getStats).toHaveBeenCalledTimes(1);
+
+		resolveOrders?.([]);
+		await hydratePromise;
 	});
 
 	it("should skip stats request when hydrate is called with includeStats=false", async () => {

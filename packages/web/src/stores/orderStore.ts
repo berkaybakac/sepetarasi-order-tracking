@@ -2,6 +2,7 @@ import { type OrderStatus, applyAnnouncementWsEvent, applyOrderWsEvent } from "@
 import type { AnnouncementPayload, DayStats, Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
 import { api } from "../lib/api";
+import { logger } from "../lib/logger";
 
 interface OrderState {
 	orders: Map<string, Order>;
@@ -12,6 +13,7 @@ interface OrderState {
 	hasConnectedOnce: boolean;
 	isHydrating: boolean;
 	lastReconnectedAt: number;
+	lastSyncedAt: number;
 
 	hydrate: (silent?: boolean, includeStats?: boolean) => Promise<void>;
 	applyWsEvent: (msg: WsMessage) => void;
@@ -28,6 +30,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 	hasConnectedOnce: false,
 	isHydrating: false,
 	lastReconnectedAt: 0,
+	lastSyncedAt: 0,
 	nowPlaying: null,
 
 	hydrate: async (silent = false, includeStats = true) => {
@@ -41,28 +44,35 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 		while (attempt <= retries) {
 			try {
-				const orderList = await api.listOrders();
-				let stats = get().stats;
-
-				if (includeStats) {
-					try {
-						stats = await api.getStats();
-					} catch (statsErr) {
-						// Do not fail order hydration when stats endpoint is unauthorized/unavailable
-						// (e.g. public customer display route).
-						console.warn("Failed to hydrate stats:", statsErr);
-					}
-				}
+				const statsPromise = includeStats
+					? api.getStats().catch((statsErr) => {
+							// Do not fail order hydration when stats endpoint is unauthorized/unavailable
+							// (e.g. public customer display route).
+							logger.warn(
+								"orderStore",
+								"Failed to hydrate stats; continuing with orders only.",
+								statsErr,
+							);
+							return get().stats;
+						})
+					: Promise.resolve(get().stats);
+				const [orderList, stats] = await Promise.all([api.listOrders(), statsPromise]);
 
 				const orders = new Map<string, Order>();
 				for (const order of orderList) {
 					orders.set(order.id, order);
 				}
-				set({ orders, stats, loading: false, isHydrating: false });
+				set({
+					orders,
+					stats,
+					loading: false,
+					isHydrating: false,
+					lastSyncedAt: Date.now(),
+				});
 				return;
 			} catch (err) {
 				attempt++;
-				console.error(`Failed to hydrate orders (attempt ${attempt}):`, err);
+				logger.error("orderStore", `Failed to hydrate orders (attempt ${attempt}).`, err);
 
 				if (attempt <= retries) {
 					const backoff = 1000 * 2 ** attempt; // 2s, 4s, 8s
@@ -80,13 +90,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
 		const orderUpdate = applyOrderWsEvent(orders, msg);
 		if (orderUpdate) {
-			set(orderUpdate);
+			set({ ...orderUpdate, lastSyncedAt: Date.now() });
 			return;
 		}
 
 		const announcementUpdate = applyAnnouncementWsEvent(msg);
 		if (announcementUpdate) {
-			set(announcementUpdate);
+			set({ ...announcementUpdate, lastSyncedAt: Date.now() });
 		}
 	},
 

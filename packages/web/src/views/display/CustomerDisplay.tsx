@@ -3,8 +3,11 @@ import type { WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { UI_LABELS } from "../../constants/labels";
+import { useBootScreenReady } from "../../hooks/useBootScreenReady";
+import { useInterval } from "../../hooks/useInterval";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { api } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 import {
 	ClockText,
@@ -66,10 +69,13 @@ export function CustomerDisplay() {
 	);
 	const [preparingPage, setPreparingPage] = useState(0);
 	const [readyPage, setReadyPage] = useState(0);
+	const [initialLoadSettled, setInitialLoadSettled] = useState(false);
 	const preparingPageCountRef = useRef(preparingPageCount);
 	const readyPageCountRef = useRef(readyPageCount);
 	const previousReadyIdsRef = useRef<Set<string>>(new Set());
 	const hasReadySnapshotRef = useRef(false);
+
+	useBootScreenReady(initialLoadSettled);
 
 	useEffect(() => {
 		preparingPageCountRef.current = preparingPageCount;
@@ -100,35 +106,47 @@ export function CustomerDisplay() {
 	useWebSocket({ channel: WS_CHANNELS.DISPLAY, onMessage, onConnect, onDisconnect });
 
 	useEffect(() => {
-		hydrate(false, false);
+		let cancelled = false;
 
-		const loadDisplaySettings = () => {
-			api
+		const loadInitialState = async () => {
+			const settingsRequest = api
 				.getPublicSettings()
 				.then((settings) => setDisplayConfig(parseDisplaySettings(settings)))
-				.catch((err) => console.error("[CustomerDisplay] getPublicSettings failed:", err));
+				.catch((error) =>
+					logger.error("CustomerDisplay", "Failed to load public display settings.", error),
+				);
+
+			await Promise.allSettled([hydrate(false, false), settingsRequest]);
+			if (!cancelled) {
+				setInitialLoadSettled(true);
+			}
 		};
 
-		loadDisplaySettings();
-		const settingsInterval = setInterval(loadDisplaySettings, 30_000);
-		return () => clearInterval(settingsInterval);
+		void loadInitialState();
+
+		return () => {
+			cancelled = true;
+		};
 	}, [hydrate]);
+
+	useInterval(() => {
+		api
+			.getPublicSettings()
+			.then((settings) => setDisplayConfig(parseDisplaySettings(settings)))
+			.catch((error) =>
+				logger.error("CustomerDisplay", "Failed to refresh public display settings.", error),
+			);
+	}, 30_000);
 
 	// Re-render every minute so the auto-hide timer stays accurate.
 	const [, tick] = useState(0);
-	useEffect(() => {
-		const interval = setInterval(() => tick((n) => n + 1), 60_000);
-		return () => clearInterval(interval);
-	}, []);
+	useInterval(() => tick((n) => n + 1), 60_000);
 
 	// Auto-advance both columns independently so one column jump does not disturb the other.
-	useEffect(() => {
-		const interval = setInterval(() => {
-			setPreparingPage((p) => advancePage(p, preparingPageCountRef.current));
-			setReadyPage((p) => advancePage(p, readyPageCountRef.current));
-		}, effectiveConfig.pageSeconds * 1000);
-		return () => clearInterval(interval);
-	}, [effectiveConfig.pageSeconds]);
+	useInterval(() => {
+		setPreparingPage((p) => advancePage(p, preparingPageCountRef.current));
+		setReadyPage((p) => advancePage(p, readyPageCountRef.current));
+	}, effectiveConfig.pageSeconds * 1000);
 
 	// When ready list gains new items (without announcement), jump ready column to the newest ready order page.
 	useEffect(() => {

@@ -94,6 +94,7 @@ describe("Customer display reconnect snapshot", () => {
 			hasConnectedOnce: false,
 			isHydrating: false,
 			lastReconnectedAt: 0,
+			lastSyncedAt: 0,
 			nowPlaying: null,
 		});
 

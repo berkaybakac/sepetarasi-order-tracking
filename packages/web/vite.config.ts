@@ -18,5 +18,14 @@ export default defineConfig({
 	},
 	build: {
 		outDir: "dist",
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					if (id.includes("node_modules/recharts")) return "charts";
+					if (id.includes("node_modules/framer-motion")) return "motion";
+					if (id.includes("node_modules/react-router")) return "router";
+				},
+			},
+		},
 	},
 });

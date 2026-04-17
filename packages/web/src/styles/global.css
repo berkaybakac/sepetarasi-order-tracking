@@ -4,9 +4,97 @@
 /* ── Beyaz scroll bug fix: tarayıcı kendi arkaplanını göstermesin ── */
 html,
 body {
-	background-color: #0f172a; /* dark-bg ile aynı */
+	background-color: #08111f;
 	margin: 0;
 	padding: 0;
+}
+
+body {
+	color: var(--color-text-strong);
+	font-feature-settings: "ss01" 1, "cv11" 1, "tnum" 1;
+}
+
+#root {
+	min-height: 100vh;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+	transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, box-shadow
+		180ms ease, transform 180ms ease;
+}
+
+:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 1px rgba(8, 17, 31, 0.7), 0 0 0 4px var(--color-focus-ring);
+}
+
+::selection {
+	background: rgba(34, 211, 238, 0.28);
+	color: #f8fafc;
+}
+
+.auth-shell {
+	background: radial-gradient(circle at 14% 14%, rgba(125, 211, 252, 0.08), transparent 30%),
+		radial-gradient(circle at 82% 18%, rgba(34, 211, 238, 0.06), transparent 24%),
+		linear-gradient(180deg, #07101c 0%, #08111f 56%, #0a1220 100%);
+}
+
+.auth-grid-overlay {
+	background-image: linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+	background-size: 88px 88px;
+	opacity: 0.34;
+}
+
+.auth-glow-overlay {
+	background: radial-gradient(circle at center top, rgba(125, 211, 252, 0.1), transparent 50%);
+}
+
+.admin-shell-noise {
+	background-image: radial-gradient(circle at 12% 18%, rgba(34, 211, 238, 0.18), transparent 28%),
+		radial-gradient(circle at 82% 12%, rgba(14, 165, 233, 0.14), transparent 22%),
+		radial-gradient(circle at 72% 72%, rgba(16, 185, 129, 0.08), transparent 24%),
+		linear-gradient(180deg, rgba(8, 17, 31, 1) 0%, rgba(5, 10, 18, 1) 100%);
+}
+
+.admin-grid-overlay {
+	background-image: linear-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(148, 163, 184, 0.09) 1px, transparent 1px);
+	background-size: 72px 72px;
+}
+
+.admin-noise-overlay {
+	background-image: radial-gradient(rgba(255, 255, 255, 0.6) 0.6px, transparent 0.6px);
+	background-size: 18px 18px;
+}
+
+.skeleton-shimmer {
+	position: relative;
+	overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.08) 45%,
+		transparent 100%
+	);
+	transform: translateX(-100%);
+	animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+	to {
+		transform: translateX(100%);
+	}
 }
 
 /* Native number spinner oklarını gizle; bu ekranda özel +/- kontroller kullanıyoruz. */

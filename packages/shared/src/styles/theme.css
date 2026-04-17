@@ -1,23 +1,39 @@
 @theme {
 	/* ── Marka Renkleri - Single Source of Truth ── */
-	--color-brand-primary: #2563eb; /* blue-600 */
-	--color-brand-primary-hover: #1d4ed8; /* blue-700 */
+	--color-brand-primary: #22d3ee; /* cyan-400 */
+	--color-brand-primary-hover: #06b6d4; /* cyan-500 */
 	--color-brand-warning: #f59e0b; /* amber-500 */
 	--color-brand-success: #10b981; /* emerald-500 */
 	--color-brand-danger: #ef4444; /* red-500 */
+	--color-brand-accent: #38bdf8; /* sky-400 */
+	--color-brand-accent-strong: #0ea5e9; /* sky-500 */
 
 	/* ── Açık Tema Yüzeyleri ── */
 	--color-brand-surface: #ffffff;
 	--color-brand-bg: #f9fafb; /* gray-50 */
 
 	/* ── Koyu Tema Yüzeyleri ── */
-	--color-dark-bg: #0f172a; /* slate-900 */
+	--color-dark-bg: #08111f;
 	--color-dark-surface: rgba(255, 255, 255, 0.05);
 	--color-dark-border: rgba(255, 255, 255, 0.08);
 	--color-dark-text: #f1f5f9; /* slate-100 */
 	--color-dark-muted: #94a3b8; /* slate-400 */
+	--color-surface-1: rgba(8, 17, 31, 0.86);
+	--color-surface-2: rgba(12, 22, 38, 0.9);
+	--color-surface-3: rgba(18, 30, 48, 0.94);
+	--color-surface-elevated: rgba(22, 35, 55, 0.96);
+	--color-border-subtle: rgba(148, 163, 184, 0.12);
+	--color-border-strong: rgba(148, 163, 184, 0.22);
+	--color-text-strong: #f8fafc;
+	--color-text-muted: #cbd5e1;
+	--color-text-subtle: #94a3b8;
+	--color-focus-ring: rgba(34, 211, 238, 0.45);
+	--shadow-elevation-1: 0 8px 24px rgba(2, 6, 23, 0.18);
+	--shadow-elevation-2: 0 16px 48px rgba(2, 6, 23, 0.3);
+	--shadow-elevation-3: 0 24px 72px rgba(2, 6, 23, 0.42);
 
 	/* ── Köşe Yuvarlaklığı ── */
 	--radius-card: 0.75rem;
 	--radius-btn: 0.5rem;
+	--radius-panel: 1.5rem;
 }

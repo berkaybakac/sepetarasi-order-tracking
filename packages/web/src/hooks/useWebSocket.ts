@@ -1,5 +1,6 @@
 import type { WsMessage } from "@sepetarasi/shared";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { logger } from "../lib/logger";
 
 interface UseWebSocketOptions {
 	channel: string;
@@ -11,70 +12,97 @@ interface UseWebSocketOptions {
 export function useWebSocket({ channel, onMessage, onConnect, onDisconnect }: UseWebSocketOptions) {
 	const wsRef = useRef<WebSocket | null>(null);
 	const reconnectAttempt = useRef(0);
-	const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const handleMessage = useEffectEvent(onMessage);
+	const handleConnect = useEffectEvent(() => onConnect?.());
+	const handleDisconnect = useEffectEvent(() => onDisconnect?.());
 
-	const connect = useCallback(() => {
+	useEffect(() => {
+		let disposed = false;
 		const protocol = location.protocol === "https:" ? "wss:" : "ws:";
 		const key = import.meta.env.VITE_WS_AUTH_KEY;
 
 		if (!key) {
-			console.error(
-				"VITE_WS_AUTH_KEY is missing! WebSocket connection will likely fail for non-display channels.",
+			logger.warn(
+				"useWebSocket",
+				"VITE_WS_AUTH_KEY is missing. Authenticated websocket channels may fail.",
 			);
 		}
 
-		const wsUrl = `${protocol}//${location.host}/ws?channel=${channel}${key ? `&key=${encodeURIComponent(key)}` : ""}`;
+		const clearReconnectTimer = () => {
+			if (reconnectTimer.current) {
+				clearTimeout(reconnectTimer.current);
+				reconnectTimer.current = null;
+			}
+		};
 
-		try {
-			const ws = new WebSocket(wsUrl);
-			wsRef.current = ws;
+		const scheduleReconnect = (delayMs: number) => {
+			if (disposed) return;
+			clearReconnectTimer();
+			reconnectTimer.current = setTimeout(() => {
+				reconnectTimer.current = null;
+				connect();
+			}, delayMs);
+		};
 
-			ws.onopen = () => {
-				reconnectAttempt.current = 0;
-				onConnect?.();
-			};
+		const connect = () => {
+			if (disposed) return;
+			const wsUrl = `${protocol}//${location.host}/ws?channel=${channel}${key ? `&key=${encodeURIComponent(key)}` : ""}`;
 
-			ws.onmessage = (event) => {
-				try {
-					const msg: WsMessage = JSON.parse(event.data);
-					if (msg.event === "error" && msg.message === "Unauthorized") {
-						console.error(
-							"WebSocket Unauthorized! This usually means VITE_WS_AUTH_KEY does not match the server's WS_AUTH_KEY. Please check your .env files and rebuild the app.",
-						);
+			try {
+				const ws = new WebSocket(wsUrl);
+				wsRef.current = ws;
+
+				ws.onopen = () => {
+					reconnectAttempt.current = 0;
+					handleConnect();
+				};
+
+				ws.onmessage = (event) => {
+					try {
+						const msg: WsMessage = JSON.parse(event.data);
+						if (msg.event === "error" && msg.message === "Unauthorized") {
+							logger.error(
+								"useWebSocket",
+								"WebSocket Unauthorized. Check VITE_WS_AUTH_KEY and server WS_AUTH_KEY.",
+							);
+						}
+						handleMessage(msg);
+					} catch (error) {
+						logger.error("useWebSocket", "WS message parse error.", error);
 					}
-					onMessage(msg);
-				} catch (err) {
-					console.error("WS message parse error:", err);
-				}
-			};
+				};
 
-			ws.onclose = () => {
-				onDisconnect?.();
-				scheduleReconnect();
-			};
+				ws.onclose = () => {
+					handleDisconnect();
+					if (wsRef.current === ws) {
+						wsRef.current = null;
+					}
+					if (disposed) return;
+					const baseDelay = Math.min(1000 * 2 ** reconnectAttempt.current, 30_000);
+					const jitter = Math.floor(baseDelay * (0.2 * Math.random()));
+					reconnectAttempt.current += 1;
+					scheduleReconnect(baseDelay + jitter);
+				};
 
-			ws.onerror = () => {
-				ws.close();
-			};
-		} catch {
-			scheduleReconnect();
-		}
-	}, [channel, onMessage, onConnect, onDisconnect]);
+				ws.onerror = () => {
+					ws.close();
+				};
+			} catch (error) {
+				logger.warn("useWebSocket", "Initial websocket connection failed; retry scheduled.", error);
+				const baseDelay = Math.min(1000 * 2 ** reconnectAttempt.current, 30_000);
+				const jitter = Math.floor(baseDelay * (0.2 * Math.random()));
+				reconnectAttempt.current += 1;
+				scheduleReconnect(baseDelay + jitter);
+			}
+		};
 
-	const scheduleReconnect = useCallback(() => {
-		const baseDelay = Math.min(1000 * 2 ** reconnectAttempt.current, 30000);
-		// Add jitter to avoid thundering herd reconnects when multiple clients drop together.
-		const jitter = Math.floor(baseDelay * (0.2 * Math.random()));
-		const delay = baseDelay + jitter;
-		reconnectAttempt.current++;
-		reconnectTimer.current = setTimeout(connect, delay);
-	}, [connect]);
-
-	useEffect(() => {
 		connect();
 		return () => {
-			clearTimeout(reconnectTimer.current);
+			disposed = true;
+			clearReconnectTimer();
 			wsRef.current?.close();
+			wsRef.current = null;
 		};
-	}, [connect]);
+	}, [channel, handleConnect, handleDisconnect, handleMessage]);
 }
