@@ -155,6 +155,18 @@ describe("GET /api/v1/orders", () => {
 		expect(body.ok).toBe(true);
 		expect(body.data).toHaveLength(2);
 	});
+
+	it("should disable caching for polling clients", async () => {
+		const res = await app.inject({ method: "GET", url: "/api/v1/orders" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.headers.pragma).toBe("no-cache");
+		expect(res.headers.expires).toBe("0");
+		expect(res.headers["surrogate-control"]).toBe("no-store");
+	});
 });
 
 describe("PATCH /api/v1/orders/:id/status", () => {
@@ -830,5 +842,29 @@ describe("GET /health", () => {
 		} finally {
 			await localApp.close();
 		}
+	});
+});
+
+describe("connectivity test pages", () => {
+	it("serves /test.html as plain HTML with no-store headers", async () => {
+		const res = await app.inject({ method: "GET", url: "/test.html" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.headers.pragma).toBe("no-cache");
+		expect(res.headers.expires).toBe("0");
+		expect(res.headers["surrogate-control"]).toBe("no-store");
+		expect(res.body).toContain("BAĞLANTI BAŞARILI");
+	});
+
+	it("serves /ping with the same static success page", async () => {
+		const res = await app.inject({ method: "GET", url: "/ping" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.body).toContain("BAĞLANTI BAŞARILI");
 	});
 });

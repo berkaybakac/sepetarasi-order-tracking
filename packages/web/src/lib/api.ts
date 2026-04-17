@@ -77,6 +77,21 @@ async function buildRateLimitError(res: Response): Promise<ApiError> {
 	return buildRateLimitErrorFromParts(headerValue, bodyText);
 }
 
+function createAbortError(signal?: AbortSignal): ApiError {
+	if (signal?.aborted) {
+		return new ApiError("İstek iptal edildi.", { code: "ABORTED", recoverable: true });
+	}
+
+	return new ApiError("Sunucu zamanında yanıt vermedi. Lütfen tekrar deneyin.", {
+		code: "TIMEOUT",
+		recoverable: true,
+	});
+}
+
+function hasFetchTransport() {
+	return typeof fetch === "function" && typeof AbortController === "function";
+}
+
 function createTimeoutSignal(signal?: AbortSignal, timeoutMs = 12_000) {
 	const controller = new AbortController();
 
@@ -102,25 +117,73 @@ function createTimeoutSignal(signal?: AbortSignal, timeoutMs = 12_000) {
 	};
 }
 
-async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
+function buildRequestHeaders(options: RequestOptions) {
 	const headers: Record<string, string> = {};
 	if (resolvedCashierToken) {
 		headers["x-cashier-token"] = resolvedCashierToken;
 	}
-	if (options.body) {
+	if (options.body !== undefined) {
 		headers["Content-Type"] = "application/json";
 	}
 	if (options.headers) {
 		Object.assign(headers, options.headers);
 	}
 
+	return headers;
+}
+
+async function parseApiResponse<T>(
+	status: number,
+	jsonPromise: Promise<{ ok: boolean; data?: T; error?: { message?: string } }>,
+) {
+	let json: { ok: boolean; data?: T; error?: { message?: string } } | null = null;
+	try {
+		json = await jsonPromise;
+	} catch {
+		if (status !== 204 && status >= 200 && status < 300) {
+			throw new ApiError("Sunucu yanıtı okunamadı.", {
+				status,
+				code: "INVALID_RESPONSE",
+			});
+		}
+
+		throw new ApiError(`Sunucuya ulaşılamıyor (HTTP ${status}).`, {
+			status,
+			code: "HTTP_ERROR",
+			recoverable: status >= 500,
+		});
+	}
+
+	if (status < 200 || status >= 300 || !json.ok) {
+		throw new ApiError(
+			json.error?.message ||
+				(status >= 500
+					? "Sunucu tarafında bir hata oluştu. Lütfen tekrar deneyin."
+					: "İstek tamamlanamadı."),
+			{
+				status,
+				code: "API_ERROR",
+				recoverable: status >= 500 || status === 0,
+			},
+		);
+	}
+
+	return json.data as T;
+}
+
+async function requestWithFetch<T>(
+	method: string,
+	path: string,
+	options: RequestOptions,
+	headers: Record<string, string>,
+) {
 	const { signal, cleanup } = createTimeoutSignal(options.signal, options.timeoutMs);
 
 	try {
 		const res = await fetch(`${baseUrl}${path}`, {
 			method,
 			headers,
-			body: options.body ? JSON.stringify(options.body) : undefined,
+			body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
 			credentials: "include",
 			signal,
 		});
@@ -129,48 +192,14 @@ async function request<T>(method: string, path: string, options: RequestOptions 
 			throw await buildRateLimitError(res);
 		}
 
-		let json: { ok: boolean; data?: T; error?: { message?: string } } | null = null;
-		try {
-			json = (await res.json()) as { ok: boolean; data?: T; error?: { message?: string } };
-		} catch {
-			if (!res.ok) {
-				throw new ApiError(`Sunucuya ulaşılamıyor (HTTP ${res.status}).`, {
-					status: res.status,
-					code: "HTTP_ERROR",
-					recoverable: res.status >= 500,
-				});
-			}
-			throw new ApiError("Sunucu yanıtı okunamadı.", {
-				status: res.status,
-				code: "INVALID_RESPONSE",
-			});
-		}
-
-		if (!res.ok || !json.ok) {
-			throw new ApiError(
-				json.error?.message ||
-					(res.status >= 500
-						? "Sunucu tarafında bir hata oluştu. Lütfen tekrar deneyin."
-						: "İstek tamamlanamadı."),
-				{
-					status: res.status,
-					code: "API_ERROR",
-					recoverable: res.status >= 500 || res.status === 0,
-				},
-			);
-		}
-
-		return json.data as T;
+		return await parseApiResponse(
+			res.status,
+			res.json() as Promise<{ ok: boolean; data?: T; error?: { message?: string } }>,
+		);
 	} catch (error) {
 		if (error instanceof ApiError) throw error;
 		if (error instanceof DOMException && error.name === "AbortError") {
-			if (options.signal?.aborted) {
-				throw new ApiError("İstek iptal edildi.", { code: "ABORTED", recoverable: true });
-			}
-			throw new ApiError("Sunucu zamanında yanıt vermedi. Lütfen tekrar deneyin.", {
-				code: "TIMEOUT",
-				recoverable: true,
-			});
+			throw createAbortError(options.signal);
 		}
 		throw new ApiError("Ağ hatası. Bağlantınızı kontrol edin.", {
 			code: "NETWORK_ERROR",
@@ -179,6 +208,130 @@ async function request<T>(method: string, path: string, options: RequestOptions 
 	} finally {
 		cleanup();
 	}
+}
+
+function requestWithXhr<T>(
+	method: string,
+	path: string,
+	options: RequestOptions,
+	headers: Record<string, string>,
+) {
+	return new Promise<T>((resolve, reject) => {
+		if (typeof XMLHttpRequest !== "function") {
+			reject(
+				new ApiError("Ağ hatası. Bağlantınızı kontrol edin.", {
+					code: "NETWORK_ERROR",
+					recoverable: true,
+				}),
+			);
+			return;
+		}
+
+		if (options.signal?.aborted) {
+			reject(createAbortError(options.signal));
+			return;
+		}
+
+		const xhr = new XMLHttpRequest();
+		const cleanup = () => {
+			if (options.signal && abortRequest) {
+				options.signal.removeEventListener("abort", abortRequest);
+			}
+		};
+		const abortRequest = () => {
+			xhr.abort();
+		};
+		const fail = (error: ApiError) => {
+			cleanup();
+			reject(error);
+		};
+		const complete = (value: T) => {
+			cleanup();
+			resolve(value);
+		};
+
+		xhr.open(method, `${baseUrl}${path}`, true);
+		xhr.withCredentials = true;
+		xhr.timeout = options.timeoutMs ?? 12_000;
+
+		for (const [key, value] of Object.entries(headers)) {
+			xhr.setRequestHeader(key, value);
+		}
+
+		xhr.onload = () => {
+			if (xhr.status === 429) {
+				fail(buildRateLimitErrorFromParts(xhr.getResponseHeader("retry-after"), xhr.responseText));
+				return;
+			}
+
+			let jsonPromise: Promise<{ ok: boolean; data?: T; error?: { message?: string } }>;
+			try {
+				jsonPromise = Promise.resolve(
+					JSON.parse(xhr.responseText) as { ok: boolean; data?: T; error?: { message?: string } },
+				);
+			} catch {
+				jsonPromise = Promise.reject(
+					new ApiError("Sunucu yanıtı okunamadı.", {
+						status: xhr.status,
+						code: "INVALID_RESPONSE",
+					}),
+				);
+			}
+
+			void parseApiResponse(xhr.status, jsonPromise)
+				.then(complete)
+				.catch((error: unknown) => {
+					fail(
+						error instanceof ApiError
+							? error
+							: new ApiError("Sunucu yanıtı okunamadı.", {
+									status: xhr.status,
+									code: "INVALID_RESPONSE",
+								}),
+					);
+				});
+		};
+
+		xhr.onerror = () => {
+			fail(
+				new ApiError("Ağ hatası. Bağlantınızı kontrol edin.", {
+					code: "NETWORK_ERROR",
+					recoverable: true,
+				}),
+			);
+		};
+
+		xhr.ontimeout = () => {
+			fail(createAbortError());
+		};
+
+		xhr.onabort = () => {
+			fail(createAbortError(options.signal));
+		};
+
+		if (options.signal) {
+			options.signal.addEventListener("abort", abortRequest);
+		}
+
+		try {
+			xhr.send(options.body !== undefined ? JSON.stringify(options.body) : undefined);
+		} catch {
+			fail(
+				new ApiError("Ağ hatası. Bağlantınızı kontrol edin.", {
+					code: "NETWORK_ERROR",
+					recoverable: true,
+				}),
+			);
+		}
+	});
+}
+
+async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
+	const headers = buildRequestHeaders(options);
+	if (hasFetchTransport()) {
+		return requestWithFetch<T>(method, path, options, headers);
+	}
+	return requestWithXhr<T>(method, path, options, headers);
 }
 
 export const api = {

@@ -41,6 +41,13 @@ function replyRetryAfterSeconds(reply: FastifyReply) {
 	return parseRetryAfterSeconds(reply.getHeader("retry-after"));
 }
 
+function setNoStoreHeaders(reply: FastifyReply) {
+	reply.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+	reply.header("Pragma", "no-cache");
+	reply.header("Expires", "0");
+	reply.header("Surrogate-Control", "no-store");
+}
+
 function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
 	return request.ip || request.socket?.remoteAddress || undefined;
 }
@@ -444,6 +451,50 @@ export async function buildApp(opts: AppOptions) {
 
 		return body;
 	});
+
+	const connectivityTestHtml = `<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Baglanti Testi</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #ffffff;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, sans-serif;
+      }
+
+      h1 {
+        margin: 0;
+        color: #111111;
+        font-size: clamp(3rem, 12vw, 8rem);
+        font-weight: 900;
+        text-align: center;
+        letter-spacing: 0.08em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BAĞLANTI BAŞARILI</h1>
+  </body>
+</html>`;
+
+	const sendConnectivityTestHtml = async (_request: FastifyRequest, reply: FastifyReply) => {
+		setNoStoreHeaders(reply);
+		return reply.type("text/html; charset=utf-8").send(connectivityTestHtml);
+	};
+
+	app.get("/test.html", sendConnectivityTestHtml);
+	app.get("/ping", sendConnectivityTestHtml);
 
 	// Music API routes (available even without worker, returns null player gracefully)
 	registerMusicRoutes(app, opts.db, musicPath, musicPlayer, musicUploadMaxBytes);

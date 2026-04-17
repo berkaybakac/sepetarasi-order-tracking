@@ -15,12 +15,91 @@ interface OrderState {
 	lastReconnectedAt: number;
 	lastSyncedAt: number;
 
-	hydrate: (silent?: boolean, includeStats?: boolean) => Promise<void>;
+	hydrate: (
+		silent?: boolean,
+		includeStats?: boolean,
+		options?: { retryCount?: number },
+	) => Promise<boolean>;
 	applyWsEvent: (msg: WsMessage) => void;
 	setConnected: (connected: boolean, options?: { includeStatsOnReconnect?: boolean }) => void;
+	clearNowPlaying: () => void;
 }
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+function areOrderItemsEqual(a: Order["items"], b: Order["items"]) {
+	if (a === b) return true;
+	const left = a ?? [];
+	const right = b ?? [];
+	if (left.length !== right.length) return false;
+
+	for (let index = 0; index < left.length; index += 1) {
+		const leftItem = left[index];
+		const rightItem = right[index];
+		if (!rightItem) return false;
+		if (
+			leftItem.id !== rightItem.id ||
+			leftItem.order_id !== rightItem.order_id ||
+			leftItem.name !== rightItem.name ||
+			leftItem.quantity !== rightItem.quantity ||
+			leftItem.unit_price !== rightItem.unit_price ||
+			leftItem.notes !== rightItem.notes
+		) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function areOrdersEqual(a: Order, b: Order) {
+	return (
+		a.id === b.id &&
+		a.business_date === b.business_date &&
+		a.display_no === b.display_no &&
+		a.status === b.status &&
+		a.terminal_id === b.terminal_id &&
+		a.customer_name === b.customer_name &&
+		a.order_type === b.order_type &&
+		a.target_minutes === b.target_minutes &&
+		a.notes === b.notes &&
+		a.created_at === b.created_at &&
+		a.updated_at === b.updated_at &&
+		a.ready_at === b.ready_at &&
+		a.delivered_at === b.delivered_at &&
+		a.cancelled_at === b.cancelled_at &&
+		areOrderItemsEqual(a.items, b.items)
+	);
+}
+
+function areOrderMapsEqual(a: Map<string, Order>, b: Map<string, Order>) {
+	if (a === b) return true;
+	if (a.size !== b.size) return false;
+
+	for (const [id, order] of a) {
+		const nextOrder = b.get(id);
+		if (!nextOrder || !areOrdersEqual(order, nextOrder)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function areStatsEqual(a: DayStats | null, b: DayStats | null) {
+	if (a === b) return true;
+	if (!a || !b) return false;
+
+	return (
+		a.totalOrders === b.totalOrders &&
+		a.averagePrepMinutes === b.averagePrepMinutes &&
+		a.averageDeliverySeconds === b.averageDeliverySeconds &&
+		a.byStatus.PREPARING === b.byStatus.PREPARING &&
+		a.byStatus.READY === b.byStatus.READY &&
+		a.byStatus.DELIVERED === b.byStatus.DELIVERED &&
+		a.byStatus.CANCELLED === b.byStatus.CANCELLED
+	);
+}
 
 export const useOrderStore = create<OrderState>((set, get) => ({
 	orders: new Map(),
@@ -33,13 +112,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 	lastSyncedAt: 0,
 	nowPlaying: null,
 
-	hydrate: async (silent = false, includeStats = true) => {
-		if (get().isHydrating) return;
+	hydrate: async (silent = false, includeStats = true, options = undefined) => {
+		if (get().isHydrating) return false;
 		set({ isHydrating: true });
 
 		if (!silent) set({ loading: true });
 
-		const retries = silent ? 3 : 0;
+		const retries = options?.retryCount ?? (silent ? 3 : 0);
 		let attempt = 0;
 
 		while (attempt <= retries) {
@@ -58,18 +137,32 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 					: Promise.resolve(get().stats);
 				const [orderList, stats] = await Promise.all([api.listOrders(), statsPromise]);
 
-				const orders = new Map<string, Order>();
+				const nextOrders = new Map<string, Order>();
 				for (const order of orderList) {
-					orders.set(order.id, order);
+					nextOrders.set(order.id, order);
 				}
-				set({
-					orders,
-					stats,
+				const state = get();
+				const ordersChanged = !areOrderMapsEqual(state.orders, nextOrders);
+				const statsChanged = includeStats ? !areStatsEqual(state.stats, stats) : false;
+				const nextState: Partial<OrderState> = {
 					loading: false,
 					isHydrating: false,
-					lastSyncedAt: Date.now(),
-				});
-				return;
+				};
+
+				if (ordersChanged) {
+					nextState.orders = nextOrders;
+				}
+
+				if (includeStats && statsChanged) {
+					nextState.stats = stats;
+				}
+
+				if (ordersChanged || statsChanged) {
+					nextState.lastSyncedAt = Date.now();
+				}
+
+				set(nextState);
+				return true;
 			} catch (err) {
 				attempt++;
 				logger.error("orderStore", `Failed to hydrate orders (attempt ${attempt}).`, err);
@@ -80,9 +173,12 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				} else {
 					if (!silent) set({ loading: false });
 					set({ isHydrating: false });
+					return false;
 				}
 			}
 		}
+
+		return false;
 	},
 
 	applyWsEvent: (msg: WsMessage) => {
@@ -117,6 +213,11 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				set({ hasConnectedOnce: true });
 			}
 		}
+	},
+
+	clearNowPlaying: () => {
+		if (!get().nowPlaying) return;
+		set({ nowPlaying: null });
 	},
 }));
 

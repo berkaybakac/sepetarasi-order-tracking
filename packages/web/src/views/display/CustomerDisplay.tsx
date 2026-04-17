@@ -28,13 +28,19 @@ import {
 import { resolveDisplayConfigWithUrlOverrides } from "./display-url-overrides";
 import { advancePage, findNewestNewReadyOrderPage, findOrderPageById } from "./pagination-logic";
 
+const FALLBACK_POLL_DELAYS_MS = [3_000, 6_000, 10_000] as const;
+
 export function CustomerDisplay() {
 	const location = useLocation();
 	const hydrate = useOrderStore((s) => s.hydrate);
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);
+	const connected = useOrderStore((s) => s.connected);
+	const isHydrating = useOrderStore((s) => s.isHydrating);
+	const clearNowPlaying = useOrderStore((s) => s.clearNowPlaying);
 	const nowPlaying = useOrderStore((s) => s.nowPlaying);
 	const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(DEFAULT_DISPLAY_CONFIG);
+	const [pollBackoffIndex, setPollBackoffIndex] = useState(0);
 	const effectiveConfig = useMemo(
 		() => resolveDisplayConfigWithUrlOverrides(displayConfig, location.search),
 		[displayConfig, location.search],
@@ -74,6 +80,7 @@ export function CustomerDisplay() {
 	const readyPageCountRef = useRef(readyPageCount);
 	const previousReadyIdsRef = useRef<Set<string>>(new Set());
 	const hasReadySnapshotRef = useRef(false);
+	const previousConnectedRef = useRef(connected);
 
 	useBootScreenReady(initialLoadSettled);
 
@@ -128,6 +135,39 @@ export function CustomerDisplay() {
 			cancelled = true;
 		};
 	}, [hydrate]);
+
+	useEffect(() => {
+		if (connected) {
+			setPollBackoffIndex(0);
+			previousConnectedRef.current = true;
+			return;
+		}
+
+		if (previousConnectedRef.current) {
+			clearNowPlaying();
+			if (!isHydrating) {
+				void hydrate(true, false, { retryCount: 0 }).then((success) => {
+					setPollBackoffIndex(success ? 0 : 1);
+				});
+			}
+		}
+
+		previousConnectedRef.current = false;
+	}, [clearNowPlaying, connected, hydrate, isHydrating]);
+
+	useInterval(
+		() => {
+			if (connected || isHydrating) return;
+
+			void hydrate(true, false, { retryCount: 0 }).then((success) => {
+				setPollBackoffIndex((current) => {
+					if (success) return 0;
+					return Math.min(current + 1, FALLBACK_POLL_DELAYS_MS.length - 1);
+				});
+			});
+		},
+		connected ? null : FALLBACK_POLL_DELAYS_MS[pollBackoffIndex],
+	);
 
 	useInterval(() => {
 		api

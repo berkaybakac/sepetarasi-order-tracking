@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"test:unit": "vitest run tests/orderStore.test.ts tests/customer-display-reconnect.test.tsx tests/display-config.test.ts tests/pagination-logic.test.ts tests/customer-display-parts.test.ts",
+		"test:unit": "vitest run tests/orderStore.test.ts tests/customer-display-reconnect.test.tsx tests/customer-display-fallback.test.tsx tests/display-config.test.ts tests/pagination-logic.test.ts tests/customer-display-parts.test.ts tests/api-rate-limit.test.ts tests/legacy-build.test.ts",
 		"test:integration": "echo 'No integration tests for web yet' && exit 0"
 	},
 	"dependencies": {

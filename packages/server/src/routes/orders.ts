@@ -12,6 +12,13 @@ import { requireAdmin, requireCashierOrAdmin } from "../utils/auth-middleware.js
 import type { Broadcaster } from "../ws/broadcaster.js";
 import { createOrderBodySchema, updateStatusBodySchema } from "./schemas.js";
 
+function setNoStoreHeaders(reply: { header: (name: string, value: string) => unknown }) {
+	reply.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+	reply.header("Pragma", "no-cache");
+	reply.header("Expires", "0");
+	reply.header("Surrogate-Control", "no-store");
+}
+
 export function registerOrderRoutes(
 	app: FastifyInstance,
 	db: AppDatabase,
@@ -76,7 +83,8 @@ export function registerOrderRoutes(
 	// GET /api/v1/orders
 	app.get<{
 		Querystring: { business_date?: string; status?: string };
-	}>(API_ROUTES.V1.ORDERS, async (request) => {
+	}>(API_ROUTES.V1.ORDERS, async (request, reply) => {
+		setNoStoreHeaders(reply);
 		const { business_date, status } = request.query;
 		const orderList = orderQuery.list(
 			business_date || undefined,

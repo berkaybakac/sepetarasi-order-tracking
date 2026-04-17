@@ -12,6 +12,27 @@ vi.mock("../src/lib/api", () => ({
 	},
 }));
 
+function buildOrder(overrides: Partial<Order> = {}): Order {
+	return {
+		id: "o-1",
+		business_date: "2026-04-13",
+		display_no: 1,
+		status: OrderStatus.PREPARING,
+		terminal_id: null,
+		customer_name: "Test Musteri",
+		order_type: "Paket",
+		target_minutes: null,
+		notes: null,
+		created_at: "2026-04-13T10:00:00.000Z",
+		updated_at: "2026-04-13T10:00:00.000Z",
+		ready_at: null,
+		delivered_at: null,
+		cancelled_at: null,
+		items: [],
+		...overrides,
+	};
+}
+
 describe("Web orderStore", () => {
 	beforeEach(() => {
 		// Reset the store state before each test
@@ -89,22 +110,7 @@ describe("Web orderStore", () => {
 	});
 
 	it("should hydrate orders even when stats request fails", async () => {
-		const order = {
-			id: "o-1",
-			business_date: "2026-04-13",
-			display_no: 1,
-			status: OrderStatus.PREPARING,
-			terminal_id: null,
-			customer_name: "Test Musteri",
-			order_type: "Paket",
-			target_minutes: null,
-			notes: null,
-			created_at: "2026-04-13T10:00:00.000Z",
-			updated_at: "2026-04-13T10:00:00.000Z",
-			ready_at: null,
-			delivered_at: null,
-			cancelled_at: null,
-		} as Order;
+		const order = buildOrder();
 
 		vi.mocked(api.listOrders).mockResolvedValueOnce([order]);
 		vi.mocked(api.getStats).mockRejectedValueOnce(new Error("Unauthorized"));
@@ -147,7 +153,7 @@ describe("Web orderStore", () => {
 	});
 
 	it("should update lastReconnectedAt when reconnecting", () => {
-		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(undefined);
+		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(true);
 
 		// First connect
 		useOrderStore.getState().setConnected(true);
@@ -165,7 +171,7 @@ describe("Web orderStore", () => {
 	});
 
 	it("should allow reconnect hydration without stats", () => {
-		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(undefined);
+		const hydrateSpy = vi.spyOn(useOrderStore.getState(), "hydrate").mockResolvedValue(true);
 
 		// First connect (no hydrate call)
 		useOrderStore.getState().setConnected(true, { includeStatsOnReconnect: false });
@@ -175,5 +181,35 @@ describe("Web orderStore", () => {
 		useOrderStore.getState().setConnected(true, { includeStatsOnReconnect: false });
 
 		expect(hydrateSpy).toHaveBeenCalledWith(true, false);
+	});
+
+	it("does not replace order data when a silent hydration returns the same snapshot", async () => {
+		const order = buildOrder();
+
+		vi.mocked(api.listOrders).mockResolvedValueOnce([order]).mockResolvedValueOnce([buildOrder()]);
+
+		await useOrderStore.getState().hydrate(false, false);
+
+		const initialOrdersRef = useOrderStore.getState().orders;
+		const initialSyncedAt = useOrderStore.getState().lastSyncedAt;
+
+		await useOrderStore.getState().hydrate(true, false, { retryCount: 0 });
+
+		expect(useOrderStore.getState().orders).toBe(initialOrdersRef);
+		expect(useOrderStore.getState().lastSyncedAt).toBe(initialSyncedAt);
+	});
+
+	it("clears nowPlaying without mutating the current order snapshot", () => {
+		const order = buildOrder();
+		const orders = new Map<string, Order>([[order.id, order]]);
+		useOrderStore.setState({
+			orders,
+			nowPlaying: { order_id: order.id, display_no: order.display_no },
+		});
+
+		useOrderStore.getState().clearNowPlaying();
+
+		expect(useOrderStore.getState().nowPlaying).toBeNull();
+		expect(useOrderStore.getState().orders).toBe(orders);
 	});
 });
