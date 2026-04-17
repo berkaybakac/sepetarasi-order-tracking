@@ -3,7 +3,7 @@ import { createWriteStream, statfsSync } from "node:fs";
 import { unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
-import type { MusicTrack } from "@sepetarasi/shared";
+import { API_ROUTES, type MusicTrack } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../../db/connection.js";
@@ -35,7 +35,7 @@ export function registerMusicLibraryRoutes(
 ): void {
 	const maxUploadSizeMb = Math.floor(maxUploadBytes / 1024 / 1024);
 
-	app.get("/api/v1/music/disk", { preHandler: requireAdmin }, async () => {
+	app.get(API_ROUTES.V1.MUSIC.DISK, { preHandler: requireAdmin }, async () => {
 		try {
 			const stats = statfsSync(musicPath);
 			const totalBytes = stats.bsize * stats.blocks;
@@ -47,7 +47,7 @@ export function registerMusicLibraryRoutes(
 		}
 	});
 
-	app.get("/api/v1/music/tracks", { preHandler: requireAdmin }, async () => {
+	app.get(API_ROUTES.V1.MUSIC.TRACKS, { preHandler: requireAdmin }, async () => {
 		const tracks = db
 			.select({
 				id: musicTracks.id,
@@ -65,7 +65,7 @@ export function registerMusicLibraryRoutes(
 	});
 
 	app.post(
-		"/api/v1/music/tracks",
+		API_ROUTES.V1.MUSIC.TRACKS,
 		{
 			preHandler: requireAdmin,
 			config: {
@@ -269,51 +269,59 @@ export function registerMusicLibraryRoutes(
 		},
 	);
 
-	app.delete("/api/v1/music/tracks/:id", { preHandler: requireAdmin }, async (request, reply) => {
-		const { id } = request.params as { id: string };
-		const track = db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
+	app.delete(
+		API_ROUTES.V1.MUSIC.TRACK_BY_ID(":id"),
+		{ preHandler: requireAdmin },
+		async (request, reply) => {
+			const { id } = request.params as { id: string };
+			const track = db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
 
-		if (!track) {
-			return reply
-				.status(404)
-				.send({ ok: false, error: { code: "NOT_FOUND", message: "Parça bulunamadı" } });
-		}
+			if (!track) {
+				return reply
+					.status(404)
+					.send({ ok: false, error: { code: "NOT_FOUND", message: "Parça bulunamadı" } });
+			}
 
-		db.delete(musicTracks).where(eq(musicTracks.id, id)).run();
-		await unlink(track.file_path).catch(() => undefined);
-		request.log.info(
-			{ event: "music.track.deleted", trackId: id, filename: track.filename },
-			"Music track deleted",
-		);
-		musicPlayer?.reloadPlaylist();
-
-		return { ok: true, data: null };
-	});
-
-	app.patch("/api/v1/music/tracks/:id", { preHandler: requireAdmin }, async (request, reply) => {
-		const { id } = request.params as { id: string };
-		const body = request.body as { display_name?: string; sort_order?: number };
-
-		const track = db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
-		if (!track) {
-			return reply
-				.status(404)
-				.send({ ok: false, error: { code: "NOT_FOUND", message: "Parça bulunamadı" } });
-		}
-
-		const updates: Partial<typeof track> = {};
-		if (typeof body.display_name === "string" && body.display_name.trim()) {
-			updates.display_name = body.display_name.trim();
-		}
-		if (typeof body.sort_order === "number" && Number.isInteger(body.sort_order)) {
-			updates.sort_order = body.sort_order;
-		}
-
-		if (Object.keys(updates).length > 0) {
-			db.update(musicTracks).set(updates).where(eq(musicTracks.id, id)).run();
+			db.delete(musicTracks).where(eq(musicTracks.id, id)).run();
+			await unlink(track.file_path).catch(() => undefined);
+			request.log.info(
+				{ event: "music.track.deleted", trackId: id, filename: track.filename },
+				"Music track deleted",
+			);
 			musicPlayer?.reloadPlaylist();
-		}
 
-		return { ok: true, data: null };
-	});
+			return { ok: true, data: null };
+		},
+	);
+
+	app.patch(
+		API_ROUTES.V1.MUSIC.TRACK_BY_ID(":id"),
+		{ preHandler: requireAdmin },
+		async (request, reply) => {
+			const { id } = request.params as { id: string };
+			const body = request.body as { display_name?: string; sort_order?: number };
+
+			const track = db.select().from(musicTracks).where(eq(musicTracks.id, id)).get();
+			if (!track) {
+				return reply
+					.status(404)
+					.send({ ok: false, error: { code: "NOT_FOUND", message: "Parça bulunamadı" } });
+			}
+
+			const updates: Partial<typeof track> = {};
+			if (typeof body.display_name === "string" && body.display_name.trim()) {
+				updates.display_name = body.display_name.trim();
+			}
+			if (typeof body.sort_order === "number" && Number.isInteger(body.sort_order)) {
+				updates.sort_order = body.sort_order;
+			}
+
+			if (Object.keys(updates).length > 0) {
+				db.update(musicTracks).set(updates).where(eq(musicTracks.id, id)).run();
+				musicPlayer?.reloadPlaylist();
+			}
+
+			return { ok: true, data: null };
+		},
+	);
 }

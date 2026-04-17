@@ -1,4 +1,4 @@
-import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
+import { API_ROUTES, PASSWORD_MIN_LENGTH, SETTING_KEYS } from "@sepetarasi/shared";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -197,7 +197,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 					type: "object",
 					properties: {
 						currentPassword: { type: "string" },
-						newPassword: { type: "string", minLength: 8 },
+						newPassword: { type: "string", minLength: PASSWORD_MIN_LENGTH },
 					},
 					required: ["currentPassword", "newPassword"],
 				},

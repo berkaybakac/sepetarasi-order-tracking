@@ -1,5 +1,5 @@
 // ADR: intentionally separate from kasa/api.ts — see docs/dev-notes.md "Intentional Separations"
-import { API_ROUTES } from "@sepetarasi/shared";
+import { API_ROUTES, formatRateLimitMessage, parseRetryAfterSeconds } from "@sepetarasi/shared";
 import type {
 	DayStats,
 	DeliveryAnalyticsResult,
@@ -43,39 +43,12 @@ export class ApiError extends Error {
 	}
 }
 
-function parseRetryAfterSeconds(value: string | null): number | undefined {
-	if (!value) return undefined;
-
-	const numeric = Number.parseInt(value, 10);
-	if (Number.isFinite(numeric) && numeric >= 0) {
-		return numeric;
-	}
-
-	const dateValue = Date.parse(value);
-	if (Number.isNaN(dateValue)) return undefined;
-
-	return Math.max(1, Math.ceil((dateValue - Date.now()) / 1000));
-}
-
-function formatRateLimitMessage(retryAfterSeconds?: number): string {
-	if (!retryAfterSeconds || retryAfterSeconds <= 0) {
-		return "İstek sınırına ulaşıldı. Kısa süre sonra tekrar deneyin.";
-	}
-
-	if (retryAfterSeconds < 60) {
-		return `İstek sınırına ulaşıldı. Yaklaşık ${retryAfterSeconds} sn sonra tekrar deneyin.`;
-	}
-
-	const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
-	return `İstek sınırına ulaşıldı. Yaklaşık ${minutes} dk sonra tekrar deneyin.`;
-}
-
-async function buildRateLimitError(res: Response): Promise<ApiError> {
-	let retryAfterSeconds = parseRetryAfterSeconds(res.headers.get("retry-after"));
+function buildRateLimitErrorFromParts(headerValue: string | null, bodyText: string): ApiError {
+	let retryAfterSeconds = parseRetryAfterSeconds(headerValue);
 	let message = formatRateLimitMessage(retryAfterSeconds);
 
 	try {
-		const json = (await res.json()) as {
+		const json = JSON.parse(bodyText) as {
 			error?: { message?: string };
 			retryAfterSeconds?: number;
 		};
@@ -96,6 +69,12 @@ async function buildRateLimitError(res: Response): Promise<ApiError> {
 		recoverable: true,
 		retryAfterSeconds,
 	});
+}
+
+async function buildRateLimitError(res: Response): Promise<ApiError> {
+	const headerValue = res.headers.get("retry-after");
+	const bodyText = await res.text().catch(() => "");
+	return buildRateLimitErrorFromParts(headerValue, bodyText);
 }
 
 function createTimeoutSignal(signal?: AbortSignal, timeoutMs = 12_000) {
@@ -232,26 +211,26 @@ export const api = {
 		}),
 
 	// Music
-	getMusicTracks: () => request<MusicTrack[]>("GET", "/api/v1/music/tracks"),
-	getMusicStatus: () => request<MusicStatus>("GET", "/api/v1/music/status"),
+	getMusicTracks: () => request<MusicTrack[]>("GET", API_ROUTES.V1.MUSIC.TRACKS),
+	getMusicStatus: () => request<MusicStatus>("GET", API_ROUTES.V1.MUSIC.STATUS),
 	getMusicDisk: () =>
 		request<{ totalBytes: number; freeBytes: number; usedBytes: number } | null>(
 			"GET",
-			"/api/v1/music/disk",
+			API_ROUTES.V1.MUSIC.DISK,
 		),
-	deleteMusicTrack: (id: string) => request<null>("DELETE", `/api/v1/music/tracks/${id}`),
+	deleteMusicTrack: (id: string) => request<null>("DELETE", API_ROUTES.V1.MUSIC.TRACK_BY_ID(id)),
 	updateMusicTrack: (id: string, patch: { display_name?: string; sort_order?: number }) =>
-		request<null>("PATCH", `/api/v1/music/tracks/${id}`, { body: patch }),
-	musicPlay: () => request<null>("POST", "/api/v1/music/play"),
-	musicPause: () => request<null>("POST", "/api/v1/music/pause"),
-	musicSkip: () => request<null>("POST", "/api/v1/music/skip"),
-	musicPrevious: () => request<null>("POST", "/api/v1/music/previous"),
+		request<null>("PATCH", API_ROUTES.V1.MUSIC.TRACK_BY_ID(id), { body: patch }),
+	musicPlay: () => request<null>("POST", API_ROUTES.V1.MUSIC.PLAY),
+	musicPause: () => request<null>("POST", API_ROUTES.V1.MUSIC.PAUSE),
+	musicSkip: () => request<null>("POST", API_ROUTES.V1.MUSIC.SKIP),
+	musicPrevious: () => request<null>("POST", API_ROUTES.V1.MUSIC.PREVIOUS),
 	setMusicVolume: (volume: number) =>
-		request<null>("PATCH", "/api/v1/music/volume", { body: { volume } }),
+		request<null>("PATCH", API_ROUTES.V1.MUSIC.VOLUME, { body: { volume } }),
 	setMusicEnabled: (enabled: boolean) =>
-		request<null>("PATCH", "/api/v1/music/enabled", { body: { enabled } }),
+		request<null>("PATCH", API_ROUTES.V1.MUSIC.ENABLED, { body: { enabled } }),
 	setMusicMode: (mode: { loop?: boolean; shuffle?: boolean }) =>
-		request<null>("PATCH", "/api/v1/music/mode", { body: mode }),
+		request<null>("PATCH", API_ROUTES.V1.MUSIC.MODE, { body: mode }),
 
 	uploadMusicTrack: (file: File, onProgress?: (pct: number) => void): Promise<MusicTrack> =>
 		new Promise((resolve, reject) => {
@@ -267,35 +246,8 @@ export const api = {
 
 			xhr.onload = () => {
 				if (xhr.status === 429) {
-					let retryAfterSeconds = parseRetryAfterSeconds(xhr.getResponseHeader("retry-after"));
-					let message = formatRateLimitMessage(retryAfterSeconds);
-
-					try {
-						const json = JSON.parse(xhr.responseText) as {
-							error?: { message?: string };
-							retryAfterSeconds?: number;
-						};
-						if (
-							typeof json.retryAfterSeconds === "number" &&
-							Number.isFinite(json.retryAfterSeconds)
-						) {
-							retryAfterSeconds = json.retryAfterSeconds;
-						}
-						message =
-							json.error?.message && json.error.message.trim().length > 0
-								? json.error.message
-								: formatRateLimitMessage(retryAfterSeconds);
-					} catch {
-						message = formatRateLimitMessage(retryAfterSeconds);
-					}
-
 					reject(
-						new ApiError(message, {
-							status: 429,
-							code: "RATE_LIMITED",
-							recoverable: true,
-							retryAfterSeconds,
-						}),
+						buildRateLimitErrorFromParts(xhr.getResponseHeader("retry-after"), xhr.responseText),
 					);
 					return;
 				}
@@ -312,7 +264,7 @@ export const api = {
 			};
 
 			xhr.onerror = () => reject(new Error("Ağ hatası. Bağlantıyı kontrol edin."));
-			xhr.open("POST", "/api/v1/music/tracks");
+			xhr.open("POST", API_ROUTES.V1.MUSIC.TRACKS);
 			xhr.withCredentials = true;
 			xhr.send(form);
 		}),

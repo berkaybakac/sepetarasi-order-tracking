@@ -105,6 +105,9 @@ export const DELIVERY_TARGET_MAX = 120;
 export const STAT_PERIODS = ["daily", "weekly", "monthly"] as const;
 export type StatPeriod = (typeof STAT_PERIODS)[number];
 
+/** Admin parola minimum uzunluğu (SSoT) */
+export const PASSWORD_MIN_LENGTH = 8;
+
 /** API Endpoint Yolları (SSoT) */
 export const API_ROUTES = {
 	V1: {
@@ -124,6 +127,20 @@ export const API_ROUTES = {
 			ME: "/api/v1/auth/me",
 			VERIFY_PASSWORD: "/api/v1/auth/verify-password",
 			CHANGE_PASSWORD: "/api/v1/auth/change-password",
+		},
+		MUSIC: {
+			TRACKS: "/api/v1/music/tracks",
+			TRACK_BY_ID: (id: string) => `/api/v1/music/tracks/${id}`,
+			STATUS: "/api/v1/music/status",
+			DISK: "/api/v1/music/disk",
+			PLAY: "/api/v1/music/play",
+			PAUSE: "/api/v1/music/pause",
+			SKIP: "/api/v1/music/skip",
+			PREVIOUS: "/api/v1/music/previous",
+			VOLUME: "/api/v1/music/volume",
+			ENABLED: "/api/v1/music/enabled",
+			MODE: "/api/v1/music/mode",
+			DOWNLOAD: "/api/v1/music/download",
 		},
 	},
 } as const;

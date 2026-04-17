@@ -1,3 +1,4 @@
+import { PASSWORD_MIN_LENGTH } from "@sepetarasi/shared";
 import { type SubmitEvent, useEffect, useState } from "react";
 import { LockIcon } from "../../../components/icons";
 import { useActionFeedback } from "../../../hooks/useActionFeedback";
@@ -33,9 +34,9 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 	const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
-		if (newPassword.length < 8) {
+		if (newPassword.length < PASSWORD_MIN_LENGTH) {
 			feedback.setError(
-				new Error("Yeni parola en az 8 karakter olmalıdır."),
+				new Error(`Yeni parola en az ${PASSWORD_MIN_LENGTH} karakter olmalıdır.`),
 				"Yeni parola geçersiz.",
 			);
 			return;
@@ -70,7 +71,8 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 					<div>
 						<p className="text-sm font-semibold text-text-strong">Yönetici erişimi korunur</p>
 						<p className="mt-1 text-sm text-text-subtle">
-							En az 8 karakter kullanın. Yeni parolayı iki kez girerek yazım hatasını önleyin.
+							En az {PASSWORD_MIN_LENGTH} karakter kullanın. Yeni parolayı iki kez girerek yazım
+							hatasını önleyin.
 						</p>
 					</div>
 				</div>
@@ -94,14 +96,18 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 					/>
 				</Field>
 
-				<Field htmlFor="new-password" label="Yeni Parola" hint="En az 8 karakter girin.">
+				<Field
+					htmlFor="new-password"
+					label="Yeni Parola"
+					hint={`En az ${PASSWORD_MIN_LENGTH} karakter girin.`}
+				>
 					<PasswordInput
 						id="new-password"
 						value={newPassword}
 						onChange={(event) => setNewPassword(event.target.value)}
 						autoComplete="new-password"
 						placeholder="Yeni parolayı girin"
-						minLength={8}
+						minLength={PASSWORD_MIN_LENGTH}
 						required
 					/>
 				</Field>
@@ -117,7 +123,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 						onChange={(event) => setConfirmPassword(event.target.value)}
 						autoComplete="new-password"
 						placeholder="Yeni parolayı tekrar girin"
-						minLength={8}
+						minLength={PASSWORD_MIN_LENGTH}
 						required
 					/>
 				</Field>

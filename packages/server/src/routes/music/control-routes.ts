@@ -1,4 +1,4 @@
-import { SETTING_KEYS } from "@sepetarasi/shared";
+import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { AppDatabase } from "../../db/connection.js";
@@ -30,7 +30,7 @@ export function registerMusicControlRoutes(
 	db: AppDatabase,
 	musicPlayer: MusicPlayerService | null,
 ): void {
-	app.get("/api/v1/music/status", { preHandler: requireAdmin }, async () => {
+	app.get(API_ROUTES.V1.MUSIC.STATUS, { preHandler: requireAdmin }, async () => {
 		const status =
 			musicPlayer?.getStatus() ??
 			(() => {
@@ -53,27 +53,27 @@ export function registerMusicControlRoutes(
 		return { ok: true, data: status };
 	});
 
-	app.post("/api/v1/music/play", { preHandler: requireAdmin }, async () => {
+	app.post(API_ROUTES.V1.MUSIC.PLAY, { preHandler: requireAdmin }, async () => {
 		musicPlayer?.play();
 		return { ok: true, data: null };
 	});
 
-	app.post("/api/v1/music/pause", { preHandler: requireAdmin }, async () => {
+	app.post(API_ROUTES.V1.MUSIC.PAUSE, { preHandler: requireAdmin }, async () => {
 		musicPlayer?.pause();
 		return { ok: true, data: null };
 	});
 
-	app.post("/api/v1/music/skip", { preHandler: requireAdmin }, async () => {
+	app.post(API_ROUTES.V1.MUSIC.SKIP, { preHandler: requireAdmin }, async () => {
 		musicPlayer?.skip();
 		return { ok: true, data: null };
 	});
 
-	app.post("/api/v1/music/previous", { preHandler: requireAdmin }, async () => {
+	app.post(API_ROUTES.V1.MUSIC.PREVIOUS, { preHandler: requireAdmin }, async () => {
 		musicPlayer?.previous();
 		return { ok: true, data: null };
 	});
 
-	app.patch("/api/v1/music/volume", { preHandler: requireAdmin }, async (request, reply) => {
+	app.patch(API_ROUTES.V1.MUSIC.VOLUME, { preHandler: requireAdmin }, async (request, reply) => {
 		const body = request.body as { volume?: unknown };
 		const volume = Number(body?.volume);
 		if (!Number.isInteger(volume) || volume < 0 || volume > 100) {
@@ -88,7 +88,7 @@ export function registerMusicControlRoutes(
 		return { ok: true, data: null };
 	});
 
-	app.patch("/api/v1/music/enabled", { preHandler: requireAdmin }, async (request, reply) => {
+	app.patch(API_ROUTES.V1.MUSIC.ENABLED, { preHandler: requireAdmin }, async (request, reply) => {
 		const body = request.body as { enabled?: unknown };
 		if (typeof body.enabled !== "boolean") {
 			return reply.status(400).send({
@@ -102,7 +102,7 @@ export function registerMusicControlRoutes(
 		return { ok: true, data: null };
 	});
 
-	app.patch("/api/v1/music/mode", { preHandler: requireAdmin }, async (request, reply) => {
+	app.patch(API_ROUTES.V1.MUSIC.MODE, { preHandler: requireAdmin }, async (request, reply) => {
 		const body = request.body as { loop?: unknown; shuffle?: unknown };
 		const hasLoop = typeof body.loop === "boolean";
 		const hasShuffle = typeof body.shuffle === "boolean";
