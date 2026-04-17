@@ -2,6 +2,7 @@
  * Zamana dair utilities fonksiyonlar - Single Source of Truth
  */
 
+import { getOrderUrgency } from "@sepetarasi/shared";
 import { UI_LABELS } from "../constants/labels";
 
 /**
@@ -17,16 +18,17 @@ export function timeSince(dateStr: string): string {
 }
 
 /**
- * Siparişin kalan zamanını hesaplar.
- * Varsayılan hedef 20 dakikadır.
+ * Siparişin kalan zamanını hedef süresine göre hesaplar.
+ * `targetMinutes` çağıranın `app_settings.delivery_target_minutes`'tan (SSOT) geçirmesi gereken değerdir.
  */
-export function getOrderTimer(createdAtStr: string, targetMinutes = 20) {
+export function getOrderTimer(createdAtStr: string, targetMinutes: number) {
 	const elapsedMs = Date.now() - new Date(createdAtStr).getTime();
 	const elapsedMins = Math.floor(elapsedMs / 60000);
 	const remainingMins = targetMinutes - elapsedMins;
+	const urgency = getOrderUrgency(elapsedMins, targetMinutes);
 
-	const isUrgent = remainingMins <= 2 && remainingMins >= 0;
-	const isOverdue = remainingMins < 0;
+	const isUrgent = urgency === "warning";
+	const isOverdue = urgency === "overdue";
 
 	return {
 		elapsedMins,

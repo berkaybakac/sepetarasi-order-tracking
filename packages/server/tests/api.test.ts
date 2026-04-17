@@ -1,4 +1,4 @@
-import { WS_EVENTS } from "@sepetarasi/shared";
+import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -591,6 +591,31 @@ describe("PATCH /api/v1/settings/:key", () => {
 		expect(res.statusCode).toBe(400);
 		expect(res.json().error.code).toBe("INVALID_SETTING_VALUE");
 	});
+
+	it("should broadcast settings:updated for delivery_target_minutes", async () => {
+		const broadcaster = (
+			app as unknown as { broadcaster: { broadcast: (...args: unknown[]) => void } }
+		).broadcaster;
+		const broadcastSpy = vi.spyOn(broadcaster, "broadcast");
+
+		const res = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/settings/${SETTING_KEYS.DELIVERY_TARGET_MINUTES}`,
+			headers: { cookie: adminCookie },
+			payload: { value: "30" },
+		});
+
+		expect(res.statusCode).toBe(200);
+
+		const settingsUpdatedCall = broadcastSpy.mock.calls.find(
+			(call) => call[1] === WS_EVENTS.SETTINGS_UPDATED,
+		);
+		expect(settingsUpdatedCall).toBeDefined();
+		expect(settingsUpdatedCall?.[0]).toEqual([WS_CHANNELS.ORDERS]);
+		expect(settingsUpdatedCall?.[2]).toEqual({
+			key: SETTING_KEYS.DELIVERY_TARGET_MINUTES,
+		});
+	});
 });
 
 describe("PATCH /api/v1/settings/bulk", () => {
@@ -699,6 +724,34 @@ describe("GET /api/v1/stats", () => {
 		expect(res.statusCode).toBe(400);
 		expect(res.json().ok).toBe(false);
 		expect(res.json().error.code).toBe("INVALID_PERIOD");
+	});
+});
+
+describe("GET /api/v1/stats/delivery-analytics", () => {
+	it("returns delivery analytics for a valid date range", async () => {
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/stats/delivery-analytics?from=2026-04-10&to=2026-04-17",
+			headers: { cookie: adminCookie },
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+		expect(res.json().data).toHaveProperty("summary");
+		expect(res.json().data).toHaveProperty("timeSeries");
+		expect(res.json().data).toHaveProperty("distribution");
+	});
+
+	it("returns 400 for an impossible calendar date", async () => {
+		const res = await app.inject({
+			method: "GET",
+			url: "/api/v1/stats/delivery-analytics?from=2026-02-31&to=2026-03-02",
+			headers: { cookie: adminCookie },
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.json().ok).toBe(false);
+		expect(res.json().error.code).toBe("INVALID_RANGE");
 	});
 });
 

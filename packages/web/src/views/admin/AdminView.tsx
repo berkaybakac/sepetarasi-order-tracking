@@ -1,10 +1,11 @@
-import { WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
-import type { MusicStatus, WsMessage } from "@sepetarasi/shared";
+import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
+import type { MusicStatus, SettingsUpdatedPayload, WsMessage } from "@sepetarasi/shared";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useMusicStore } from "../../stores/musicStore";
 import { useOrderStore } from "../../stores/orderStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { AdminHeader } from "./AdminHeader";
 import { AudioTab } from "./tabs/AudioTab";
 import { DisplayTab } from "./tabs/DisplayTab";
@@ -19,6 +20,7 @@ export function AdminView() {
 	const connected = useOrderStore((s) => s.connected);
 	const lastReconnectedAt = useOrderStore((s) => s.lastReconnectedAt);
 	const setMusicStatus = useMusicStore((s) => s.setStatus);
+	const hydrateSettings = useSettingsStore((s) => s.hydrate);
 
 	const [internalStatsTrigger, setInternalStatsTrigger] = useState(0);
 
@@ -35,8 +37,15 @@ export function AdminView() {
 			if (msg.event === WS_EVENTS.MUSIC_STATUS_CHANGED && msg.data) {
 				setMusicStatus(msg.data as MusicStatus);
 			}
+			if (msg.event === WS_EVENTS.SETTINGS_UPDATED) {
+				const payload = msg.data as SettingsUpdatedPayload | undefined;
+				if (payload?.key === SETTING_KEYS.DELIVERY_TARGET_MINUTES) {
+					void hydrateSettings();
+					setInternalStatsTrigger((n) => n + 1);
+				}
+			}
 		},
-		[applyWsEvent, setMusicStatus],
+		[applyWsEvent, hydrateSettings, setMusicStatus],
 	);
 
 	const onConnect = useCallback(() => setConnected(true), [setConnected]);
@@ -46,7 +55,8 @@ export function AdminView() {
 
 	useEffect(() => {
 		hydrate();
-	}, [hydrate]);
+		hydrateSettings();
+	}, [hydrate, hydrateSettings]);
 
 	return (
 		<div className="min-h-screen bg-slate-900 relative overflow-hidden">

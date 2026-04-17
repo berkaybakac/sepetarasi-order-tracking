@@ -64,7 +64,7 @@ describe("Migration", () => {
 		expect(allTerminals).toHaveLength(1);
 
 		const allSettings = db.select().from(appSettings).all();
-		expect(allSettings).toHaveLength(4); // audio_volume + music_volume + music_enabled (migration seeds) + test_key
+		expect(allSettings).toHaveLength(5); // audio_volume + music_volume + music_enabled + delivery_target_minutes (seeded) + test_key
 
 		const allAnnouncements = db.select().from(announcementQueue).all();
 		expect(allAnnouncements).toHaveLength(1);

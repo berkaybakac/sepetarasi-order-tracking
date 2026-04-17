@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatAverageDeliveryMinutes, getDeliveredOrderDurationLabel } from "../src/utils/date";
+import {
+	formatAverageDeliveryMinutes,
+	getDeliveredOrderDurationLabel,
+	getOrderTimer,
+} from "../src/utils/date";
 
 describe("delivery duration helpers", () => {
 	afterEach(() => {
@@ -44,5 +48,31 @@ describe("delivery duration helpers", () => {
 		expect(formatAverageDeliveryMinutes(1038)).toBe("17.3");
 		expect(formatAverageDeliveryMinutes(1020)).toBe("17");
 		expect(formatAverageDeliveryMinutes(null)).toBeNull();
+	});
+
+	it("derives warning and overdue states from the shared urgency helper", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-04-16T00:20:00.000Z"));
+
+		expect(getOrderTimer("2026-04-16T00:02:00.000Z", 20)).toMatchObject({
+			elapsedMins: 18,
+			isUrgent: true,
+			isOverdue: false,
+		});
+		expect(getOrderTimer("2026-04-16T00:00:00.000Z", 20)).toMatchObject({
+			elapsedMins: 20,
+			isUrgent: false,
+			isOverdue: true,
+		});
+		expect(getOrderTimer("2026-04-15T23:52:00.000Z", 30)).toMatchObject({
+			elapsedMins: 28,
+			isUrgent: true,
+			isOverdue: false,
+		});
+		expect(getOrderTimer("2026-04-15T23:50:00.000Z", 30)).toMatchObject({
+			elapsedMins: 30,
+			isUrgent: false,
+			isOverdue: true,
+		});
 	});
 });

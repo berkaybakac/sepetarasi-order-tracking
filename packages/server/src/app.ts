@@ -284,7 +284,7 @@ export async function buildApp(opts: AppOptions) {
 	registerAuthRoutes(app, opts.db);
 	registerOrderRoutes(app, opts.db, broadcaster);
 	registerStatsRoutes(app, opts.db);
-	registerSettingsRoutes(app, opts.db);
+	registerSettingsRoutes(app, opts.db, broadcaster);
 
 	// Music player
 	const musicPath = opts.musicPath ?? join(__dirname, "../assets/music");

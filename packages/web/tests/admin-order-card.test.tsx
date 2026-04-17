@@ -77,4 +77,42 @@ describe("Admin OrderCard delivery timer", () => {
 
 		expect(container.textContent).toContain("45 sn");
 	});
+
+	it("re-renders border and glow live as elapsed time crosses warning/overdue thresholds", async () => {
+		// Sistem saatini sabit bir ana ayarla; kart 15 dk önce oluşmuş gibi render olsun.
+		const now = new Date("2026-04-16T12:00:00.000Z");
+		vi.setSystemTime(now);
+
+		const order = buildOrder({
+			id: "live-1",
+			display_no: 5,
+			status: OrderStatus.PREPARING,
+			delivered_at: null,
+			updated_at: "2026-04-16T11:45:00.000Z",
+			created_at: "2026-04-16T11:45:00.000Z", // 15 dk önce
+		});
+
+		await act(async () => {
+			root.render(<OrderCard order={order} status={OrderStatus.PREPARING} />);
+		});
+
+		const card = container.querySelector("div.bg-dark-surface") as HTMLElement;
+		expect(card).not.toBeNull();
+		// 15 dk: normal (hedef 20, warning buffer 2 → 18 dk'dan sonra warning)
+		expect(card.className).toContain("border-brand-warning/30");
+		expect(card.className).not.toContain("border-brand-danger/60");
+
+		// Parent tick 30s aralıklı; 3 dk + 1 tick kadar ilerlet → 18 dk elapsed → warning
+		await act(async () => {
+			vi.advanceTimersByTime(3 * 60 * 1000 + 1_000);
+		});
+		expect(card.className).toContain("border-brand-warning/60");
+
+		// 5 dk daha ileri → 23 dk elapsed → overdue + glow
+		await act(async () => {
+			vi.advanceTimersByTime(5 * 60 * 1000);
+		});
+		expect(card.className).toContain("border-brand-danger/60");
+		expect(card.className).toContain("shadow-[0_0_18px_rgba(239,68,68,0.15)]");
+	});
 });

@@ -116,10 +116,11 @@ describe("Customer display reconnect snapshot", () => {
 
 	it("refreshes order statuses from snapshot after reconnect when a websocket event was missed", async () => {
 		const preparingOrder = buildOrder();
+		const visibleReadyAt = new Date(Date.now() - 60_000).toISOString();
 		const readyOrder = buildOrder({
 			status: OrderStatus.READY,
-			ready_at: "2026-04-17T09:03:00.000Z",
-			updated_at: "2026-04-17T09:03:00.000Z",
+			ready_at: visibleReadyAt,
+			updated_at: visibleReadyAt,
 		});
 
 		vi.mocked(api.listOrders)

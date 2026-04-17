@@ -1,6 +1,7 @@
 import { OrderStatus } from "@sepetarasi/shared";
 import type { Order } from "@sepetarasi/shared";
 import { useEffect, useState } from "react";
+import { useSettingsStore } from "../../../stores/settingsStore";
 import { getDeliveredOrderDurationLabel, getOrderTimer } from "../../../utils/date";
 
 function formatOrderTimestamp(dateStr: string): string {
@@ -17,16 +18,11 @@ function formatOrderTimestamp(dateStr: string): string {
 
 /**
  * TimerBadge — PREPARING/READY için canlı, DELIVERED için sabit süre rozetidir.
+ * Canlı tick parent OrderCard'dan gelir; burada ayrı setInterval yok ki border/glow ile rozet
+ * aynı render adımında güncellensin.
  */
 function TimerBadge({ order, status }: { order: Order; status: OrderStatus }) {
-	const isLiveTimer = status === OrderStatus.PREPARING || status === OrderStatus.READY;
-	const [, setTick] = useState(0);
-
-	useEffect(() => {
-		if (!isLiveTimer) return;
-		const id = setInterval(() => setTick((t) => t + 1), 30_000);
-		return () => clearInterval(id);
-	}, [isLiveTimer]);
+	const targetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
 
 	if (status === OrderStatus.DELIVERED) {
 		const deliveredDuration = getDeliveredOrderDurationLabel(
@@ -39,7 +35,10 @@ function TimerBadge({ order, status }: { order: Order; status: OrderStatus }) {
 		);
 	}
 
-	const { isUrgent, isOverdue, formatted, remainingMins } = getOrderTimer(order.created_at);
+	const { isUrgent, isOverdue, formatted, remainingMins } = getOrderTimer(
+		order.created_at,
+		targetMinutes,
+	);
 
 	if (isOverdue) {
 		return (
@@ -123,10 +122,20 @@ export const CARD_STYLES: Record<
  * OrderCard — Tek bir siparişi kart olarak gösterir.
  */
 export function OrderCard({ order, status }: { order: Order; status: OrderStatus }) {
-	const { isOverdue, isUrgent } =
-		status !== OrderStatus.DELIVERED && status !== OrderStatus.CANCELLED
-			? getOrderTimer(order.created_at)
-			: { isOverdue: false, isUrgent: false };
+	const targetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
+	const isLive = status !== OrderStatus.DELIVERED && status !== OrderStatus.CANCELLED;
+
+	// Parent tick: 30s'de bir re-render zorla ki warning/overdue border+glow canlı güncellensin.
+	const [, setTick] = useState(0);
+	useEffect(() => {
+		if (!isLive) return;
+		const id = setInterval(() => setTick((t) => t + 1), 30_000);
+		return () => clearInterval(id);
+	}, [isLive]);
+
+	const { isOverdue, isUrgent } = isLive
+		? getOrderTimer(order.created_at, targetMinutes)
+		: { isOverdue: false, isUrgent: false };
 	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
 	const styles = CARD_STYLES[status];
