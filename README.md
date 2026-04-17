@@ -85,6 +85,9 @@ bash scripts/deploy.sh
 # 3. macOS kasa build (çıktı: packages/kasa/release/mac-arm64/*.app)
 cd packages/kasa && npm run build:mac
 
+# 3b. macOS dağıtım DMG'si gerekiyorsa
+cd packages/kasa && npm run build:mac:dmg
+
 # 4. Windows kasa build — Mac'ten cross-compile (çıktı: packages/kasa/release/*.exe)
 cd packages/kasa && npm run build:win
 ```
@@ -212,6 +215,9 @@ Neden olur: `npm install` sonrası ilk `npm run build` atlandıysa veya `package
 cd packages/kasa && npm run build
 open "$PWD/release/mac-arm64/SEPET ARASI KASA.app"
 
+# macOS dağıtım DMG'si
+cd packages/kasa && npm run build:mac:dmg
+
 # Windows .exe (Mac üzerinde cross-compile)
 cd packages/kasa && npm run build:win
 ```
@@ -224,7 +230,7 @@ cd packages/kasa && npm run build:win
 
 ```bash
 npm install
-npm run build        # shared → web → kasa → server sırasıyla derler
+npm run build        # shared → web → kasa (.app) → server sırasıyla derler
 npm run db:migrate
 npm run db:seed
 cp packages/server/.env.example packages/server/.env

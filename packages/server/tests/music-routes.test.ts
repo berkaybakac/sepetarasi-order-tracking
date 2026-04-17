@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SETTING_KEYS } from "@sepetarasi/shared";
+import { API_ROUTES, SETTING_KEYS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -52,7 +52,7 @@ describe("Music routes", () => {
 
 		const res = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: {
 				cookie: adminCookie,
 				"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -74,7 +74,7 @@ describe("Music routes", () => {
 
 		const listRes = await app.inject({
 			method: "GET",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: { cookie: adminCookie },
 		});
 		expect(listRes.statusCode).toBe(200);
@@ -104,7 +104,7 @@ describe("Music routes", () => {
 
 			const res = await localApp.inject({
 				method: "POST",
-				url: "/api/v1/music/tracks",
+				url: API_ROUTES.V1.MUSIC.TRACKS,
 				headers: {
 					cookie: localAdminCookie,
 					"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -146,7 +146,7 @@ describe("Music routes", () => {
 		);
 		const uploadRes = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: {
 				cookie: adminCookie,
 				"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -161,7 +161,7 @@ describe("Music routes", () => {
 	it("does not expose removed download endpoints", async () => {
 		const postRes = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/download",
+			url: API_ROUTES.V1.MUSIC.DOWNLOAD,
 			headers: { cookie: adminCookie },
 			payload: { trackIds: ["x"] },
 		});
@@ -169,7 +169,7 @@ describe("Music routes", () => {
 
 		const getRes = await app.inject({
 			method: "GET",
-			url: "/api/v1/music/download?token=abc",
+			url: `${API_ROUTES.V1.MUSIC.DOWNLOAD}?token=abc`,
 			headers: { cookie: adminCookie },
 		});
 		expect(getRes.statusCode).toBe(404);
@@ -181,7 +181,7 @@ describe("Music routes", () => {
 
 		const res = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: {
 				cookie: adminCookie,
 				"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -199,7 +199,7 @@ describe("Music routes", () => {
 
 		const res = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: {
 				cookie: adminCookie,
 				"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -218,7 +218,7 @@ describe("Music routes", () => {
 		const { boundary, payload } = buildMultipartPayload("to-delete.mp3", "audio/mpeg", fileBuffer);
 		const uploadRes = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: {
 				cookie: adminCookie,
 				"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -235,7 +235,7 @@ describe("Music routes", () => {
 		// Delete the track
 		const deleteRes = await app.inject({
 			method: "DELETE",
-			url: `/api/v1/music/tracks/${id}`,
+			url: API_ROUTES.V1.MUSIC.TRACK_BY_ID(id),
 			headers: { cookie: adminCookie },
 		});
 		expect(deleteRes.statusCode).toBe(200);
@@ -246,7 +246,7 @@ describe("Music routes", () => {
 		// Deleting again returns 404
 		const deleteAgainRes = await app.inject({
 			method: "DELETE",
-			url: `/api/v1/music/tracks/${id}`,
+			url: API_ROUTES.V1.MUSIC.TRACK_BY_ID(id),
 			headers: { cookie: adminCookie },
 		});
 		expect(deleteAgainRes.statusCode).toBe(404);
@@ -257,7 +257,7 @@ describe("Music routes", () => {
 		for (const bad of [-1, 101, 50.5, "loud"]) {
 			const res = await app.inject({
 				method: "PATCH",
-				url: "/api/v1/music/volume",
+				url: API_ROUTES.V1.MUSIC.VOLUME,
 				headers: { cookie: adminCookie },
 				payload: { volume: bad },
 			});
@@ -269,7 +269,7 @@ describe("Music routes", () => {
 	it("rejects PATCH /enabled with non-boolean and rejects PATCH /mode with no valid fields", async () => {
 		const enabledRes = await app.inject({
 			method: "PATCH",
-			url: "/api/v1/music/enabled",
+			url: API_ROUTES.V1.MUSIC.ENABLED,
 			headers: { cookie: adminCookie },
 			payload: { enabled: "yes" },
 		});
@@ -278,7 +278,7 @@ describe("Music routes", () => {
 
 		const modeRes = await app.inject({
 			method: "PATCH",
-			url: "/api/v1/music/mode",
+			url: API_ROUTES.V1.MUSIC.MODE,
 			headers: { cookie: adminCookie },
 			payload: { loop: "on" }, // string, not boolean
 		});
@@ -296,7 +296,7 @@ describe("Music routes", () => {
 		);
 		const uploadRes = await app.inject({
 			method: "POST",
-			url: "/api/v1/music/tracks",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
 			headers: {
 				cookie: adminCookie,
 				"content-type": `multipart/form-data; boundary=${boundary}`,
@@ -309,7 +309,7 @@ describe("Music routes", () => {
 		// Rename
 		const renameRes = await app.inject({
 			method: "PATCH",
-			url: `/api/v1/music/tracks/${id}`,
+			url: API_ROUTES.V1.MUSIC.TRACK_BY_ID(id),
 			headers: { cookie: adminCookie },
 			payload: { display_name: "Yeni İsim", sort_order: 5 },
 		});
@@ -322,7 +322,7 @@ describe("Music routes", () => {
 		// 404 for missing track
 		const missingRes = await app.inject({
 			method: "PATCH",
-			url: "/api/v1/music/tracks/nonexistent-id",
+			url: API_ROUTES.V1.MUSIC.TRACK_BY_ID("nonexistent-id"),
 			headers: { cookie: adminCookie },
 			payload: { display_name: "test" },
 		});
@@ -333,7 +333,7 @@ describe("Music routes", () => {
 	it("updates enabled/loop/shuffle mode settings and reflects them in status", async () => {
 		const enableRes = await app.inject({
 			method: "PATCH",
-			url: "/api/v1/music/enabled",
+			url: API_ROUTES.V1.MUSIC.ENABLED,
 			headers: { cookie: adminCookie },
 			payload: { enabled: true },
 		});
@@ -345,7 +345,7 @@ describe("Music routes", () => {
 
 		const modeRes = await app.inject({
 			method: "PATCH",
-			url: "/api/v1/music/mode",
+			url: API_ROUTES.V1.MUSIC.MODE,
 			headers: { cookie: adminCookie },
 			payload: { loop: false, shuffle: true },
 		});
@@ -367,7 +367,7 @@ describe("Music routes", () => {
 
 		const statusRes = await app.inject({
 			method: "GET",
-			url: "/api/v1/music/status",
+			url: API_ROUTES.V1.MUSIC.STATUS,
 			headers: { cookie: adminCookie },
 		});
 		expect(statusRes.statusCode).toBe(200);

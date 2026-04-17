@@ -7,9 +7,10 @@
 	"main": "dist-electron/main.js",
 	"scripts": {
 		"dev": "env -u ELECTRON_RUN_AS_NODE vite",
-		"build": "tsc && vite build && electron-builder",
+		"build": "tsc && vite build && electron-builder --dir",
 		"build:win": "tsc && vite build && electron-builder --win --x64",
-		"build:mac": "tsc && vite build && electron-builder --mac",
+		"build:mac": "tsc && vite build && electron-builder --mac dir",
+		"build:mac:dmg": "tsc && vite build && electron-builder --mac dmg",
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"test": "vitest run",
@@ -53,7 +54,7 @@
 			"allowToChangeInstallationDirectory": false
 		},
 		"mac": {
-			"target": "dmg",
+			"target": "dir",
 			"icon": "build/icon.png"
 		}
 	}
