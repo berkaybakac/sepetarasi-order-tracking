@@ -13,7 +13,7 @@
 		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"test:unit": "vitest run tests/orderStore.test.ts tests/discovery.test.ts tests/orderForm.test.tsx tests/orderCard.test.tsx tests/orderList.test.tsx tests/printer.test.ts",
+		"test:unit": "vitest run tests/orderStore.test.ts tests/restart-reconnect.test.tsx tests/discovery.test.ts tests/orderForm.test.tsx tests/orderCard.test.tsx tests/orderList.test.tsx tests/printer.test.ts",
 		"test:integration": "echo 'No integration tests for kasa yet' && exit 0"
 	},
 	"dependencies": {

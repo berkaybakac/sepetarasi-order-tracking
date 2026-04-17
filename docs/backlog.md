@@ -88,3 +88,21 @@ Bu dosya, feature gelistirmeyi bloklamayan ama teknik borc birikimini kontrol al
   - Urunde tekrar "ekran bazli ozel gorunum" ihtiyaci netlesirse ayni runtime path uzerine daha sade bir UI geri eklenebilir.
   - Boyle bir ihtiyac cikmazsa bu runtime override destegi tamamen sokulebilir.
 - Not: Geri getirme zor degil; asil parsing/apply mekanizmasi zaten tek yerde ve kucuk kapsamda duruyor.
+
+### 8) Active Orders vs Business Date Midnight Boundary
+- Durum: Backlog (urun kurali netlesmeden kod degistirme yok)
+- Oncelik: P2
+- Kapsam:
+  - `/packages/server/src/services/order.query.service.ts`
+  - restart / reconnect / display snapshot akislarinin tumu
+- Problem:
+  - Siparis listesi varsayilan olarak sadece "bugunun business_date" kayitlarini donuyor.
+  - Eger gece yarisi sonrasina sarkan aktif siparis olursa, teknik olarak siparis DB'de kalmaya devam eder ama aktif listeye geri yuklenmeyebilir.
+  - Bu durum bug da olabilir, bilincli urun karari da olabilir; su an kural net degil.
+- Acik Sorular:
+  - Isletmede aktif siparislerin gun bitmeden kapanmasi garanti mi?
+  - Geceye sarkan aktif siparis ertesi gun kasa ve musteri ekraninda gorunmeli mi?
+  - Business day kesimi gercekten 00:00 mi, yoksa operasyonel kapanis saati farkli mi?
+- Not:
+  - Mevcut davranis normal gun ici kullanimda kusur gibi gorunmuyor.
+  - Geceye sarkan operasyon varsa kullanici bunu "siparis kayboldu" olarak algilar; bu nedenle karar netlesince test + kod birlikte ele alinmali.

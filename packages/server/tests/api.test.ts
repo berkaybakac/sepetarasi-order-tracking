@@ -241,6 +241,70 @@ describe("PATCH /api/v1/orders/:id/status", () => {
 
 		expect(res.statusCode).toBe(404);
 	});
+
+	it("should persist DELIVERED and broadcast both transitions for rapid READY -> DELIVERED requests", async () => {
+		const createRes = await app.inject({
+			method: "POST",
+			url: "/api/v1/orders",
+			headers: withCashierAuth(),
+			payload: buildCreateOrderInput({ customer_name: "Hızlı Geçiş Testi", items: [] }),
+		});
+		const orderId = createRes.json().data.id as string;
+
+		const broadcaster = (
+			app as unknown as { broadcaster: { broadcast: (...args: unknown[]) => void } }
+		).broadcaster;
+		const broadcastSpy = vi.spyOn(broadcaster, "broadcast");
+
+		const readyRes = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/orders/${orderId}/status`,
+			headers: withCashierAuth(),
+			payload: { status: "READY" },
+		});
+		const deliveredRes = await app.inject({
+			method: "PATCH",
+			url: `/api/v1/orders/${orderId}/status`,
+			headers: withCashierAuth(),
+			payload: { status: "DELIVERED" },
+		});
+
+		expect(readyRes.statusCode).toBe(200);
+		expect(deliveredRes.statusCode).toBe(200);
+
+		const refreshedOrderRes = await app.inject({
+			method: "GET",
+			url: `/api/v1/orders/${orderId}`,
+		});
+
+		expect(refreshedOrderRes.statusCode).toBe(200);
+		expect(refreshedOrderRes.json().data.status).toBe("DELIVERED");
+		expect(refreshedOrderRes.json().data.ready_at).not.toBeNull();
+		expect(refreshedOrderRes.json().data.delivered_at).not.toBeNull();
+
+		const statusChangeCalls = broadcastSpy.mock.calls.filter(
+			(call) => call[1] === WS_EVENTS.ORDER_STATUS_CHANGED,
+		);
+		expect(statusChangeCalls).toHaveLength(2);
+
+		const firstPayload = statusChangeCalls[0]?.[2] as {
+			status: string;
+			previousStatus: string;
+		};
+		const secondPayload = statusChangeCalls[1]?.[2] as {
+			status: string;
+			previousStatus: string;
+		};
+
+		expect(firstPayload).toMatchObject({
+			status: "READY",
+			previousStatus: "PREPARING",
+		});
+		expect(secondPayload).toMatchObject({
+			status: "DELIVERED",
+			previousStatus: "READY",
+		});
+	});
 });
 
 describe("GET /api/v1/stats/today", () => {

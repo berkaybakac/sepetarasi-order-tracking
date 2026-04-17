@@ -3,8 +3,15 @@
 import { type Order, OrderStatus } from "@sepetarasi/shared";
 import { act } from "react";
 import { type Root, createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OrderCard } from "../src/components/OrderCard";
+import { api } from "../src/lib/api";
+
+vi.mock("../src/lib/api", () => ({
+	api: {
+		changeStatus: vi.fn(),
+	},
+}));
 
 function buildOrder(overrides: Partial<Order> = {}): Order {
 	return {
@@ -36,6 +43,7 @@ describe("Kasa OrderCard note behavior", () => {
 		container = document.createElement("div");
 		document.body.appendChild(container);
 		root = createRoot(container);
+		vi.mocked(api.changeStatus).mockReset();
 	});
 
 	afterEach(async () => {
@@ -78,5 +86,42 @@ describe("Kasa OrderCard note behavior", () => {
 			button.textContent?.includes("Notun tamamını göster"),
 		);
 		expect(expandButton).toBeUndefined();
+	});
+
+	it("allows marking the order ready after expanding a long note", async () => {
+		const longNote = "x".repeat(160);
+		vi.mocked(api.changeStatus).mockResolvedValueOnce(
+			buildOrder({
+				status: OrderStatus.READY,
+				notes: longNote,
+				ready_at: "2026-04-16T10:05:00.000Z",
+			}),
+		);
+
+		await act(async () => {
+			root.render(<OrderCard order={buildOrder({ notes: longNote })} />);
+		});
+
+		const expandButton = Array.from(container.querySelectorAll("button")).find((button) =>
+			button.textContent?.includes("Notun tamamını göster"),
+		);
+		if (!(expandButton instanceof HTMLButtonElement)) throw new Error("Expand button not found");
+
+		await act(async () => {
+			expandButton.click();
+		});
+
+		const readyButton = Array.from(container.querySelectorAll("button")).find((button) =>
+			button.textContent?.includes("Hazır"),
+		);
+		if (!(readyButton instanceof HTMLButtonElement)) throw new Error("Ready button not found");
+
+		await act(async () => {
+			readyButton.click();
+			await Promise.resolve();
+		});
+
+		expect(api.changeStatus).toHaveBeenCalledWith("order-1", { status: OrderStatus.READY });
+		expect(container.textContent).toContain("Notu daralt");
 	});
 });
