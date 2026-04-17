@@ -5,7 +5,7 @@ import {
 	WS_EVENTS,
 	type WsMessage,
 } from "@sepetarasi/shared";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { BrandLogo } from "./components/BrandLogo";
 import { OrderForm } from "./components/OrderForm";
 import { OrderList } from "./components/OrderList";
@@ -44,6 +44,20 @@ function AdminUnlockModal({
 	onSubmit,
 	password,
 }: AdminUnlockModalProps) {
+	const [showPassword, setShowPassword] = useState(false);
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	const focusPasswordInput = () => {
+		if (isSubmitting) return;
+		const input = inputRef.current;
+		if (!input) return;
+		input.focus();
+		const cursorPosition = input.value.length;
+		try {
+			input.setSelectionRange(cursorPosition, cursorPosition);
+		} catch {}
+	};
+
 	if (!isOpen) return null;
 
 	return (
@@ -64,16 +78,40 @@ function AdminUnlockModal({
 						>
 							Parola
 						</label>
-						<input
-							id="admin-unlock-password"
-							type="password"
-							value={password}
-							onChange={(event) => onPasswordChange(event.target.value)}
-							className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-base text-white transition-colors focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-							placeholder="Yönetici parolasını girin"
-							autoComplete="current-password"
-							disabled={isSubmitting}
-						/>
+						{/* biome-ignore lint/a11y/useKeyWithClickEvents: input is focusable via label htmlFor; wrapper click is an edge-padding convenience only. */}
+						<div
+							className="flex h-[50px] items-center rounded-lg border border-slate-700 bg-slate-800 transition focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500"
+							onClick={(event) => {
+								if (event.target === event.currentTarget) {
+									focusPasswordInput();
+								}
+							}}
+						>
+							<input
+								ref={inputRef}
+								id="admin-unlock-password"
+								type={showPassword ? "text" : "password"}
+								value={password}
+								onChange={(event) => onPasswordChange(event.target.value)}
+								className="h-full min-w-0 flex-1 bg-transparent px-4 text-base text-white placeholder:text-slate-500 focus:outline-none"
+								placeholder="Yönetici parolasını girin"
+								autoComplete="current-password"
+								disabled={isSubmitting}
+							/>
+							<button
+								type="button"
+								onPointerDown={(event) => event.preventDefault()}
+								onClick={() => {
+									setShowPassword((current) => !current);
+									focusPasswordInput();
+								}}
+								aria-label={showPassword ? "Parolayı gizle" : "Parolayı göster"}
+								aria-pressed={showPassword}
+								className="mr-1.5 inline-flex h-8 shrink-0 items-center rounded-md border border-slate-600 px-2.5 text-xs font-semibold text-slate-300 transition-colors hover:border-slate-400 hover:text-white"
+							>
+								{showPassword ? "Gizle" : "Göster"}
+							</button>
+						</div>
 					</div>
 
 					{error ? (

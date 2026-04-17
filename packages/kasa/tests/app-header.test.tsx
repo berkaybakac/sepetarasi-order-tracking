@@ -130,6 +130,42 @@ describe("Kasa App header", () => {
 		expect(vi.mocked(api.verifyAdminPassword)).not.toHaveBeenCalled();
 	});
 
+	it("keeps the unlock input easy to focus while toggling password visibility", async () => {
+		setConnectionState(true);
+
+		await act(async () => {
+			root.render(<KasaApp onReconfigure={() => undefined} />);
+		});
+
+		await click(getStatusButton(container));
+
+		const passwordInput = container.querySelector("#admin-unlock-password");
+		if (!(passwordInput instanceof HTMLInputElement)) {
+			throw new Error("Unlock password input not found");
+		}
+		const passwordShell = passwordInput.parentElement;
+		if (!(passwordShell instanceof HTMLDivElement)) {
+			throw new Error("Unlock password shell not found");
+		}
+		const toggleButton = container.querySelector('button[aria-label="Parolayı göster"]');
+		if (!(toggleButton instanceof HTMLButtonElement)) {
+			throw new Error("Unlock toggle button not found");
+		}
+
+		await click(passwordShell);
+
+		expect(document.activeElement).toBe(passwordInput);
+		expect(passwordInput.type).toBe("password");
+
+		await act(async () => {
+			toggleButton.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }));
+			toggleButton.click();
+		});
+
+		expect(passwordInput.type).toBe("text");
+		expect(document.activeElement).toBe(passwordInput);
+	});
+
 	it("keeps the cashier on the current screen when admin password is wrong", async () => {
 		setConnectionState(true);
 		const onReconfigure = vi.fn();
