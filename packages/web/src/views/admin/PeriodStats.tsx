@@ -5,88 +5,23 @@ import {
 	SETTING_KEYS,
 } from "@sepetarasi/shared";
 import type { DeliveryAnalyticsResult } from "@sepetarasi/shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	CartesianGrid,
-	Line,
-	LineChart,
-	ReferenceLine,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { StatsEmptyState, StatsKpiCard, TargetMinutesEditor } from "./stats/StatsPanels";
+import { PeriodStatsDeliveryDistribution } from "./stats/PeriodStatsDeliveryDistribution";
+import { PeriodStatsFilters } from "./stats/PeriodStatsFilters";
+import { PeriodStatsKpis } from "./stats/PeriodStatsKpis";
+import { PeriodStatsOrderTypeBreakdown } from "./stats/PeriodStatsOrderTypeBreakdown";
+import { PeriodStatsTimeSeries } from "./stats/PeriodStatsTimeSeries";
+import { TargetMinutesEditor } from "./stats/StatsPanels";
+import { type PresetKey, rangeForPreset } from "./stats/range-utils";
 import { InlineAlert } from "./ui/primitives";
-
-type PresetKey = "today" | "yesterday" | "last7" | "last30" | "custom";
-
-interface PresetRange {
-	key: PresetKey;
-	label: string;
-}
-
-const PRESETS: PresetRange[] = [
-	{ key: "today", label: "Bugün" },
-	{ key: "yesterday", label: "Dün" },
-	{ key: "last7", label: "Son 7 Gün" },
-	{ key: "last30", label: "Son 30 Gün" },
-	{ key: "custom", label: "Özel" },
-];
 
 const SILENT_REFRESH_MIN_INTERVAL_MS = 15_000;
 
-function toIsoDate(d: Date): string {
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, "0");
-	const day = String(d.getDate()).padStart(2, "0");
-	return `${y}-${m}-${day}`;
-}
-
-function rangeForPreset(key: PresetKey): { from: string; to: string } {
-	const now = new Date();
-	const today = toIsoDate(now);
-	if (key === "today") return { from: today, to: today };
-	if (key === "yesterday") {
-		const y = new Date(now);
-		y.setDate(y.getDate() - 1);
-		const iso = toIsoDate(y);
-		return { from: iso, to: iso };
-	}
-	if (key === "last7") {
-		const from = new Date(now);
-		from.setDate(from.getDate() - 6);
-		return { from: toIsoDate(from), to: today };
-	}
-	if (key === "last30") {
-		const from = new Date(now);
-		from.setDate(from.getDate() - 29);
-		return { from: toIsoDate(from), to: today };
-	}
-	return { from: today, to: today };
-}
-
 function clampInt(value: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, value));
-}
-
-function formatBucket(bucket: string, granularity: "hour" | "day"): string {
-	if (granularity === "hour") {
-		// Hour granularity 2 güne kadar yayılabilir; gün bilgisi olmadan 14:00 iki güne denk gelirse label çakışır.
-		const match = bucket.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):/);
-		if (!match) return bucket;
-		const [, day, hour] = match;
-		const d = new Date(`${day}T00:00:00`);
-		if (Number.isNaN(d.getTime())) return `${hour}:00`;
-		const dayLabel = d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
-		return `${dayLabel} ${hour}:00`;
-	}
-	const d = new Date(`${bucket}T00:00:00`);
-	if (Number.isNaN(d.getTime())) return bucket;
-	return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
 }
 
 interface Props {
@@ -244,21 +179,11 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 		}
 	};
 
-	const chartData = useMemo(() => {
-		if (!analytics) return [];
-		return analytics.timeSeries.points.map((p) => ({
-			label: formatBucket(p.bucket, analytics.timeSeries.granularity),
-			dk: p.averageDeliveryMinutes,
-			count: p.deliveredCount,
-		}));
-	}, [analytics]);
-
 	const summary = analytics?.summary;
 	const targetMinutes =
 		summary?.targetMinutes ?? deliveryTargetMinutes ?? DELIVERY_TARGET_DEFAULT_MINUTES;
 	const trendPositive = summary ? summary.trendPercent < 0 : false;
 	const onTargetOk = summary ? summary.onTargetRate >= 80 : false;
-	const maxDistribution = Math.max(1, ...(analytics?.distribution.map((d) => d.count) ?? [1]));
 	const empty = !loading && summary != null && summary.totalDelivered === 0;
 	const targetDirty = targetDraft !== deliveryTargetMinutes;
 
@@ -299,41 +224,12 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 					</div>
 				</div>
 
-				<div className="flex flex-col gap-3 rounded-[1.35rem] border border-border-subtle bg-surface-1/80 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-					<div className="flex flex-wrap items-center gap-2">
-						{PRESETS.map((p) => (
-							<button
-								key={p.key}
-								type="button"
-								onClick={() => handlePreset(p.key)}
-								className={`rounded-[0.9rem] border px-3 py-1.5 text-sm font-medium transition ${
-									preset === p.key
-										? "border-brand-primary/25 bg-brand-primary/12 text-text-strong shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-										: "border-border-subtle bg-surface-1 text-text-muted hover:border-white/18 hover:text-text-strong"
-								}`}
-							>
-								{p.label}
-							</button>
-						))}
-					</div>
-					<div className="flex flex-wrap items-center gap-2 lg:justify-end">
-						<input
-							type="date"
-							value={range.from}
-							max={range.to}
-							onChange={(e) => handleCustomChange("from", e.target.value)}
-							className="h-10 rounded-[0.9rem] border border-border-subtle bg-surface-1 px-3 text-sm text-text-strong"
-						/>
-						<span className="text-sm text-text-subtle">—</span>
-						<input
-							type="date"
-							value={range.to}
-							min={range.from}
-							onChange={(e) => handleCustomChange("to", e.target.value)}
-							className="h-10 rounded-[0.9rem] border border-border-subtle bg-surface-1 px-3 text-sm text-text-strong"
-						/>
-					</div>
-				</div>
+				<PeriodStatsFilters
+					preset={preset}
+					range={range}
+					onPresetChange={handlePreset}
+					onCustomChange={handleCustomChange}
+				/>
 
 				{error ? (
 					<InlineAlert className="px-3.5 py-2.5" tone={error.tone}>
@@ -347,148 +243,25 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 					</div>
 				) : (
 					<>
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-							<StatsKpiCard
-								label="Ortalama Süre"
-								value={summary ? `${summary.averageDeliveryMinutes} dk` : "—"}
-								badge={
-									summary
-										? summary.previousPeriodAvgMinutes > 0
-											? `${trendPositive ? "↓" : "↑"} %${Math.abs(summary.trendPercent)} önceki döneme göre ${
-													trendPositive ? "hızlı" : "yavaş"
-												}`
-											: "karşılaştırılacak önceki dönem yok"
-										: undefined
-								}
-								badgeTone={trendPositive ? "good" : summary?.trendPercent === 0 ? "neutral" : "bad"}
-							/>
-							<StatsKpiCard
-								label="Toplam Teslimat"
-								value={summary ? `${summary.totalDelivered}` : "—"}
-								badge={summary ? "teslim edilen sipariş" : undefined}
-								badgeTone="neutral"
-							/>
-							<StatsKpiCard
-								label="Hedefte"
-								value={summary ? `%${summary.onTargetRate}` : "—"}
-								badge={
-									summary
-										? `${summary.onTargetCount}/${summary.totalDelivered} sipariş ≤ ${targetMinutes} dk`
-										: undefined
-								}
-								badgeTone={onTargetOk ? "good" : "bad"}
-							/>
-						</div>
+						<PeriodStatsKpis
+							summary={summary}
+							targetMinutes={targetMinutes}
+							trendPositive={trendPositive}
+							onTargetOk={onTargetOk}
+						/>
 
-						<div className="rounded-[1.45rem] border border-border-subtle bg-surface-1/85 p-4">
-							<div className="mb-3 flex items-center justify-between">
-								<h3 className="text-sm font-semibold text-text-strong">
-									{analytics?.timeSeries.granularity === "hour"
-										? "Saatlik Teslim Süresi"
-										: "Günlük Teslim Süresi"}
-								</h3>
-								{analytics ? (
-									<span className="text-xs text-text-subtle">{targetMinutes} dk hedef</span>
-								) : null}
-							</div>
-							{empty || chartData.length === 0 ? (
-								<StatsEmptyState label="Bu aralıkta teslim edilen sipariş yok" />
-							) : (
-								<ResponsiveContainer width="100%" height={260}>
-									<LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-										<CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-										<XAxis dataKey="label" stroke="#64748b" fontSize={12} />
-										<YAxis stroke="#64748b" fontSize={12} unit=" dk" />
-										<Tooltip
-											contentStyle={{
-												background: "rgba(15,23,42,0.95)",
-												border: "1px solid rgba(255,255,255,0.1)",
-												borderRadius: 8,
-											}}
-											labelStyle={{ color: "#e2e8f0" }}
-											formatter={(value, name) =>
-												name === "dk"
-													? [`${String(value)} dk`, "Ortalama"]
-													: [`${String(value)}`, "Teslimat"]
-											}
-										/>
-										<ReferenceLine
-											y={targetMinutes}
-											stroke="#facc15"
-											strokeDasharray="4 4"
-											label={{ value: "Hedef", fill: "#facc15", fontSize: 11, position: "right" }}
-										/>
-										<Line
-											type="monotone"
-											dataKey="dk"
-											stroke="#38bdf8"
-											strokeWidth={2.5}
-											dot={{ r: 4, fill: "#38bdf8" }}
-											activeDot={{ r: 6 }}
-										/>
-									</LineChart>
-								</ResponsiveContainer>
-							)}
-						</div>
+						<PeriodStatsTimeSeries
+							analytics={analytics}
+							targetMinutes={targetMinutes}
+							empty={empty}
+						/>
 
 						<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-							<div className="rounded-[1.45rem] border border-border-subtle bg-surface-1/85 p-4">
-								<h3 className="mb-3 text-sm font-semibold text-text-strong">Süre Dağılımı</h3>
-								{empty || !analytics ? (
-									<StatsEmptyState label="Veri yok" compact />
-								) : (
-									<div className="space-y-2">
-										{analytics.distribution.map((b) => {
-											const width = (b.count / maxDistribution) * 100;
-											return (
-												<div key={b.bucket} className="flex items-center gap-3">
-													<span className="w-16 text-xs tabular-nums text-text-subtle">
-														{b.bucket}
-													</span>
-													<div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-1">
-														<div
-															className="h-full rounded-full bg-gradient-to-r from-brand-primary to-brand-accent-strong transition-[width] duration-500"
-															style={{ width: `${width}%` }}
-														/>
-													</div>
-													<span className="w-16 text-right text-xs tabular-nums text-text-muted">
-														{b.count} sipariş
-													</span>
-												</div>
-											);
-										})}
-									</div>
-								)}
-							</div>
-
-							<div className="rounded-[1.45rem] border border-border-subtle bg-surface-1/85 p-4">
-								<h3 className="mb-3 text-sm font-semibold text-text-strong">
-									Sipariş Tipi Kırılımı
-								</h3>
-								{empty || !analytics || analytics.byOrderType.length === 0 ? (
-									<StatsEmptyState label="Tip bilgisi olan teslim yok" compact />
-								) : (
-									<div className="space-y-3">
-										{analytics.byOrderType.map((t) => (
-											<div
-												key={t.orderType}
-												className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-1 px-3 py-2"
-											>
-												<span className="text-sm font-medium text-text-strong">{t.orderType}</span>
-												<div className="flex items-center gap-4 text-xs text-text-subtle">
-													<span className="tabular-nums">
-														<span className="font-semibold text-text-strong">
-															{t.averageDeliveryMinutes} dk
-														</span>{" "}
-														ortalama
-													</span>
-													<span className="tabular-nums">{t.deliveredCount} sipariş</span>
-												</div>
-											</div>
-										))}
-									</div>
-								)}
-							</div>
+							<PeriodStatsDeliveryDistribution
+								distribution={analytics?.distribution}
+								empty={empty}
+							/>
+							<PeriodStatsOrderTypeBreakdown byOrderType={analytics?.byOrderType} empty={empty} />
 						</div>
 					</>
 				)}
