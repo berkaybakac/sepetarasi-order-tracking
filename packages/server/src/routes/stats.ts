@@ -1,11 +1,10 @@
 import { API_ROUTES, STAT_PERIODS } from "@sepetarasi/shared";
 import type { StatPeriod } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
+import { DELIVERY_ANALYTICS_RATE_LIMIT } from "../config/rate-limit.js";
 import type { AppDatabase } from "../db/connection.js";
 import { InvalidDeliveryAnalyticsRangeError, StatsService } from "../services/stats.service.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
-
-const DELIVERY_ANALYTICS_RATE_LIMIT = { max: 300, timeWindow: "1 minute" } as const;
 
 export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 	const statsService = new StatsService(db);

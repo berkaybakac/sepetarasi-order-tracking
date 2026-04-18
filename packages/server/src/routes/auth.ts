@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG } from "../config/auth.js";
+import { AUTH_RATE_LIMIT } from "../config/rate-limit.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
 import { auditLog } from "../utils/audit-logger.js";
@@ -56,8 +57,8 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				},
 			},
 			config: {
-				// Keep auth endpoint stricter than generic API routes.
-				rateLimit: { max: 100, timeWindow: "1 minute" },
+				// Keep auth traffic in its own bucket so password checks never share generic API counters.
+				rateLimit: AUTH_RATE_LIMIT,
 			},
 		},
 		async (request, reply) => {
@@ -120,7 +121,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				},
 			},
 			config: {
-				rateLimit: { max: 100, timeWindow: "1 minute" },
+				rateLimit: AUTH_RATE_LIMIT,
 			},
 		},
 		async (request, reply) => {

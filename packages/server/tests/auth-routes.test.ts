@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
+import { AUTH_RATE_LIMIT } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { loginAsAdmin } from "./auth-helpers.js";
@@ -282,7 +283,7 @@ describe("Auth routes contract", () => {
 	it("POST /auth/verify-password is rate limited like login", async () => {
 		vi.spyOn(bcrypt, "compare").mockResolvedValue(false);
 
-		for (let i = 0; i < 100; i += 1) {
+		for (let i = 0; i < AUTH_RATE_LIMIT.max; i += 1) {
 			const res = await app.inject({
 				method: "POST",
 				url: API_ROUTES.V1.AUTH.VERIFY_PASSWORD,

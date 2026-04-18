@@ -2,12 +2,15 @@ import { API_ROUTES } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
+import {
+	DELIVERY_ANALYTICS_RATE_LIMIT,
+	GENERIC_API_RATE_LIMIT_MAX,
+} from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { loginAsAdmin } from "./auth-helpers.js";
 
 const ANALYTICS_URL = `${API_ROUTES.V1.STATS_DELIVERY_ANALYTICS}?from=2026-04-17&to=2026-04-17`;
-const GENERIC_API_RATE_LIMIT_MAX = 300;
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -51,7 +54,7 @@ describe("Stats routes rate limiting", () => {
 	});
 
 	it("returns retryAfterSeconds in delivery analytics 429 responses", async () => {
-		for (let i = 0; i < 300; i += 1) {
+		for (let i = 0; i < DELIVERY_ANALYTICS_RATE_LIMIT.max; i += 1) {
 			const res = await app.inject({
 				method: "GET",
 				url: ANALYTICS_URL,

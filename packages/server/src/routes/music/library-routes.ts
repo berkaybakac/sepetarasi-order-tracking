@@ -6,6 +6,7 @@ import { pipeline } from "node:stream/promises";
 import { API_ROUTES, type MusicTrack } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
+import { MUSIC_UPLOAD_RATE_LIMIT } from "../../config/rate-limit.js";
 import type { AppDatabase } from "../../db/connection.js";
 import { musicTracks } from "../../db/schema.js";
 import type { MusicPlayerService } from "../../services/music-player.service.js";
@@ -14,7 +15,6 @@ import { requireAdmin } from "../../utils/auth-middleware.js";
 
 const ACCEPTED_MIME_TYPES = new Set(["audio/mpeg", "audio/mp3", "audio/x-mpeg"]);
 const MIN_FREE_DISK_MB = 100;
-const MUSIC_UPLOAD_RATE_LIMIT = { max: 300, timeWindow: "1 minute" } as const;
 
 interface MultipartMusicFile {
 	filename: string;

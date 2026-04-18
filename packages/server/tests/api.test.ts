@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
+import { GENERIC_API_RATE_LIMIT_MAX } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -12,7 +13,6 @@ import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-hel
 let db: AppDatabase;
 let app: FastifyInstance;
 let adminCookie: string;
-const GENERIC_API_RATE_LIMIT_MAX = 300;
 
 async function exhaustGenericApiRateLimit(app: FastifyInstance, cookie: string) {
 	for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {

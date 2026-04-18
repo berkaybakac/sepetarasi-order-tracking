@@ -18,6 +18,7 @@ import { eq } from "drizzle-orm";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
+import { GENERIC_API_RATE_LIMIT_MAX } from "./config/rate-limit.js";
 import type { AppDatabase } from "./db/connection.js";
 import { appSettings } from "./db/schema.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -36,7 +37,6 @@ import { Broadcaster } from "./ws/broadcaster.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const HEARTBEAT_INTERVAL = 60000;
 const HEARTBEAT_INTERVAL_LABEL = "60s";
-const GENERIC_API_RATE_LIMIT_MAX = 300;
 const MAX_MUSIC_UPLOAD_BYTES = 500 * 1024 * 1024;
 const DISPLAY_PATHS = new Set(["/display", "/display/", "/display.html"]);
 const DISPLAY_DIAGNOSTIC_PRELUDE = `<script>

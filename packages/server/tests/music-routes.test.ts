@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
+import { GENERIC_API_RATE_LIMIT_MAX } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, musicTracks } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -22,8 +23,6 @@ function buildMultipartPayload(fileName: string, mimeType: string, fileBuffer: B
 	const payload = Buffer.concat([header, fileBuffer, footer]);
 	return { boundary, payload };
 }
-
-const GENERIC_API_RATE_LIMIT_MAX = 300;
 
 let db: AppDatabase;
 let app: FastifyInstance;
