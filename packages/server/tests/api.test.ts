@@ -918,6 +918,8 @@ describe("connectivity test pages", () => {
 		expect(res.body).toContain('<div id="root"></div>');
 		expect(res.body).toContain('src="./assets/');
 		expect(res.body).toContain('href="./assets/');
+		expect(res.body).toContain('data-display-probe="armed"');
+		expect(res.body).toContain("DISPLAY.HTML SHELL YUKLENDI");
 		expect(res.body).toContain("window.onerror = function");
 		expect(res.body).toContain("window.onunhandledrejection = function");
 	});
@@ -951,5 +953,19 @@ describe("connectivity test pages", () => {
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
 		expect(res.body).toContain("BAĞLANTI BAŞARILI");
+	});
+
+	it("accepts display diagnostic beacons without auth", async () => {
+		const res = await app.inject({
+			method: "GET",
+			url: "/display-beacon.gif?phase=react-mounted&path=%2Fdisplay.html",
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("image/gif");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(Buffer.byteLength(res.body)).toBeGreaterThan(0);
 	});
 });

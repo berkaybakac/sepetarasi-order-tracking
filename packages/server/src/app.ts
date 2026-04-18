@@ -38,6 +38,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const HEARTBEAT_INTERVAL = 60000;
 const HEARTBEAT_INTERVAL_LABEL = "60s";
 const MAX_MUSIC_UPLOAD_BYTES = 500 * 1024 * 1024;
+const DISPLAY_DIAGNOSTIC_PIXEL_GIF = Buffer.from(
+	"R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
+	"base64",
+);
+
+function normalizeDisplayDiagnosticField(value: unknown, maxLength = 240) {
+	if (value === null || value === undefined) return undefined;
+	const normalized = String(value).trim();
+	if (normalized.length === 0) return undefined;
+	if (normalized.length <= maxLength) return normalized;
+	return `${normalized.slice(0, maxLength)}...`;
+}
 
 function relativizeUrl(url: string) {
 	if (!url.startsWith("/") || url.startsWith("//")) return url;
@@ -46,6 +58,12 @@ function relativizeUrl(url: string) {
 
 function buildRelativeDisplayShellHtml(indexHtml: string) {
 	return indexHtml
+		.replace(/<html\b([^>]*)>/i, (_match, attrs) => {
+			if (attrs.includes('data-display-probe="armed"')) {
+				return `<html${attrs}>`;
+			}
+			return `<html${attrs} data-display-probe="armed">`;
+		})
 		.replace(/\b(href|src|data-src)=("([^"]*)"|'([^']*)')/g, (match, attr, _quoted, dq, sq) => {
 			const url = typeof dq === "string" ? dq : sq;
 			if (!url) return match;
@@ -56,7 +74,11 @@ function buildRelativeDisplayShellHtml(indexHtml: string) {
 		.replace(/url\((['"]?)\/([^)"']+)\1\)/g, (_match, quote, path) => {
 			const resolvedQuote = quote ?? "";
 			return `url(${resolvedQuote}./${path}${resolvedQuote})`;
-		});
+		})
+		.replace(
+			/<body([^>]*)>/i,
+			'<body$1><div id="display-static-probe"><div class="display-static-probe-title">DISPLAY.HTML SHELL YUKLENDI</div><div class="display-static-probe-subtitle">BURADA KALIYORSA TB1 JAVASCRIPT CALISTIRAMIYOR</div></div>',
+		);
 }
 
 function replyRetryAfterSeconds(reply: FastifyReply) {
@@ -519,6 +541,38 @@ export async function buildApp(opts: AppOptions) {
 
 	app.get("/test.html", sendConnectivityTestHtml);
 	app.get("/ping", sendConnectivityTestHtml);
+	app.get(
+		"/display-beacon.gif",
+		async (
+			request: FastifyRequest<{
+				Querystring: {
+					phase?: string;
+					detail?: string;
+					source?: string;
+					location?: string;
+					path?: string;
+					href?: string;
+				};
+			}>,
+			reply,
+		) => {
+			setNoStoreHeaders(reply);
+			request.log.info(
+				{
+					event: "display.client.diagnostic",
+					phase: normalizeDisplayDiagnosticField(request.query.phase, 80) ?? "unknown",
+					detail: normalizeDisplayDiagnosticField(request.query.detail),
+					source: normalizeDisplayDiagnosticField(request.query.source),
+					location: normalizeDisplayDiagnosticField(request.query.location, 80),
+					path: normalizeDisplayDiagnosticField(request.query.path, 120),
+					href: normalizeDisplayDiagnosticField(request.query.href, 240),
+					userAgent: normalizeDisplayDiagnosticField(request.headers["user-agent"], 240),
+				},
+				"Display client diagnostic beacon",
+			);
+			return reply.type("image/gif").send(DISPLAY_DIAGNOSTIC_PIXEL_GIF);
+		},
+	);
 
 	// Music API routes (available even without worker, returns null player gracefully)
 	registerMusicRoutes(app, opts.db, musicPath, musicPlayer, musicUploadMaxBytes);

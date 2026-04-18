@@ -29,6 +29,17 @@ import { resolveDisplayConfigWithUrlOverrides } from "./display-url-overrides";
 import { advancePage, findNewestNewReadyOrderPage, findOrderPageById } from "./pagination-logic";
 
 const FALLBACK_POLL_DELAYS_MS = [3_000, 6_000, 10_000] as const;
+type DisplayDiagnosticWindow = Window &
+	typeof globalThis & {
+		__displaySendDiagnostic?: (phase: string, detail?: string) => void;
+	};
+
+function sendDisplayDiagnostic(phase: string, detail?: string) {
+	if (typeof window === "undefined") return;
+	const diagnosticWindow = window as DisplayDiagnosticWindow;
+	if (typeof diagnosticWindow.__displaySendDiagnostic !== "function") return;
+	diagnosticWindow.__displaySendDiagnostic(phase, detail);
+}
 
 export function CustomerDisplay() {
 	const location = useLocation();
@@ -86,6 +97,21 @@ export function CustomerDisplay() {
 	const hasReadySnapshotRef = useRef(false);
 	const previousConnectedRef = useRef(connected);
 
+	useEffect(() => {
+		if (!isDisplayShellRoute || typeof document === "undefined") return undefined;
+
+		const root = document.documentElement;
+		root.setAttribute("data-display-app-mounted", "true");
+		root.setAttribute("data-display-shell", "instant");
+		root.setAttribute("data-app-shell", "ready");
+		sendDisplayDiagnostic("react-mounted");
+
+		return () => {
+			root.removeAttribute("data-display-app-mounted");
+			root.removeAttribute("data-display-shell");
+		};
+	}, [isDisplayShellRoute]);
+
 	useBootScreenReady(initialLoadSettled, { disabled: isDisplayShellRoute });
 
 	useEffect(() => {
@@ -123,13 +149,15 @@ export function CustomerDisplay() {
 			const settingsRequest = api
 				.getPublicSettings()
 				.then((settings) => setDisplayConfig(parseDisplaySettings(settings)))
-				.catch((error) =>
-					logger.error("CustomerDisplay", "Failed to load public display settings.", error),
-				);
+				.catch((error) => {
+					logger.error("CustomerDisplay", "Failed to load public display settings.", error);
+					sendDisplayDiagnostic("settings-load-failed", error instanceof Error ? error.message : String(error));
+				});
 
 			await Promise.allSettled([hydrate(false, false), settingsRequest]);
 			if (!cancelled) {
 				setInitialLoadSettled(true);
+				sendDisplayDiagnostic("initial-load-settled");
 			}
 		};
 

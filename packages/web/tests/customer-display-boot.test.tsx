@@ -28,6 +28,7 @@ describe("CustomerDisplay boot behavior", () => {
 	beforeEach(() => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		document.documentElement.setAttribute("data-app-shell", "booting");
+		document.documentElement.setAttribute("data-display-probe", "armed");
 		document.body.innerHTML = '<div id="app-boot" data-state="visible"></div><div id="root"></div>';
 		rootElement = document.getElementById("root") as HTMLDivElement;
 		root = createRoot(rootElement);
@@ -71,6 +72,8 @@ describe("CustomerDisplay boot behavior", () => {
 			});
 
 			expect(document.documentElement.getAttribute("data-app-shell")).toBe("ready");
+			expect(document.documentElement.getAttribute("data-display-app-mounted")).toBe("true");
+			expect(document.documentElement.getAttribute("data-display-shell")).toBe("instant");
 			expect(document.getElementById("app-boot")).toBeNull();
 		},
 	);
