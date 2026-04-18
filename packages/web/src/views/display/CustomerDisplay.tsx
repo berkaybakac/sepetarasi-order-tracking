@@ -32,7 +32,10 @@ const FALLBACK_POLL_DELAYS_MS = [3_000, 6_000, 10_000] as const;
 
 export function CustomerDisplay() {
 	const location = useLocation();
-	const isDisplayShellRoute = location.pathname === "/display" || location.pathname === "/display/";
+	const isDisplayShellRoute =
+		location.pathname === "/display" ||
+		location.pathname === "/display/" ||
+		location.pathname === "/display.html";
 	const hydrate = useOrderStore((s) => s.hydrate);
 	const applyWsEvent = useOrderStore((s) => s.applyWsEvent);
 	const setConnected = useOrderStore((s) => s.setConnected);

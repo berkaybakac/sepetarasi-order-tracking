@@ -7,6 +7,7 @@ import { createTestDb } from "../src/db/test-utils.js";
 import { loginAsAdmin } from "./auth-helpers.js";
 
 const ANALYTICS_URL = `${API_ROUTES.V1.STATS_DELIVERY_ANALYTICS}?from=2026-04-17&to=2026-04-17`;
+const GENERIC_API_RATE_LIMIT_MAX = 300;
 
 let db: AppDatabase;
 let app: FastifyInstance;
@@ -24,7 +25,7 @@ afterEach(async () => {
 
 describe("Stats routes rate limiting", () => {
 	it("keeps delivery analytics available after the generic admin read limit is exhausted", async () => {
-		for (let i = 0; i < 100; i += 1) {
+		for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {
 			const res = await app.inject({
 				method: "GET",
 				url: API_ROUTES.V1.AUTH.ME,

@@ -23,6 +23,8 @@ function buildMultipartPayload(fileName: string, mimeType: string, fileBuffer: B
 	return { boundary, payload };
 }
 
+const GENERIC_API_RATE_LIMIT_MAX = 300;
+
 let db: AppDatabase;
 let app: FastifyInstance;
 let adminCookie: string;
@@ -122,7 +124,7 @@ describe("Music routes", () => {
 	});
 
 	it("keeps music upload available after the generic API rate limit is exhausted", async () => {
-		for (let i = 0; i < 100; i++) {
+		for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {
 			const res = await app.inject({
 				method: "GET",
 				url: "/api/v1/auth/me",

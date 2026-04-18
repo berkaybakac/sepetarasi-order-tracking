@@ -93,6 +93,7 @@ export default function App() {
 					}
 				/>
 				<Route path="/display" element={<CustomerDisplay />} />
+				<Route path="/display.html" element={<CustomerDisplay />} />
 				<Route path="*" element={<Navigate to="/admin" replace />} />
 			</Routes>
 		</BrowserRouter>

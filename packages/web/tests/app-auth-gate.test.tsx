@@ -67,4 +67,18 @@ describe("App auth gate", () => {
 		expect(container.textContent).toContain("admin-view");
 		expect(container.textContent).not.toContain("login-view");
 	});
+
+	it("routes /display.html to the customer display without running the admin auth gate", async () => {
+		const { api } = await import("../src/lib/api");
+		window.history.pushState({}, "", "/display.html?layout=split&max=4");
+
+		await act(async () => {
+			root.render(<App />);
+		});
+
+		expect(container.textContent).toContain("display-view");
+		expect(container.textContent).not.toContain("admin-view");
+		expect(container.textContent).not.toContain("login-view");
+		expect(api.authCheck).not.toHaveBeenCalled();
+	});
 });

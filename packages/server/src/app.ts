@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, statfsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statfsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyCookie from "@fastify/cookie";
@@ -36,10 +36,190 @@ import { Broadcaster } from "./ws/broadcaster.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const HEARTBEAT_INTERVAL = 60000;
 const HEARTBEAT_INTERVAL_LABEL = "60s";
+const GENERIC_API_RATE_LIMIT_MAX = 300;
 const MAX_MUSIC_UPLOAD_BYTES = 500 * 1024 * 1024;
+const DISPLAY_PATHS = new Set(["/display", "/display/", "/display.html"]);
+const DISPLAY_DIAGNOSTIC_PRELUDE = `<script>
+  (function () {
+    try {
+      var path = window.location && window.location.pathname ? window.location.pathname : "";
+      var isDisplayPath = path === "/display" || path === "/display/" || path === "/display.html";
+      if (!isDisplayPath) return;
+
+      var root = document.documentElement;
+      if (root) {
+        root.setAttribute("data-display-shell", "instant");
+        root.setAttribute("data-app-shell", "ready");
+      }
+
+      if (window.__displayDiagnosticsInstalled) return;
+      window.__displayDiagnosticsInstalled = true;
+
+      function safeToString(value) {
+        if (value === null || value === undefined) return String(value);
+        if (typeof value === "string") return value;
+        if (typeof value === "number" || typeof value === "boolean") return String(value);
+        if (typeof value.message === "string" && value.message) return value.message;
+        try {
+          return JSON.stringify(value);
+        } catch (_error) {
+          return Object.prototype.toString.call(value);
+        }
+      }
+
+      function ensureOverlay() {
+        var overlay = document.getElementById("__display-error-overlay");
+        if (overlay) return overlay;
+
+        overlay = document.createElement("div");
+        overlay.id = "__display-error-overlay";
+        overlay.setAttribute(
+          "style",
+          "position:fixed;inset:0;z-index:2147483647;overflow:auto;background:#2d0202;color:#fff;padding:24px 20px 32px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;",
+        );
+
+        var title = document.createElement("div");
+        title.textContent = "DISPLAY HATASI";
+        title.setAttribute(
+          "style",
+          "font-size:clamp(32px,7vw,64px);font-weight:900;letter-spacing:0.04em;line-height:1.05;",
+        );
+        overlay.appendChild(title);
+
+        var subtitle = document.createElement("div");
+        subtitle.textContent = "Path: " + path;
+        subtitle.setAttribute(
+          "style",
+          "margin-top:12px;font-size:clamp(16px,3vw,24px);font-weight:700;color:#fecaca;",
+        );
+        overlay.appendChild(subtitle);
+
+        var log = document.createElement("div");
+        log.id = "__display-error-log";
+        log.setAttribute("style", "display:flex;flex-direction:column;gap:14px;margin-top:20px;");
+        overlay.appendChild(log);
+
+        (document.body || document.documentElement).appendChild(overlay);
+        return overlay;
+      }
+
+      function appendField(parent, label, value) {
+        if (!value || value === "0:0" || value === "0") return;
+        var line = document.createElement("div");
+        line.textContent = label + ": " + value;
+        line.setAttribute("style", "margin-top:8px;font-size:clamp(16px,2.4vw,24px);line-height:1.4;");
+        parent.appendChild(line);
+      }
+
+      function report(kind, payload) {
+        var overlay = ensureOverlay();
+        var log = document.getElementById("__display-error-log");
+        if (!log) {
+          log = overlay;
+        }
+
+        var entry = document.createElement("div");
+        entry.setAttribute(
+          "style",
+          "border:3px solid rgba(254,202,202,0.45);background:rgba(17,24,39,0.5);padding:16px 18px;",
+        );
+
+        var heading = document.createElement("div");
+        heading.textContent = kind;
+        heading.setAttribute(
+          "style",
+          "font-size:clamp(18px,3vw,28px);font-weight:900;color:#fecaca;letter-spacing:0.03em;",
+        );
+        entry.appendChild(heading);
+
+        appendField(entry, "Mesaj", safeToString(payload.message));
+        appendField(entry, "Kaynak", safeToString(payload.source));
+        appendField(entry, "Konum", safeToString(payload.location));
+
+        log.appendChild(entry);
+      }
+
+      var previousOnError = window.onerror;
+      window.onerror = function (message, source, lineno, colno, error) {
+        report("JS ERROR", {
+          message: error && error.stack ? error.stack : message,
+          source: source,
+          location: String(lineno || 0) + ":" + String(colno || 0),
+        });
+        if (typeof previousOnError === "function") {
+          return previousOnError.apply(this, arguments);
+        }
+        return false;
+      };
+
+      var previousOnUnhandledRejection = window.onunhandledrejection;
+      window.onunhandledrejection = function (event) {
+        var reason = event && "reason" in event ? event.reason : undefined;
+        report("PROMISE REJECTION", {
+          message: reason && reason.stack ? reason.stack : safeToString(reason),
+          source: "",
+          location: "",
+        });
+        if (typeof previousOnUnhandledRejection === "function") {
+          return previousOnUnhandledRejection.apply(this, arguments);
+        }
+        return false;
+      };
+
+      window.addEventListener(
+        "error",
+        function (event) {
+          var target = event.target || event.srcElement;
+          if (!target || target === window) return;
+
+          var tagName = target.tagName ? String(target.tagName).toUpperCase() : "RESOURCE";
+          var source =
+            target.src ||
+            target.href ||
+            (typeof target.getAttribute === "function"
+              ? target.getAttribute("src") || target.getAttribute("href")
+              : "");
+
+          report("RESOURCE LOAD ERROR", {
+            message: tagName + " yuklenemedi",
+            source: source || safeToString(target.outerHTML || tagName),
+            location: "",
+          });
+        },
+        true,
+      );
+    } catch (_error) {}
+  })();
+</script>`;
+
+function relativizeUrl(url: string) {
+	if (!url.startsWith("/") || url.startsWith("//")) return url;
+	return `.${url}`;
+}
+
+function buildRelativeDisplayShellHtml(indexHtml: string) {
+	return indexHtml
+		.replace("<head>", `<head>\n${DISPLAY_DIAGNOSTIC_PRELUDE}\n`)
+		.replace(/\b(href|src|data-src)=("([^"]*)"|'([^']*)')/g, (match, attr, _quoted, dq, sq) => {
+			const url = typeof dq === "string" ? dq : sq;
+			if (!url) return match;
+			const quote = typeof dq === "string" ? '"' : "'";
+			if (!url.startsWith("/") || url.startsWith("//")) return match;
+			return `${attr}=${quote}${relativizeUrl(url)}${quote}`;
+		})
+		.replace(/url\((['"]?)\/([^)"']+)\1\)/g, (_match, quote, path) => {
+			const resolvedQuote = quote ?? "";
+			return `url(${resolvedQuote}./${path}${resolvedQuote})`;
+		});
+}
 
 function replyRetryAfterSeconds(reply: FastifyReply) {
 	return parseRetryAfterSeconds(reply.getHeader("retry-after"));
+}
+
+function shouldBypassGenericRateLimit(request: FastifyRequest) {
+	const url = request.raw.url ?? request.url ?? "";
+	return request.method === "OPTIONS" || (!url.startsWith("/api/") && !url.startsWith("/ws"));
 }
 
 function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
@@ -288,8 +468,12 @@ export async function buildApp(opts: AppOptions) {
 	);
 
 	// Setup Rate Limiting, Cookie, JWT
-	// Keep a sane default for all routes. Auth route applies its own tighter guard.
-	await app.register(fastifyRateLimit, { max: 100, timeWindow: "1 minute" });
+	// Keep a generous default for API routes, but do not throttle local display/static/health flows.
+	await app.register(fastifyRateLimit, {
+		max: GENERIC_API_RATE_LIMIT_MAX,
+		timeWindow: "1 minute",
+		allowList: shouldBypassGenericRateLimit,
+	});
 	await app.register(fastifyCookie, { secret: AUTH_CONFIG.cookieSecret });
 	await app.register(fastifyJwt, {
 		secret: AUTH_CONFIG.jwtSecret,
@@ -497,6 +681,11 @@ export async function buildApp(opts: AppOptions) {
 	if (!opts.disableStatic) {
 		const webDistPath = join(__dirname, "../../web/dist");
 		if (existsSync(webDistPath)) {
+			const webIndexHtmlPath = join(webDistPath, "index.html");
+			const displayAliasHtml = buildRelativeDisplayShellHtml(
+				readFileSync(webIndexHtmlPath, "utf8"),
+			);
+
 			await app.register(fastifyStatic, {
 				root: webDistPath,
 				prefix: "/",
@@ -514,6 +703,10 @@ export async function buildApp(opts: AppOptions) {
 
 			app.get("/display", sendDisplayShell);
 			app.get("/display/", sendDisplayShell);
+			app.get("/display.html", async (_request, reply) => {
+				setNoStoreHeaders(reply);
+				return reply.type("text/html; charset=utf-8").send(displayAliasHtml);
+			});
 
 			// SPA fallback: serve index.html for non-API, non-WS routes
 			app.setNotFoundHandler((request, reply) => {
@@ -521,6 +714,9 @@ export async function buildApp(opts: AppOptions) {
 					return reply
 						.status(404)
 						.send({ ok: false, error: { code: "NOT_FOUND", message: "Route not found" } });
+				}
+				if (DISPLAY_PATHS.has(request.url)) {
+					setNoStoreHeaders(reply);
 				}
 				return reply.sendFile("index.html");
 			});

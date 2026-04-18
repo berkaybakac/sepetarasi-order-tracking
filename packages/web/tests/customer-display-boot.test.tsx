@@ -59,16 +59,19 @@ describe("CustomerDisplay boot behavior", () => {
 		document.body.innerHTML = "";
 	});
 
-	it("disables the boot overlay immediately on the display route", async () => {
-		await act(async () => {
-			root.render(
-				<MemoryRouter initialEntries={["/display"]}>
-					<CustomerDisplay />
-				</MemoryRouter>,
-			);
-		});
+	it.each(["/display", "/display.html?layout=split&max=4"])(
+		"disables the boot overlay immediately on %s",
+		async (route) => {
+			await act(async () => {
+				root.render(
+					<MemoryRouter initialEntries={[route]}>
+						<CustomerDisplay />
+					</MemoryRouter>,
+				);
+			});
 
-		expect(document.documentElement.getAttribute("data-app-shell")).toBe("ready");
-		expect(document.getElementById("app-boot")).toBeNull();
-	});
+			expect(document.documentElement.getAttribute("data-app-shell")).toBe("ready");
+			expect(document.getElementById("app-boot")).toBeNull();
+		},
+	);
 });

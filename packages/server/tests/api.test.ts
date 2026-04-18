@@ -1,4 +1,4 @@
-import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
+import { API_ROUTES, SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,25 @@ import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-hel
 let db: AppDatabase;
 let app: FastifyInstance;
 let adminCookie: string;
+const GENERIC_API_RATE_LIMIT_MAX = 300;
+
+async function exhaustGenericApiRateLimit(app: FastifyInstance, cookie: string) {
+	for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {
+		const res = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.AUTH.ME,
+			headers: { cookie },
+		});
+		expect(res.statusCode).toBe(200);
+	}
+
+	const limitedRes = await app.inject({
+		method: "GET",
+		url: API_ROUTES.V1.AUTH.ME,
+		headers: { cookie },
+	});
+	expect(limitedRes.statusCode).toBe(429);
+}
 
 beforeEach(async () => {
 	db = createTestDb();
@@ -849,6 +868,14 @@ describe("GET /health", () => {
 			await localApp.close();
 		}
 	});
+
+	it("stays reachable after the generic API rate limit is exhausted", async () => {
+		await exhaustGenericApiRateLimit(app, adminCookie);
+
+		const res = await app.inject({ method: "GET", url: "/health" });
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+	});
 });
 
 describe("connectivity test pages", () => {
@@ -874,6 +901,33 @@ describe("connectivity test pages", () => {
 		expect(res.headers["cache-control"]).toBe(
 			"no-store, no-cache, must-revalidate, proxy-revalidate",
 		);
+		expect(res.body).toContain('<div id="root"></div>');
+	});
+
+	it("serves /display.html as a no-store relative-asset shell with diagnostics", async () => {
+		const res = await app.inject({ method: "GET", url: "/display.html?layout=split&max=4" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.headers.pragma).toBe("no-cache");
+		expect(res.headers.expires).toBe("0");
+		expect(res.headers["surrogate-control"]).toBe("no-store");
+		expect(res.body).toContain('<div id="root"></div>');
+		expect(res.body).toContain('src="./assets/');
+		expect(res.body).toContain('href="./assets/');
+		expect(res.body).toContain('window.onerror = function');
+		expect(res.body).toContain('window.onunhandledrejection = function');
+	});
+
+	it("keeps /display reachable after the generic API rate limit is exhausted", async () => {
+		await exhaustGenericApiRateLimit(app, adminCookie);
+
+		const res = await app.inject({ method: "GET", url: "/display" });
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
 		expect(res.body).toContain('<div id="root"></div>');
 	});
 
