@@ -134,9 +134,9 @@ function buildRequestHeaders(options: RequestOptions) {
 
 async function parseApiResponse<T>(
 	status: number,
-	jsonPromise: Promise<{ ok: boolean; data?: T; error?: { message?: string } }>,
+	jsonPromise: Promise<{ ok: boolean; data?: T; error?: { code?: string; message?: string } }>,
 ) {
-	let json: { ok: boolean; data?: T; error?: { message?: string } } | null = null;
+	let json: { ok: boolean; data?: T; error?: { code?: string; message?: string } } | null = null;
 	try {
 		json = await jsonPromise;
 	} catch {
@@ -162,7 +162,7 @@ async function parseApiResponse<T>(
 					: "İstek tamamlanamadı."),
 			{
 				status,
-				code: "API_ERROR",
+				code: json.error?.code || "API_ERROR",
 				recoverable: status >= 500 || status === 0,
 			},
 		);
@@ -194,7 +194,7 @@ async function requestWithFetch<T>(
 
 		return await parseApiResponse(
 			res.status,
-			res.json() as Promise<{ ok: boolean; data?: T; error?: { message?: string } }>,
+			res.json() as Promise<{ ok: boolean; data?: T; error?: { code?: string; message?: string } }>,
 		);
 	} catch (error) {
 		if (error instanceof ApiError) throw error;
@@ -264,10 +264,18 @@ function requestWithXhr<T>(
 				return;
 			}
 
-			let jsonPromise: Promise<{ ok: boolean; data?: T; error?: { message?: string } }>;
+			let jsonPromise: Promise<{
+				ok: boolean;
+				data?: T;
+				error?: { code?: string; message?: string };
+			}>;
 			try {
 				jsonPromise = Promise.resolve(
-					JSON.parse(xhr.responseText) as { ok: boolean; data?: T; error?: { message?: string } },
+					JSON.parse(xhr.responseText) as {
+						ok: boolean;
+						data?: T;
+						error?: { code?: string; message?: string };
+					},
 				);
 			} catch {
 				jsonPromise = Promise.reject(

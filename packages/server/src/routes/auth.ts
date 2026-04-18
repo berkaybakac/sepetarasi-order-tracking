@@ -223,6 +223,16 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				});
 			}
 
+			if (currentPassword === newPassword) {
+				return reply.code(400).send({
+					ok: false,
+					error: {
+						code: "PASSWORD_REUSE_NOT_ALLOWED",
+						message: "New password must be different from the current password",
+					},
+				});
+			}
+
 			const newHash = await bcrypt.hash(newPassword ?? "", 10);
 			db.insert(appSettings)
 				.values({

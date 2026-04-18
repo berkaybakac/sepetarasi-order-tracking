@@ -46,6 +46,17 @@ cd packages/kasa && npm run dev
 
 Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
 
+### Lokal Production Simülasyonu
+
+Mac'te production benzeri davranışı görmek istiyorsan:
+
+```bash
+npm run build   # shared + web + kasa + server production çıktısını üretir
+npm run start   # built Fastify server'ı 3000 portunda production modda açar
+```
+
+Bu akış özellikle `/display`, `/ping` ve static shell davranışını dev server yerine gerçek production zincirinde doğrulamak için kullanılır.
+
 ### Kasa Bağlantı Bilgileri
 
 | Ortam | Sunucu Adresi | Kasiyer Token |

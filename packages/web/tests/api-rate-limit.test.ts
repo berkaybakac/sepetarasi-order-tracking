@@ -102,6 +102,33 @@ describe("api rate-limit handling", () => {
 		});
 	});
 
+	it("preserves API error codes for non-2xx JSON responses", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					ok: false,
+					error: {
+						code: "INVALID_CURRENT_PASSWORD",
+						message: "Current password is wrong",
+					},
+				}),
+				{
+					status: 400,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			),
+		);
+
+		await expect(api.authChangePassword("wrong-password", "new-password-1")).rejects.toMatchObject({
+			name: "ApiError",
+			status: 400,
+			code: "INVALID_CURRENT_PASSWORD",
+			message: "Current password is wrong",
+		});
+	});
+
 	it("falls back to XMLHttpRequest when fetch transport is unavailable", async () => {
 		globalThis.fetch = undefined as typeof fetch;
 		globalThis.AbortController = undefined as typeof AbortController;

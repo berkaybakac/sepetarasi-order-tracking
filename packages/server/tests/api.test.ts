@@ -918,8 +918,8 @@ describe("connectivity test pages", () => {
 		expect(res.body).toContain('<div id="root"></div>');
 		expect(res.body).toContain('src="./assets/');
 		expect(res.body).toContain('href="./assets/');
-		expect(res.body).toContain('window.onerror = function');
-		expect(res.body).toContain('window.onunhandledrejection = function');
+		expect(res.body).toContain("window.onerror = function");
+		expect(res.body).toContain("window.onunhandledrejection = function");
 	});
 
 	it("keeps /display reachable after the generic API rate limit is exhausted", async () => {

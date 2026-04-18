@@ -1,8 +1,8 @@
 import { PASSWORD_MIN_LENGTH } from "@sepetarasi/shared";
-import { type SubmitEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type SubmitEvent, useEffect, useState } from "react";
 import { LockIcon } from "../../../components/icons";
 import { useActionFeedback } from "../../../hooks/useActionFeedback";
-import { api } from "../../../lib/api";
+import { ApiError, api } from "../../../lib/api";
 import { Field, InlineAlert, Modal, PasswordInput } from "../ui/primitives";
 
 interface PasswordChangeModalProps {
@@ -10,11 +10,45 @@ interface PasswordChangeModalProps {
 	onClose: () => void;
 }
 
+function getPasswordChangeErrorMessage(error: unknown) {
+	if (error instanceof ApiError) {
+		switch (error.code) {
+			case "INVALID_CURRENT_PASSWORD":
+				return "Mevcut parola hatalı.";
+			case "PASSWORD_REUSE_NOT_ALLOWED":
+				return "Yeni parola mevcut parola ile aynı olamaz.";
+			case "UNAUTHORIZED":
+				return "Oturum süreniz dolmuş. Tekrar giriş yapın.";
+			default:
+				break;
+		}
+	}
+
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
+
+	return "Parola değiştirilemedi. Lütfen tekrar deneyin.";
+}
+
 export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps) {
 	const [currentPassword, setCurrentPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const feedback = useActionFeedback();
+	const submitDisabled =
+		feedback.isPending ||
+		currentPassword.length === 0 ||
+		newPassword.length === 0 ||
+		confirmPassword.length === 0;
+
+	const updateField =
+		(setter: (value: string) => void) => (event: ChangeEvent<HTMLInputElement>) => {
+			if (feedback.isError) {
+				feedback.reset();
+			}
+			setter(event.target.value);
+		};
 
 	useEffect(() => {
 		if (!open) {
@@ -47,12 +81,23 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 			return;
 		}
 
+		if (currentPassword === newPassword) {
+			feedback.setError(
+				new Error("Yeni parola mevcut parola ile aynı olamaz."),
+				"Yeni parola mevcut parola ile aynı olamaz.",
+			);
+			return;
+		}
+
 		feedback.setPending();
 		try {
 			await api.authChangePassword(currentPassword, newPassword);
 			feedback.setSuccess("Parolanız güncellendi.");
 		} catch (error) {
-			feedback.setError(error, "Parola değiştirilemedi. Lütfen tekrar deneyin.");
+			feedback.setError(
+				new Error(getPasswordChangeErrorMessage(error)),
+				"Parola değiştirilemedi. Lütfen tekrar deneyin.",
+			);
 		}
 	};
 
@@ -89,7 +134,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 						id="current-password"
 						data-autofocus
 						value={currentPassword}
-						onChange={(event) => setCurrentPassword(event.target.value)}
+						onChange={updateField(setCurrentPassword)}
 						autoComplete="current-password"
 						placeholder="Şu anki parolanızı girin"
 						required
@@ -104,7 +149,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 					<PasswordInput
 						id="new-password"
 						value={newPassword}
-						onChange={(event) => setNewPassword(event.target.value)}
+						onChange={updateField(setNewPassword)}
 						autoComplete="new-password"
 						placeholder="Yeni parolayı girin"
 						minLength={PASSWORD_MIN_LENGTH}
@@ -120,7 +165,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 					<PasswordInput
 						id="confirm-password"
 						value={confirmPassword}
-						onChange={(event) => setConfirmPassword(event.target.value)}
+						onChange={updateField(setConfirmPassword)}
 						autoComplete="new-password"
 						placeholder="Yeni parolayı tekrar girin"
 						minLength={PASSWORD_MIN_LENGTH}
@@ -138,7 +183,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 					</button>
 					<button
 						type="submit"
-						disabled={feedback.isPending}
+						disabled={submitDisabled}
 						className="inline-flex h-11 items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-r from-brand-primary to-brand-accent-strong px-4 text-sm font-semibold text-slate-950 shadow-[0_16px_40px_rgba(14,165,233,0.25)] disabled:opacity-45"
 					>
 						{feedback.isPending ? (

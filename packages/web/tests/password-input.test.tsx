@@ -44,6 +44,27 @@ describe("PasswordInput", () => {
 		expect(document.activeElement).toBe(input);
 	});
 
+	it("focuses the input on pointer down so touch interactions stay responsive", async () => {
+		await act(async () => {
+			root.render(<PasswordInput id="admin-password" defaultValue="admin123" />);
+		});
+
+		const input = container.querySelector("#admin-password");
+		if (!(input instanceof HTMLInputElement)) {
+			throw new Error("Password input not found");
+		}
+		const shell = input.parentElement;
+		if (!(shell instanceof HTMLDivElement)) {
+			throw new Error("Password shell not found");
+		}
+
+		await act(async () => {
+			shell.dispatchEvent(new Event("pointerdown", { bubbles: true, cancelable: true }));
+		});
+
+		expect(document.activeElement).toBe(input);
+	});
+
 	it("keeps focus on the input while toggling password visibility", async () => {
 		await act(async () => {
 			root.render(<PasswordInput id="admin-password" defaultValue="admin123" />);

@@ -210,6 +210,19 @@ describe("Auth routes contract", () => {
 		expect(tooShort.json().error.code).toBe("VALIDATION_ERROR");
 	});
 
+	it("POST /auth/change-password rejects reusing the current password", async () => {
+		const adminCookie = await loginAsAdmin(app);
+		const samePassword = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.AUTH.CHANGE_PASSWORD,
+			headers: { cookie: adminCookie },
+			payload: { currentPassword: "admin123", newPassword: "admin123" },
+		});
+
+		expect(samePassword.statusCode).toBe(400);
+		expect(samePassword.json().error.code).toBe("PASSWORD_REUSE_NOT_ALLOWED");
+	});
+
 	it("password change invalidates old password and accepts new password", async () => {
 		const adminCookie = await loginAsAdmin(app);
 		const changeRes = await app.inject({

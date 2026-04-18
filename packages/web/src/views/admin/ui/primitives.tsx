@@ -2,7 +2,9 @@ import type {
 	ButtonHTMLAttributes,
 	HTMLAttributes,
 	InputHTMLAttributes,
+	MouseEvent as ReactMouseEvent,
 	ReactNode,
+	PointerEvent as ReactPointerEvent,
 	SelectHTMLAttributes,
 } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -248,6 +250,7 @@ export function PasswordInput({
 	const [visible, setVisible] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const visibilityLabel = visible ? hideLabel : showLabel;
+
 	const focusInput = () => {
 		if (props.disabled) return;
 		const input = inputRef.current;
@@ -259,19 +262,45 @@ export function PasswordInput({
 		} catch {}
 	};
 
+	const isVisibilityToggleTarget = (target: EventTarget | null) =>
+		target instanceof HTMLElement &&
+		target.closest("[data-password-visibility-toggle]") instanceof HTMLElement;
+
+	const handleShellPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+		if (
+			props.disabled ||
+			isVisibilityToggleTarget(event.target) ||
+			event.target === inputRef.current
+		) {
+			return;
+		}
+
+		event.preventDefault();
+		focusInput();
+	};
+
+	const handleShellClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+		if (
+			props.disabled ||
+			isVisibilityToggleTarget(event.target) ||
+			event.target === inputRef.current
+		) {
+			return;
+		}
+
+		focusInput();
+	};
+
 	return (
-		// biome-ignore lint/a11y/useKeyWithClickEvents: input is focusable via Field's label htmlFor; wrapper click is an edge-padding convenience only.
+		// biome-ignore lint/a11y/useKeyWithClickEvents: wrapper forwards pointer focus to the input; keyboard entry uses the input itself.
 		<div
 			className={cn(
 				"flex h-11 items-center rounded-[1rem] border border-border-subtle bg-surface-1 transition focus-within:border-white/18 focus-within:shadow-[0_0_0_1px_rgba(8,17,31,0.7),0_0_0_4px_var(--color-focus-ring)]",
 				props.disabled ? "cursor-not-allowed opacity-45" : "",
 				className,
 			)}
-			onClick={(event) => {
-				if (event.target === event.currentTarget) {
-					focusInput();
-				}
-			}}
+			onPointerDown={handleShellPointerDown}
+			onClick={handleShellClick}
 		>
 			<input
 				ref={inputRef}
@@ -283,6 +312,7 @@ export function PasswordInput({
 			/>
 			<button
 				type="button"
+				data-password-visibility-toggle
 				disabled={props.disabled}
 				onPointerDown={(event) => event.preventDefault()}
 				onClick={() => {
@@ -539,47 +569,52 @@ export function Modal({ open, title, description, onClose, children, footer }: M
 	if (!open) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/82 p-4 backdrop-blur-md">
-			<button
-				type="button"
-				className="absolute inset-0 cursor-default"
-				onClick={onClose}
-				aria-label="Modalı kapat"
-			/>
-			<dialog
-				ref={panelRef}
-				open
-				aria-labelledby={titleId}
-				aria-describedby={description ? descriptionId : undefined}
-				onCancel={(event) => {
-					event.preventDefault();
-					onClose();
+		<div className="fixed inset-0 z-50 bg-slate-950/82 p-4 backdrop-blur-md">
+			<div
+				className="flex min-h-full items-center justify-center py-4"
+				onMouseDown={(event) => {
+					if (event.target === event.currentTarget) {
+						onClose();
+					}
 				}}
-				className="relative z-10 w-full max-w-lg rounded-[1.75rem] border border-border-strong bg-surface-elevated p-6 shadow-elevation-3"
 			>
-				<div className="mb-5 flex items-start justify-between gap-4">
-					<div>
-						<h2 id={titleId} className="text-xl font-semibold tracking-tight text-text-strong">
-							{title}
-						</h2>
-						{description ? (
-							<p id={descriptionId} className="mt-1 text-sm text-text-subtle">
-								{description}
-							</p>
-						) : null}
+				<dialog
+					ref={panelRef}
+					open
+					aria-modal="true"
+					aria-labelledby={titleId}
+					aria-describedby={description ? descriptionId : undefined}
+					tabIndex={-1}
+					onCancel={(event) => {
+						event.preventDefault();
+						onClose();
+					}}
+					className="relative z-10 m-0 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-[1.75rem] border border-border-strong bg-surface-elevated p-6 shadow-elevation-3"
+				>
+					<div className="mb-5 flex items-start justify-between gap-4">
+						<div>
+							<h2 id={titleId} className="text-xl font-semibold tracking-tight text-text-strong">
+								{title}
+							</h2>
+							{description ? (
+								<p id={descriptionId} className="mt-1 text-sm text-text-subtle">
+									{description}
+								</p>
+							) : null}
+						</div>
+						<button
+							type="button"
+							onClick={onClose}
+							aria-label="Kapat"
+							className="grid h-10 w-10 place-items-center rounded-2xl border border-border-subtle bg-white/5 text-text-muted hover:text-text-strong"
+						>
+							<CloseIcon className="h-4 w-4" />
+						</button>
 					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						aria-label="Kapat"
-						className="grid h-10 w-10 place-items-center rounded-2xl border border-border-subtle bg-white/5 text-text-muted hover:text-text-strong"
-					>
-						<CloseIcon className="h-4 w-4" />
-					</button>
-				</div>
-				<div>{children}</div>
-				{footer ? <div className="mt-6 flex items-center justify-end gap-3">{footer}</div> : null}
-			</dialog>
+					<div>{children}</div>
+					{footer ? <div className="mt-6 flex items-center justify-end gap-3">{footer}</div> : null}
+				</dialog>
+			</div>
 		</div>
 	);
 }
