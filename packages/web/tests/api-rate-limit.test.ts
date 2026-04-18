@@ -206,6 +206,9 @@ describe("api rate-limit handling", () => {
 			),
 		);
 
-		await expect(Promise.all([requestA, requestB])).resolves.toEqual([{ foo: "bar" }, { foo: "bar" }]);
+		await expect(Promise.all([requestA, requestB])).resolves.toEqual([
+			{ foo: "bar" },
+			{ foo: "bar" },
+		]);
 	});
 });

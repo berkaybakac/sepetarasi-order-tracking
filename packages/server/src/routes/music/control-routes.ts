@@ -25,6 +25,16 @@ function getSettingValue(db: AppDatabase, key: string): string | null {
 	return row?.value ?? null;
 }
 
+function getPlayFailureStatus(code: string): number {
+	switch (code) {
+		case "MUSIC_DISABLED":
+		case "NO_PLAYABLE_TRACKS":
+			return 409;
+		default:
+			return 503;
+	}
+}
+
 export function registerMusicControlRoutes(
 	app: FastifyInstance,
 	db: AppDatabase,
@@ -48,13 +58,34 @@ export function registerMusicControlRoutes(
 					enabled,
 					loop: loop === null ? true : loop === "1",
 					shuffle: shuffle === "1",
+					runtimeIssue: null,
 				};
 			})();
 		return { ok: true, data: status };
 	});
 
-	app.post(API_ROUTES.V1.MUSIC.PLAY, { preHandler: requireAdmin }, async () => {
-		musicPlayer?.play();
+	app.post(API_ROUTES.V1.MUSIC.PLAY, { preHandler: requireAdmin }, async (_request, reply) => {
+		if (!musicPlayer) {
+			return reply.status(503).send({
+				ok: false,
+				error: {
+					code: "MUSIC_PLAYER_UNAVAILABLE",
+					message: "Müzik oynatıcı servisi hazır değil.",
+				},
+			});
+		}
+
+		const result = await musicPlayer.playAndVerify();
+		if (!result.ok) {
+			return reply.status(getPlayFailureStatus(result.code ?? "PLAYBACK_FAILED")).send({
+				ok: false,
+				error: {
+					code: result.code ?? "PLAYBACK_FAILED",
+					message: result.message ?? "Müzik oynatma başlatılamadı.",
+				},
+			});
+		}
+
 		return { ok: true, data: null };
 	});
 

@@ -207,6 +207,13 @@ export interface MusicTrackRecord extends MusicTrack {
 	file_path: string;
 }
 
+export interface MusicRuntimeIssue {
+	code: string;
+	message: string;
+	at: string;
+	signals: string[];
+}
+
 export interface MusicStatus {
 	isPlaying: boolean;
 	isPaused: boolean;
@@ -217,4 +224,5 @@ export interface MusicStatus {
 	enabled: boolean;
 	loop: boolean;
 	shuffle: boolean;
+	runtimeIssue: MusicRuntimeIssue | null;
 }

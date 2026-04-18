@@ -1,6 +1,6 @@
 import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { MusicStatus, SettingsUpdatedPayload, WsMessage } from "@sepetarasi/shared";
-import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useBootScreenReady } from "../../hooks/useBootScreenReady";
 import { useWebSocket } from "../../hooks/useWebSocket";

@@ -205,6 +205,7 @@ type InternalPlayer = {
 	isDucked: boolean;
 	fadeTimers: ReturnType<typeof setTimeout>[];
 	lastLoadAt?: number;
+	awaitingPlaybackConfirmation?: boolean;
 	handleMpg123Line?: (line: string) => void;
 };
 
@@ -564,6 +565,75 @@ describe("MusicPlayerService — stop / play / skip / previous", () => {
 			randomSpy.mockRestore();
 			rmSync(tempDir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("MusicPlayerService — verified play diagnostics", () => {
+	it("playAndVerify() fails with a developer-visible issue when music is disabled", async () => {
+		const db = createTestDb();
+		const { player } = buildPlayer(db);
+
+		const result = await player.playAndVerify(10);
+
+		expect(result.ok).toBe(false);
+		expect(result.code).toBe("MUSIC_DISABLED");
+		expect(player.getStatus().runtimeIssue?.code).toBe("MUSIC_DISABLED");
+	});
+
+	it("playAndVerify() waits for @P 2 confirmation before succeeding", async () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values({
+				key: SETTING_KEYS.MUSIC_ENABLED,
+				value: "1",
+				updated_at: new Date().toISOString(),
+			})
+			.onConflictDoUpdate({
+				target: appSettings.key,
+				set: { value: "1", updated_at: new Date().toISOString() },
+			})
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, false);
+		internal.playlist = [{ id: "a", file_path: "/tmp/a.mp3", display_name: "A" }];
+		internal.isPaused = true;
+
+		const resultPromise = player.playAndVerify(50);
+		setTimeout(() => internal.handleMpg123Line?.("@P 2"), 5);
+
+		const result = await resultPromise;
+
+		expect(result.ok).toBe(true);
+		expect(write).toHaveBeenCalledWith(expect.stringContaining("PAUSE\n"));
+		expect(player.getStatus().runtimeIssue).toBeNull();
+	});
+
+	it("playAndVerify() returns a failure when playback confirmation times out", async () => {
+		const db = createTestDb();
+		db.insert(appSettings)
+			.values({
+				key: SETTING_KEYS.MUSIC_ENABLED,
+				value: "1",
+				updated_at: new Date().toISOString(),
+			})
+			.onConflictDoUpdate({
+				target: appSettings.key,
+				set: { value: "1", updated_at: new Date().toISOString() },
+			})
+			.run();
+
+		const { player } = buildPlayer(db);
+		const { internal, write } = withMockedProc(player, false);
+		internal.playlist = [{ id: "a", file_path: "/tmp/a.mp3", display_name: "A" }];
+		internal.isPaused = true;
+
+		const result = await player.playAndVerify(10);
+
+		expect(result.ok).toBe(false);
+		expect(result.code).toBe("PLAYBACK_NOT_CONFIRMED");
+		expect(write).toHaveBeenCalledWith(expect.stringContaining("PAUSE\n"));
+		expect(player.getStatus().runtimeIssue?.code).toBe("PLAYBACK_NOT_CONFIRMED");
 	});
 });
 

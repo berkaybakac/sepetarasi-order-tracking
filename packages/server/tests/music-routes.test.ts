@@ -287,6 +287,49 @@ describe("Music routes", () => {
 		expect(modeRes.json().error.code).toBe("VALIDATION_ERROR");
 	});
 
+	it("rejects play when no playable tracks exist and exposes the runtime issue in status", async () => {
+		const localDb = createTestDb();
+		const localMusicDir = mkdtempSync(join(tmpdir(), "sepetarasi-music-play-blocked-"));
+		const localApp = await buildApp({
+			db: localDb,
+			disableStatic: true,
+			disableAudio: true,
+			musicPath: localMusicDir,
+			workerPollIntervalMs: 60_000,
+		});
+
+		try {
+			const localAdminCookie = await loginAsAdmin(localApp);
+
+			const enableRes = await localApp.inject({
+				method: "PATCH",
+				url: API_ROUTES.V1.MUSIC.ENABLED,
+				headers: { cookie: localAdminCookie },
+				payload: { enabled: true },
+			});
+			expect(enableRes.statusCode).toBe(200);
+
+			const playRes = await localApp.inject({
+				method: "POST",
+				url: API_ROUTES.V1.MUSIC.PLAY,
+				headers: { cookie: localAdminCookie },
+			});
+			expect(playRes.statusCode).toBe(409);
+			expect(playRes.json().error.code).toBe("NO_PLAYABLE_TRACKS");
+
+			const statusRes = await localApp.inject({
+				method: "GET",
+				url: API_ROUTES.V1.MUSIC.STATUS,
+				headers: { cookie: localAdminCookie },
+			});
+			expect(statusRes.statusCode).toBe(200);
+			expect(statusRes.json().data.runtimeIssue.code).toBe("NO_PLAYABLE_TRACKS");
+		} finally {
+			await localApp.close();
+			rmSync(localMusicDir, { recursive: true, force: true });
+		}
+	});
+
 	it("renames and reorders a track via PATCH /tracks/:id, returns 404 for missing", async () => {
 		// Upload a track to rename
 		const fileBuffer = Buffer.alloc(512, 0x5);
@@ -375,5 +418,6 @@ describe("Music routes", () => {
 		expect(statusRes.json().data.enabled).toBe(true);
 		expect(statusRes.json().data.loop).toBe(false);
 		expect(statusRes.json().data.shuffle).toBe(true);
+		expect(statusRes.json().data.runtimeIssue).toBeNull();
 	});
 });

@@ -1,30 +1,37 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "acorn";
 import { describe, expect, it } from "vitest";
 
 const testsDir = dirname(fileURLToPath(import.meta.url));
 const webDir = resolve(testsDir, "..");
-const distAssetsDir = resolve(webDir, "dist/assets");
 
 describe.sequential("legacy build output", () => {
 	it("emits legacy bundles that parse as ES5", () => {
-		execFileSync("npm", ["run", "build"], {
-			cwd: webDir,
-			stdio: "pipe",
-		});
+		const tempDistDir = mkdtempSync(join(tmpdir(), "sepetarasi-web-legacy-build-"));
 
-		const legacyFiles = readdirSync(distAssetsDir).filter(
-			(fileName) => fileName.endsWith(".js") && fileName.includes("-legacy"),
-		);
+		try {
+			execFileSync("npm", ["run", "build", "--", "--outDir", tempDistDir], {
+				cwd: webDir,
+				stdio: "pipe",
+			});
 
-		expect(legacyFiles.length).toBeGreaterThan(0);
+			const distAssetsDir = resolve(tempDistDir, "assets");
+			const legacyFiles = readdirSync(distAssetsDir).filter(
+				(fileName) => fileName.endsWith(".js") && fileName.includes("-legacy"),
+			);
 
-		for (const fileName of legacyFiles) {
-			const source = readFileSync(resolve(distAssetsDir, fileName), "utf8");
-			expect(() => parse(source, { ecmaVersion: 5, sourceType: "script" })).not.toThrow();
+			expect(legacyFiles.length).toBeGreaterThan(0);
+
+			for (const fileName of legacyFiles) {
+				const source = readFileSync(resolve(distAssetsDir, fileName), "utf8");
+				expect(() => parse(source, { ecmaVersion: 5, sourceType: "script" })).not.toThrow();
+			}
+		} finally {
+			rmSync(tempDistDir, { recursive: true, force: true });
 		}
 	}, 60_000);
 });

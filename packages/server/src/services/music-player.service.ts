@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
-import type { MusicStatus, MusicTrackRecord } from "@sepetarasi/shared";
+import type { MusicRuntimeIssue, MusicStatus, MusicTrackRecord } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings, musicTracks } from "../db/schema.js";
@@ -43,6 +43,23 @@ export interface MusicPlayerOptions {
 	logger?: MusicPlayerLogger;
 }
 
+interface MusicPlayResult {
+	ok: boolean;
+	code?: string;
+	message?: string;
+	status: MusicStatus;
+}
+
+interface PlaybackBlocker {
+	code: string;
+	message: string;
+}
+
+interface PlaybackConfirmationWaiter {
+	resolve: (confirmed: boolean) => void;
+	timer: ReturnType<typeof setTimeout>;
+}
+
 /**
  * mpg123 remote mode VOLUME command accepts 0-100 percentage.
  * Clamp and round to integer.
@@ -74,11 +91,16 @@ export class MusicPlayerService {
 	private isPlaying = false;
 	private isPaused = false;
 	private isDucked = false;
+	private runtimeIssue: MusicRuntimeIssue | null = null;
+	private awaitingPlaybackConfirmation = false;
+	private playbackConfirmationWaiters: PlaybackConfirmationWaiter[] = [];
+	private stoppingProcess = false;
 	private fadeTimers: ReturnType<typeof setTimeout>[] = [];
 	private lastLoadAt = 0;
 	private consecutiveLoadFailures = 0;
 	private static readonly LOAD_FAIL_THRESHOLD_MS = 500;
 	private static readonly MAX_CONSECUTIVE_FAILURES = 3;
+	private static readonly PLAYBACK_CONFIRMATION_TIMEOUT_MS = 1500;
 
 	private db: AppDatabase;
 	private broadcaster: Broadcaster;
@@ -100,10 +122,15 @@ export class MusicPlayerService {
 		try {
 			this.playlist = this.loadPlaylistFromDb();
 		} catch (err) {
+			this.setRuntimeIssue(
+				"PLAYLIST_LOAD_FAILED",
+				`Müzik listesi yüklenemedi: ${err instanceof Error ? err.message : String(err)}`,
+			);
 			this.logger.error(
 				{ event: "music.start.db_error", error: err instanceof Error ? err.message : String(err) },
 				"Music player failed to load playlist from DB — skipping startup (migration missing?)",
 			);
+			this.broadcastStatus();
 			return;
 		}
 
@@ -125,6 +152,8 @@ export class MusicPlayerService {
 		this.consecutiveLoadFailures = 0;
 		this.clearFadeTimers();
 		this.isDucked = false;
+		this.awaitingPlaybackConfirmation = false;
+		this.resolvePlaybackConfirmationWaiters(false);
 
 		if (!this.proc) {
 			this.isPlaying = false;
@@ -133,6 +162,7 @@ export class MusicPlayerService {
 			return;
 		}
 
+		this.stoppingProcess = true;
 		this.sendCommand("STOP");
 		this.sendCommand("QUIT");
 		setTimeout(() => {
@@ -155,10 +185,63 @@ export class MusicPlayerService {
 			this.sendCommand("PAUSE"); // toggle resume
 			this.isPaused = false;
 			this.isPlaying = true;
+			this.awaitingPlaybackConfirmation = true;
 		} else if (!this.isPlaying) {
 			this.loadCurrentTrack();
 		}
 		this.broadcastStatus();
+	}
+
+	async playAndVerify(
+		timeoutMs = MusicPlayerService.PLAYBACK_CONFIRMATION_TIMEOUT_MS,
+	): Promise<MusicPlayResult> {
+		const blocker = this.getPlaybackBlocker();
+		if (blocker) {
+			this.setRuntimeIssue(blocker.code, blocker.message);
+			this.broadcastStatus();
+			return {
+				ok: false,
+				code: blocker.code,
+				message: blocker.message,
+				status: this.getStatus(),
+			};
+		}
+
+		this.play();
+
+		if (!this.awaitingPlaybackConfirmation) {
+			if (this.isPlaying && !this.isPaused) {
+				return { ok: true, status: this.getStatus() };
+			}
+			const issue = this.ensureRuntimeIssue(
+				"PLAYBACK_NOT_CONFIRMED",
+				"Müzik oynatma başlatıldı ama doğrulanamadı.",
+			);
+			this.broadcastStatus();
+			return {
+				ok: false,
+				code: issue.code,
+				message: issue.message,
+				status: this.getStatus(),
+			};
+		}
+
+		const confirmed = await this.waitForPlaybackConfirmation(timeoutMs);
+		if (confirmed) {
+			return { ok: true, status: this.getStatus() };
+		}
+
+		const issue = this.ensureRuntimeIssue(
+			"PLAYBACK_NOT_CONFIRMED",
+			"Müzik oynatma başlatıldı ama doğrulanamadı.",
+		);
+		this.broadcastStatus();
+		return {
+			ok: false,
+			code: issue.code,
+			message: issue.message,
+			status: this.getStatus(),
+		};
 	}
 
 	pause(): void {
@@ -319,6 +402,7 @@ export class MusicPlayerService {
 			enabled: this.getEnabled(),
 			loop: this.getLoopEnabled(),
 			shuffle: this.getShuffleEnabled(),
+			runtimeIssue: this.runtimeIssue,
 		};
 	}
 
@@ -330,6 +414,7 @@ export class MusicPlayerService {
 
 		this.logger.info({ event: "music.process.spawn", args }, "Spawning mpg123 remote process");
 
+		this.stoppingProcess = false;
 		this.proc = spawn("mpg123", args, { stdio: ["pipe", "pipe", "pipe"] });
 
 		this.proc.stdin?.on("error", (err) => {
@@ -351,22 +436,43 @@ export class MusicPlayerService {
 					},
 					"mpg123 stderr",
 				);
+				if (signals.length > 0 || this.awaitingPlaybackConfirmation) {
+					this.setRuntimeIssue(signals[0]?.toUpperCase() ?? "PLAYER_STDERR", text, signals);
+					this.broadcastStatus();
+				}
 			}
 		});
 
 		this.proc.on("error", (err) => {
+			this.setRuntimeIssue("PLAYER_PROCESS_ERROR", `mpg123 process error: ${err.message}`);
 			this.logger.error(
 				{ event: "music.process.error", error: err.message },
 				"mpg123 process error",
 			);
 			this.proc = null;
 			this.isPlaying = false;
+			this.isPaused = false;
+			this.awaitingPlaybackConfirmation = false;
+			this.resolvePlaybackConfirmationWaiters(false);
+			this.broadcastStatus();
 		});
 
 		this.proc.on("close", (code) => {
+			const intentionalStop = this.stoppingProcess;
+			this.stoppingProcess = false;
 			this.logger.info({ event: "music.process.closed", code }, "mpg123 process closed");
 			this.proc = null;
 			this.isPlaying = false;
+			this.isPaused = false;
+			this.awaitingPlaybackConfirmation = false;
+			this.resolvePlaybackConfirmationWaiters(false);
+			if (!intentionalStop && code !== 0 && !this.runtimeIssue) {
+				this.setRuntimeIssue(
+					"PLAYER_PROCESS_CLOSED",
+					`mpg123 beklenmedik şekilde kapandı (exit code: ${code ?? "unknown"}).`,
+				);
+			}
+			this.broadcastStatus();
 		});
 
 		// Parse stdout for @P status lines
@@ -397,6 +503,10 @@ export class MusicPlayerService {
 			if (elapsed < MusicPlayerService.LOAD_FAIL_THRESHOLD_MS) {
 				this.consecutiveLoadFailures += 1;
 				const failedTrack = this.playlist[this.currentIndex];
+				this.setRuntimeIssue(
+					"TRACK_LOAD_FAILED",
+					`Parça yüklenemedi: ${failedTrack?.display_name ?? "bilinmeyen parça"}`,
+				);
 				this.logger.error(
 					{
 						event: "music.track.load_failed",
@@ -433,6 +543,7 @@ export class MusicPlayerService {
 			if (nextIndex === null) {
 				this.isPlaying = false;
 				this.isPaused = false;
+				this.awaitingPlaybackConfirmation = false;
 				this.broadcastStatus();
 				return;
 			}
@@ -442,9 +553,14 @@ export class MusicPlayerService {
 		} else if (line.startsWith("@P 1")) {
 			this.isPaused = true;
 			this.isPlaying = false;
+			this.broadcastStatus();
 		} else if (line.startsWith("@P 2")) {
 			this.isPaused = false;
 			this.isPlaying = true;
+			this.awaitingPlaybackConfirmation = false;
+			this.clearRuntimeIssue();
+			this.resolvePlaybackConfirmationWaiters(true);
+			this.broadcastStatus();
 		}
 	}
 
@@ -475,6 +591,7 @@ export class MusicPlayerService {
 			}
 
 			this.lastLoadAt = Date.now();
+			this.awaitingPlaybackConfirmation = true;
 			this.sendCommand(`LOAD ${track.file_path}`);
 			this.isPlaying = true;
 			this.isPaused = false;
@@ -492,6 +609,7 @@ export class MusicPlayerService {
 			return;
 		}
 
+		this.setRuntimeIssue("NO_PLAYABLE_TRACKS", "Çalınabilir müzik parçası bulunamadı.");
 		this.logger.warn(
 			{ event: "music.playlist.empty_runtime" },
 			"No playable tracks remain in runtime playlist",
@@ -748,6 +866,88 @@ export class MusicPlayerService {
 		}
 
 		return this.pickRandomIndexExcludingCurrent();
+	}
+
+	private getPlaybackBlocker(): PlaybackBlocker | null {
+		if (!this.getEnabled()) {
+			return {
+				code: "MUSIC_DISABLED",
+				message: "Müzik kapalı. Oynatmadan önce müziği açın.",
+			};
+		}
+
+		if (!this.proc) {
+			try {
+				this.playlist = this.loadPlaylistFromDb();
+				this.currentIndex = this.playlist.length > 0 ? this.resolveStartIndex() : 0;
+				this.syncShuffleState();
+			} catch (err) {
+				return {
+					code: "PLAYLIST_LOAD_FAILED",
+					message: `Müzik listesi yüklenemedi: ${err instanceof Error ? err.message : String(err)}`,
+				};
+			}
+		}
+
+		if (this.playlist.length === 0) {
+			return {
+				code: "NO_PLAYABLE_TRACKS",
+				message: "Çalınabilir müzik parçası bulunamadı.",
+			};
+		}
+
+		return null;
+	}
+
+	private waitForPlaybackConfirmation(timeoutMs: number): Promise<boolean> {
+		if (!this.awaitingPlaybackConfirmation) {
+			return Promise.resolve(this.isPlaying && !this.isPaused);
+		}
+
+		return new Promise((resolve) => {
+			const waiter: PlaybackConfirmationWaiter = {
+				resolve,
+				timer: setTimeout(() => {
+					this.playbackConfirmationWaiters = this.playbackConfirmationWaiters.filter(
+						(entry) => entry !== waiter,
+					);
+					resolve(false);
+				}, timeoutMs),
+			};
+			this.playbackConfirmationWaiters.push(waiter);
+		});
+	}
+
+	private resolvePlaybackConfirmationWaiters(confirmed: boolean): void {
+		for (const waiter of this.playbackConfirmationWaiters) {
+			clearTimeout(waiter.timer);
+			waiter.resolve(confirmed);
+		}
+		this.playbackConfirmationWaiters = [];
+	}
+
+	private setRuntimeIssue(code: string, message: string, signals: string[] = []): void {
+		this.runtimeIssue = {
+			code,
+			message,
+			at: new Date().toISOString(),
+			signals,
+		};
+	}
+
+	private ensureRuntimeIssue(
+		code: string,
+		message: string,
+		signals: string[] = [],
+	): MusicRuntimeIssue {
+		if (!this.runtimeIssue) {
+			this.setRuntimeIssue(code, message, signals);
+		}
+		return this.runtimeIssue as MusicRuntimeIssue;
+	}
+
+	private clearRuntimeIssue(): void {
+		this.runtimeIssue = null;
 	}
 
 	private broadcastStatus(): void {
