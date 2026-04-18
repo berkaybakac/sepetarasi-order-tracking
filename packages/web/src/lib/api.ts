@@ -7,6 +7,7 @@ import type {
 	MusicTrack,
 	Order,
 } from "@sepetarasi/shared";
+import { useAuthStore } from "../stores/auth.store";
 
 const baseUrl = "";
 const cashierToken = import.meta.env.VITE_CASHIER_TOKEN?.trim();
@@ -133,6 +134,18 @@ function buildRequestHeaders(options: RequestOptions) {
 }
 
 const inflightGetRequests = new Map<string, Promise<unknown>>();
+
+function syncAdminAuthFromError(path: string, error: unknown) {
+	if (
+		error instanceof ApiError &&
+		(error.status === 401 || error.code === "UNAUTHORIZED") &&
+		path !== API_ROUTES.V1.AUTH.LOGIN
+	) {
+		useAuthStore.getState().setAuthStatus(false);
+	}
+
+	return error;
+}
 
 function buildInFlightGetKey(
 	method: string,
@@ -358,9 +371,13 @@ async function request<T>(method: string, path: string, options: RequestOptions 
 		}
 	}
 
-	const requestPromise = hasFetchTransport()
-		? requestWithFetch<T>(method, path, options, headers)
-		: requestWithXhr<T>(method, path, options, headers);
+	const requestPromise = (
+		hasFetchTransport()
+			? requestWithFetch<T>(method, path, options, headers)
+			: requestWithXhr<T>(method, path, options, headers)
+	).catch((error: unknown) => {
+		throw syncAdminAuthFromError(path, error);
+	});
 
 	if (!inFlightKey) {
 		return requestPromise;
@@ -444,9 +461,22 @@ export const api = {
 					return;
 				}
 				try {
-					const json = JSON.parse(xhr.responseText);
+					const json = JSON.parse(xhr.responseText) as {
+						ok: boolean;
+						data?: MusicTrack;
+						error?: { code?: string; message?: string };
+					};
 					if (!json.ok) {
-						reject(new Error(json.error?.message || "Yükleme başarısız."));
+						reject(
+							syncAdminAuthFromError(
+								API_ROUTES.V1.MUSIC.TRACKS,
+								new ApiError(json.error?.message || "Yükleme başarısız.", {
+									status: xhr.status,
+									code: json.error?.code || "API_ERROR",
+									recoverable: xhr.status >= 500 || xhr.status === 0,
+								}),
+							),
+						);
 					} else {
 						resolve(json.data as MusicTrack);
 					}

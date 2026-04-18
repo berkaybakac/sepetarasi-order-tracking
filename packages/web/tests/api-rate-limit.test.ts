@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../src/lib/api";
+import { useAuthStore } from "../src/stores/auth.store";
 
 class MockXMLHttpRequest {
 	static lastInstance: MockXMLHttpRequest | null = null;
@@ -69,6 +70,8 @@ describe("api rate-limit handling", () => {
 		globalThis.AbortController = originalAbortController;
 		globalThis.XMLHttpRequest = originalXmlHttpRequest;
 		MockXMLHttpRequest.lastInstance = null;
+		useAuthStore.getState().setAuthStatus(false);
+		localStorage.clear();
 		vi.restoreAllMocks();
 	});
 
@@ -127,6 +130,35 @@ describe("api rate-limit handling", () => {
 			code: "INVALID_CURRENT_PASSWORD",
 			message: "Current password is wrong",
 		});
+	});
+
+	it("clears persisted admin auth on unauthorized protected responses", async () => {
+		useAuthStore.getState().setAuthStatus(true);
+
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					ok: false,
+					error: {
+						code: "UNAUTHORIZED",
+						message: "Admin access required",
+					},
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			),
+		);
+
+		await expect(api.getMusicStatus()).rejects.toMatchObject({
+			name: "ApiError",
+			status: 401,
+			code: "UNAUTHORIZED",
+		});
+		expect(useAuthStore.getState().isAdmin).toBe(false);
 	});
 
 	it("falls back to XMLHttpRequest when fetch transport is unavailable", async () => {

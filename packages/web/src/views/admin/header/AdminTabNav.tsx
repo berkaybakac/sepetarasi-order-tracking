@@ -12,7 +12,6 @@ export function AdminTabNav() {
 				<NavLink
 					key={tab.to}
 					to={tab.to}
-					title={tab.description}
 					className={({ isActive }) =>
 						cn(
 							"group inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[0.9rem] border px-2.5 py-1.5 text-[0.95rem] font-semibold transition",

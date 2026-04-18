@@ -44,16 +44,24 @@ export function TargetMinutesEditor({
 	onSave,
 	saving,
 	dirty,
+	disabled,
+	disabledMessage,
 	error,
 	saveLabel,
+	onRetry,
+	retrying,
 }: {
 	value: number;
 	onChange: (value: number) => void;
 	onSave: () => void;
 	saving: boolean;
 	dirty: boolean;
+	disabled?: boolean;
+	disabledMessage?: string | null;
 	error: string | null;
 	saveLabel: "idle" | "saved";
+	onRetry?: () => void;
+	retrying?: boolean;
 }) {
 	return (
 		<div className="w-full rounded-[1.25rem] border border-border-subtle bg-surface-3/90 p-4 xl:min-w-[19rem] xl:max-w-[21rem]">
@@ -76,7 +84,7 @@ export function TargetMinutesEditor({
 							decreaseLabel="Teslim hedefini azalt"
 							increaseLabel="Teslim hedefini artır"
 							inputLabel="Teslim hedefi dakikası"
-							disabled={saving}
+							disabled={saving || disabled}
 						/>
 					</div>
 					<ActionButton
@@ -84,13 +92,25 @@ export function TargetMinutesEditor({
 						onClick={onSave}
 						busy={saving}
 						success={saveLabel === "saved"}
-						disabled={!dirty}
+						disabled={disabled || !dirty}
 						className="h-10 min-w-[108px] px-4"
 					>
 						{saveLabel === "saved" ? "Kaydedildi" : "Kaydet"}
 					</ActionButton>
 				</div>
 			</div>
+			{disabledMessage ? (
+				<div className="mt-3 space-y-3">
+					<InlineAlert tone="danger">{disabledMessage}</InlineAlert>
+					{onRetry ? (
+						<div className="flex justify-end">
+							<ActionButton tone="secondary" onClick={onRetry} busy={retrying}>
+								Yeniden Dene
+							</ActionButton>
+						</div>
+					) : null}
+				</div>
+			) : null}
 			{error ? (
 				<InlineAlert className="mt-3" tone="danger">
 					{error}

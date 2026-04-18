@@ -56,12 +56,22 @@ function setInputValue(input: HTMLInputElement, value: string) {
 	input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-function getDateInputs(container: HTMLDivElement) {
-	const inputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="date"]'));
-	if (inputs.length !== 2) {
-		throw new Error(`Expected 2 date inputs, received ${inputs.length}`);
+function getRangePickerButton(container: HTMLDivElement) {
+	const button = container.querySelector<HTMLButtonElement>(
+		'button[aria-label="Tarih aralığını seç"]',
+	);
+	if (!button) {
+		throw new Error("Range picker trigger not found");
 	}
-	return { fromInput: inputs[0], toInput: inputs[1] };
+	return button;
+}
+
+function getCalendarDateButton(container: HTMLDivElement, iso: string) {
+	const button = container.querySelector<HTMLButtonElement>(`button[data-date="${iso}"]`);
+	if (!button) {
+		throw new Error(`Calendar date button not found for ${iso}`);
+	}
+	return button;
 }
 
 describe("PeriodStats — delivery analytics dashboard", () => {
@@ -76,7 +86,7 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 		vi.clearAllMocks();
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-04-17T14:17:00.000Z"));
-		useSettingsStore.setState({ deliveryTargetMinutes: 20, loaded: true });
+		useSettingsStore.setState({ deliveryTargetMinutes: 20, loaded: true, loadFailed: false });
 	});
 
 	afterEach(async () => {
@@ -266,6 +276,56 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 		expect(container.textContent).toContain("Teslim hedefi kaydedilemedi");
 	});
 
+	it("disables target edits until delivery target settings reload successfully", async () => {
+		vi.mocked(api.getDeliveryAnalytics).mockResolvedValue(buildAnalytics());
+		vi.mocked(api.getPublicSettings).mockResolvedValue({
+			[SETTING_KEYS.DELIVERY_TARGET_MINUTES]: "25",
+		});
+		useSettingsStore.setState({ deliveryTargetMinutes: 20, loaded: true, loadFailed: true });
+
+		await act(async () => {
+			root.render(<PeriodStats />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		const saveButton = Array.from(container.querySelectorAll("button")).find((node) =>
+			node.textContent?.includes("Kaydet"),
+		);
+		const retryButton = Array.from(container.querySelectorAll("button")).find((node) =>
+			node.textContent?.includes("Yeniden Dene"),
+		);
+		const targetInput = container.querySelector(
+			'input[aria-label="Teslim hedefi dakikası"]',
+		) as HTMLInputElement | null;
+
+		expect(container.textContent).toContain(
+			"Teslim hedefi yüklenemedi. Ayar doğrulanmadan düzenleme kapalı.",
+		);
+		expect(saveButton).toBeInstanceOf(HTMLButtonElement);
+		expect((saveButton as HTMLButtonElement).disabled).toBe(true);
+		expect(targetInput?.disabled).toBe(true);
+
+		await act(async () => {
+			(retryButton as HTMLButtonElement).dispatchEvent(
+				new MouseEvent("click", { bubbles: true, cancelable: true }),
+			);
+			await Promise.resolve();
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getPublicSettings).toHaveBeenCalledTimes(1);
+		expect(useSettingsStore.getState().loadFailed).toBe(false);
+		expect(useSettingsStore.getState().deliveryTargetMinutes).toBe(25);
+		expect(
+			(container.querySelector('input[aria-label="Teslim hedefi dakikası"]') as HTMLInputElement)
+				.disabled,
+		).toBe(false);
+	});
+
 	it("fetches analytics only once when range changes after wsTrigger becomes truthy", async () => {
 		vi.mocked(api.getDeliveryAnalytics).mockResolvedValue(buildAnalytics());
 
@@ -287,17 +347,30 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 
 		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(2);
 
-		const { fromInput } = getDateInputs(container);
+		await act(async () => {
+			getRangePickerButton(container).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
 
 		await act(async () => {
-			setInputValue(fromInput, "2026-04-09");
+			getCalendarDateButton(container, "2026-04-09").dispatchEvent(
+				new MouseEvent("click", { bubbles: true }),
+			);
+		});
+		await act(async () => {
+			Array.from(container.querySelectorAll("button"))
+				.find((button) => button.textContent?.trim() === "Uygula")
+				?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+			await Promise.resolve();
 		});
 		await act(async () => {
 			await Promise.resolve();
 		});
 
 		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(3);
-		expect(api.getDeliveryAnalytics).toHaveBeenLastCalledWith("2026-04-09", fromInput.max);
+		expect(api.getDeliveryAnalytics).toHaveBeenLastCalledWith("2026-04-09", "2026-04-17");
 	});
 
 	it("throttles silent ws-triggered analytics refreshes", async () => {

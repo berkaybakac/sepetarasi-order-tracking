@@ -28,7 +28,7 @@ vi.mock("../src/lib/api", () => ({
 	},
 }));
 
-function getInput(container: HTMLDivElement, id: string) {
+function getInput(container: ParentNode, id: string) {
 	const input = container.querySelector(`#${id}`);
 	if (!(input instanceof HTMLInputElement)) {
 		throw new Error(`${id} input not found`);
@@ -48,7 +48,7 @@ async function setInputValue(input: HTMLInputElement, value: string) {
 	});
 }
 
-async function submitForm(container: HTMLDivElement) {
+async function submitForm(container: ParentNode) {
 	const form = container.querySelector("form");
 	if (!(form instanceof HTMLFormElement)) {
 		throw new Error("Password change form not found");
@@ -95,8 +95,8 @@ describe("PasswordChangeModal", () => {
 			root.render(<PasswordChangeModal open onClose={onClose} />);
 		});
 
-		const currentPassword = getInput(container, "current-password");
-		const dialog = container.querySelector("dialog");
+		const currentPassword = getInput(document.body, "current-password");
+		const dialog = document.body.querySelector("dialog");
 		if (!(dialog instanceof HTMLDialogElement)) {
 			throw new Error("Dialog panel not found");
 		}
@@ -118,7 +118,7 @@ describe("PasswordChangeModal", () => {
 			root.render(<PasswordChangeModal open onClose={onClose} />);
 		});
 
-		const dialog = container.querySelector("dialog");
+		const dialog = document.body.querySelector("dialog");
 		if (!(dialog instanceof HTMLDialogElement)) {
 			throw new Error("Dialog panel not found");
 		}
@@ -146,16 +146,16 @@ describe("PasswordChangeModal", () => {
 			root.render(<PasswordChangeModal open onClose={onClose} />);
 		});
 
-		await setInputValue(getInput(container, "current-password"), "wrong-password");
-		await setInputValue(getInput(container, "new-password"), "new-password-1");
-		await setInputValue(getInput(container, "confirm-password"), "new-password-1");
-		await submitForm(container);
+		await setInputValue(getInput(document.body, "current-password"), "wrong-password");
+		await setInputValue(getInput(document.body, "new-password"), "new-password-1");
+		await setInputValue(getInput(document.body, "confirm-password"), "new-password-1");
+		await submitForm(document.body);
 
-		expect(container.textContent).toContain("Mevcut parola hatalı.");
+		expect(document.body.textContent).toContain("Mevcut parola hatalı.");
 
-		await setInputValue(getInput(container, "current-password"), "admin123");
+		await setInputValue(getInput(document.body, "current-password"), "admin123");
 
-		expect(container.textContent).not.toContain("Mevcut parola hatalı.");
+		expect(document.body.textContent).not.toContain("Mevcut parola hatalı.");
 	});
 
 	it("blocks reusing the current password before sending the request", async () => {
@@ -163,12 +163,12 @@ describe("PasswordChangeModal", () => {
 			root.render(<PasswordChangeModal open onClose={onClose} />);
 		});
 
-		await setInputValue(getInput(container, "current-password"), "admin123");
-		await setInputValue(getInput(container, "new-password"), "admin123");
-		await setInputValue(getInput(container, "confirm-password"), "admin123");
-		await submitForm(container);
+		await setInputValue(getInput(document.body, "current-password"), "admin123");
+		await setInputValue(getInput(document.body, "new-password"), "admin123");
+		await setInputValue(getInput(document.body, "confirm-password"), "admin123");
+		await submitForm(document.body);
 
 		expect(vi.mocked(api.authChangePassword)).not.toHaveBeenCalled();
-		expect(container.textContent).toContain("Yeni parola mevcut parola ile aynı olamaz.");
+		expect(document.body.textContent).toContain("Yeni parola mevcut parola ile aynı olamaz.");
 	});
 });

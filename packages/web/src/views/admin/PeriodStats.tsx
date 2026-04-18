@@ -15,7 +15,7 @@ import { PeriodStatsKpis } from "./stats/PeriodStatsKpis";
 import { PeriodStatsOrderTypeBreakdown } from "./stats/PeriodStatsOrderTypeBreakdown";
 import { PeriodStatsTimeSeries } from "./stats/PeriodStatsTimeSeries";
 import { TargetMinutesEditor } from "./stats/StatsPanels";
-import { type PresetKey, rangeForPreset } from "./stats/range-utils";
+import { type DateRange, type PresetKey, rangeForPreset } from "./stats/range-utils";
 import { InlineAlert } from "./ui/primitives";
 
 const SILENT_REFRESH_MIN_INTERVAL_MS = 15_000;
@@ -57,10 +57,11 @@ function resolveUiError(error: unknown): UiErrorState {
 
 export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) {
 	const deliveryTargetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
+	const settingsLoadFailed = useSettingsStore((s) => s.loadFailed);
 	const hydrateSettings = useSettingsStore((s) => s.hydrate);
 	const setDeliveryTargetMinutes = useSettingsStore((s) => s.setDeliveryTargetMinutes);
 	const [preset, setPreset] = useState<PresetKey>("last7");
-	const [range, setRange] = useState<{ from: string; to: string }>(() => rangeForPreset("last7"));
+	const [range, setRange] = useState<DateRange>(() => rangeForPreset("last7"));
 	const [analytics, setAnalytics] = useState<DeliveryAnalyticsResult | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<UiErrorState | null>(null);
@@ -68,6 +69,7 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 	const [targetSaving, setTargetSaving] = useState(false);
 	const [targetError, setTargetError] = useState<string | null>(null);
 	const [targetSaveLabel, setTargetSaveLabel] = useState<"idle" | "saved">("idle");
+	const [targetRetrying, setTargetRetrying] = useState(false);
 	const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const rangeRef = useRef(range);
 	const analyticsRef = useRef<DeliveryAnalyticsResult | null>(null);
@@ -158,9 +160,9 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 		if (key !== "custom") setRange(rangeForPreset(key));
 	};
 
-	const handleCustomChange = (field: "from" | "to", value: string) => {
+	const handleCustomChange = (nextRange: DateRange) => {
 		setPreset("custom");
-		setRange((prev) => ({ ...prev, [field]: value }));
+		setRange(nextRange);
 	};
 
 	const handleTargetDraftChange = (nextValue: number) => {
@@ -169,6 +171,7 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 	};
 
 	const handleSaveTarget = async () => {
+		if (settingsLoadFailed) return;
 		setTargetSaving(true);
 		setTargetError(null);
 		setTargetSaveLabel("idle");
@@ -188,6 +191,15 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 		}
 	};
 
+	const handleRetryTargetLoad = async () => {
+		setTargetRetrying(true);
+		try {
+			await hydrateSettings();
+		} finally {
+			setTargetRetrying(false);
+		}
+	};
+
 	const summary = analytics?.summary;
 	const targetMinutes =
 		summary?.targetMinutes ?? deliveryTargetMinutes ?? DELIVERY_TARGET_DEFAULT_MINUTES;
@@ -195,6 +207,9 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 	const onTargetOk = summary ? summary.onTargetRate >= 80 : false;
 	const empty = !loading && summary != null && summary.totalDelivered === 0;
 	const targetDirty = targetDraft !== deliveryTargetMinutes;
+	const targetLoadError = settingsLoadFailed
+		? "Teslim hedefi yüklenemedi. Ayar doğrulanmadan düzenleme kapalı."
+		: null;
 
 	return (
 		<div className="rounded-[2rem] border border-border-subtle bg-surface-2/95 p-5 shadow-elevation-1 backdrop-blur-xl md:p-6">
@@ -227,8 +242,12 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 							onSave={handleSaveTarget}
 							saving={targetSaving}
 							dirty={targetDirty}
+							disabled={settingsLoadFailed}
+							disabledMessage={targetLoadError}
 							error={targetError}
 							saveLabel={targetSaveLabel}
+							onRetry={() => void handleRetryTargetLoad()}
+							retrying={targetRetrying}
 						/>
 					</div>
 				</div>

@@ -1,6 +1,6 @@
 # SEPET ARASI Order Tracking
 
-LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Paneli ve Müşteri Ekranı.
+LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Paneli ve Sipariş Takip Ekranı.
 
 ---
 
@@ -15,7 +15,7 @@ Pi4 gerekmez. Mac'te local server + local DB ile çalışır.
 # Terminal 1 — Server
 npm run dev:server
 
-# Terminal 2 — Web (Yönetici + Müşteri Ekranı)
+# Terminal 2 — Web (Yönetici + Sipariş Takip Ekranı)
 npm run dev:web
 
 # Terminal 3 — Kasa (Electron)
@@ -26,7 +26,7 @@ cd packages/kasa && npm run dev
 Pi4 çalışıyor olmalı. Hot reload Mac'te, data Pi4'ten gelir. Lokal server açma.
 
 ```bash
-# Terminal 1 — Web UI (admin panel, display)
+# Terminal 1 — Web UI (yönetici ekranı, sipariş takip ekranı)
 npm run dev:web:pi4
 
 # Terminal 2 — Kasa Electron
@@ -36,13 +36,30 @@ cd packages/kasa && npm run dev
 > Kasa ilk açılışta config ekranında server URL'yi `http://sepetarasi.local:3000` yap ve kaydet — bir daha sormaz.
 > **İstisna:** `packages/server` kodunu değiştirdiysen hot reload olmaz — değişiklik Pi4'e ancak `bash scripts/deploy.sh` ile gider. O durumda Mod 1'e geç.
 
-| Arayüz | Lokal Dev | Pi4 Dev (`dev:web:pi4`) | Pi4 Production |
-| --- | --- | --- | --- |
-| Yönetici Paneli | http://localhost:5173 | http://localhost:5173 | http://sepetarasi.local:3000 |
-| Müşteri Ekranı | http://localhost:5173/display | http://localhost:5173/display | http://sepetarasi.local:3000/display |
-| Admin | http://localhost:5173/admin | http://localhost:5173/admin | http://sepetarasi.local:3000/admin |
-| API | http://localhost:3000 | http://sepetarasi.local:3000 | http://sepetarasi.local:3000 |
-| Kasa | Electron penceresi | — | `.app` / `.exe` build |
+Pi4 verisiyle geliştirme modunda web adresleri local ile aynıdır; fark, `npm run dev:web:pi4` ile web'in API isteklerini Pi4'e yönlendirmesidir.
+
+### Local
+
+- Yönetici ekranı: `http://localhost:5173/admin`
+- Sipariş takip ekranı: `http://localhost:5173/display`
+- API: `http://localhost:3000`
+- Kasa (terminal):
+
+```bash
+cd packages/kasa && npm run dev
+```
+
+### Prod
+
+- Yönetici ekranı: `http://sepetarasi.local:3000/admin`
+- Sipariş takip ekranı: `http://sepetarasi.local:3000/display`
+- API: `http://sepetarasi.local:3000`
+- Kasa (terminal, macOS build):
+
+```bash
+cd packages/kasa && npm run build
+open "$PWD/release/mac-arm64/SEPET ARASI KASA.app"
+```
 
 Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
 

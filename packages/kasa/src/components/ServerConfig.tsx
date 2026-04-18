@@ -12,9 +12,9 @@ interface ServerConfigProps {
 }
 
 const inputClass =
-	"w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-3 text-base focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors";
+	"w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-400 rounded-lg px-4 py-2.5 text-[15px] focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors";
 
-const labelClass = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5";
+const labelClass = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1";
 
 export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [url, setUrl] = useState(getBaseUrl());
@@ -130,13 +130,13 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center">
-			<div className="bg-slate-900/80 border border-white/[0.07] rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-black/40">
-				<h1 className="text-2xl font-bold text-white mb-1 tracking-wide">SEPET ARASI KASA</h1>
-				<p className="text-slate-400 mb-7">Kasa ayarlarını yapılandırın</p>
+		<div className="min-h-screen flex items-center justify-center p-4">
+			<div className="bg-slate-900/80 border border-white/[0.07] rounded-2xl p-6 sm:p-7 max-w-lg w-full shadow-2xl shadow-black/40">
+				<h1 className="text-[2rem] font-bold text-white mb-1 tracking-wide">SEPET ARASI KASA</h1>
+				<p className="text-slate-400 mb-5">Kasa ayarlarını yapılandırın</p>
 
 				{/* Sunucu Adresi */}
-				<div className="mb-4">
+				<div className="mb-3">
 					<label htmlFor="server-url" className={labelClass}>
 						Sunucu Adresi
 					</label>
@@ -152,7 +152,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				</div>
 
 				{/* Terminal ID + Adı */}
-				<div className="grid grid-cols-2 gap-3 mb-4">
+				<div className="grid grid-cols-2 gap-3 mb-3">
 					<div>
 						<label htmlFor="terminal-id" className={labelClass}>
 							Terminal ID
@@ -182,7 +182,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				</div>
 
 				{/* Kasiyer Token */}
-				<div className="mb-4">
+				<div className="mb-3">
 					<label htmlFor="cashier-token" className={labelClass}>
 						Kasiyer Token
 					</label>
@@ -208,10 +208,9 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				</div>
 
 				{/* Yazıcı IP */}
-				<div className="mb-5">
+				<div className="mb-4">
 					<label htmlFor="printer-ip" className={labelClass}>
-						Yazıcı IP Adresi{" "}
-						<span className="text-slate-500 normal-case font-normal">(opsiyonel)</span>
+						Yazıcı IP Adresi
 					</label>
 					<input
 						id="printer-ip"
@@ -221,12 +220,10 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						placeholder="192.168.1.12"
 						className={inputClass}
 					/>
-					<p className="text-xs text-slate-500 mt-1.5">
-						Boş bırakılırsa fiş yazdırma devre dışı kalır
-					</p>
+					<p className="text-xs text-slate-500 mt-1.5">Boşsa fiş yazdırılmaz</p>
 				</div>
 
-				<div className="grid grid-cols-2 gap-3 mb-5">
+				<div className="grid grid-cols-2 gap-3 mb-4">
 					<div>
 						<label htmlFor="printer-code-page" className={labelClass}>
 							Code Page
@@ -256,22 +253,22 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						/>
 					</div>
 				</div>
-				<p className="text-xs text-slate-500 -mt-3 mb-5">
-					Varsayılan: <code>cp857</code> + <code>61</code>. Türkçe karakter bozuksa alternatif
-					olarak <code>cp1254</code> + <code>24</code> deneyin.
+				<p className="text-[11px] leading-5 text-slate-500 -mt-2.5 mb-4">
+					Önerilen: <code>61</code> + <code>cp857</code>. Türkçe bozulursa <code>24</code> +{" "}
+					<code>cp1254</code>.
 				</p>
 
 				{/* Kısayol bilgisi */}
-				<div className="bg-slate-800/60 border border-white/[0.05] rounded-lg px-3 py-2 mb-5 text-sm text-slate-400">
+				<div className="bg-slate-800/60 border border-white/[0.05] rounded-lg px-3 py-2 mb-4 text-sm text-slate-400">
 					Kısayol:{" "}
 					<kbd className="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">
 						Ctrl+Shift+O
 					</kbd>{" "}
-					— Pencereyi göster/gizle
+					- Pencereyi aç/kapat
 				</div>
 
 				{error && (
-					<p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">
+					<p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">
 						{error}
 					</p>
 				)}
@@ -281,7 +278,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						type="button"
 						onClick={handleDiscover}
 						disabled={testing || discovering || !getElectronAPI()}
-						className="flex-1 border border-slate-600 text-slate-300 hover:border-slate-500 hover:text-white hover:bg-slate-700/50 font-bold py-3 rounded-xl text-base disabled:opacity-40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+						className="flex-1 border border-slate-600 text-slate-300 hover:border-slate-500 hover:text-white hover:bg-slate-700/50 font-bold py-2.5 rounded-xl text-base disabled:opacity-40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
 					>
 						{discovering ? (
 							<>
@@ -296,14 +293,14 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						type="button"
 						onClick={handleTest}
 						disabled={testing || discovering}
-						className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold py-3 rounded-xl text-base disabled:opacity-50 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+						className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold py-2.5 rounded-xl text-base disabled:opacity-50 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(16,185,129,0.25)]"
 					>
 						{testing ? "Bağlanıyor..." : "Bağlan"}
 					</button>
 				</div>
 
 				{discoverHint && (
-					<p className="text-amber-400 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mt-4">
+					<p className="text-amber-400 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mt-3">
 						{discoverHint}
 					</p>
 				)}

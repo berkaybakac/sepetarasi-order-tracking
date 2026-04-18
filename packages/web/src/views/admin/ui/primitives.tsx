@@ -7,6 +7,7 @@ import type {
 	SelectHTMLAttributes,
 } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CheckIcon, CloseIcon, EyeIcon, EyeOffIcon } from "../../../components/icons";
 import { cn } from "../../../lib/cn";
 
@@ -72,7 +73,6 @@ export function TopBar({
 
 interface SectionCardProps extends HTMLAttributes<HTMLDivElement> {
 	title?: string;
-	description?: string;
 	icon?: ReactNode;
 	actions?: ReactNode;
 	children: ReactNode;
@@ -80,7 +80,6 @@ interface SectionCardProps extends HTMLAttributes<HTMLDivElement> {
 
 export function SectionCard({
 	title,
-	description,
 	icon,
 	actions,
 	children,
@@ -95,7 +94,7 @@ export function SectionCard({
 			)}
 			{...props}
 		>
-			{title || description || actions ? (
+			{title || actions ? (
 				<div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 					<div className="min-w-0">
 						{title ? (
@@ -109,13 +108,8 @@ export function SectionCard({
 									<h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-text-muted">
 										{title}
 									</h2>
-									{description ? (
-										<p className="mt-1 max-w-3xl text-sm text-text-subtle">{description}</p>
-									) : null}
 								</div>
 							</div>
-						) : description ? (
-							<p className="max-w-3xl text-sm text-text-subtle">{description}</p>
 						) : null}
 					</div>
 					{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
@@ -482,6 +476,8 @@ export function Modal({ open, title, description, onClose, children, footer }: M
 	const descriptionId = useId();
 	const panelRef = useRef<HTMLDialogElement>(null);
 	const lastFocusedRef = useRef<HTMLElement | null>(null);
+	const onCloseRef = useRef(onClose);
+	onCloseRef.current = onClose;
 
 	useEffect(() => {
 		if (!open) return;
@@ -512,7 +508,7 @@ export function Modal({ open, title, description, onClose, children, footer }: M
 			if (!panel) return;
 			if (event.key === "Escape") {
 				event.preventDefault();
-				onClose();
+				onCloseRef.current();
 				return;
 			}
 			if (event.key !== "Tab") return;
@@ -549,12 +545,12 @@ export function Modal({ open, title, description, onClose, children, footer }: M
 			document.body.style.overflow = previousOverflow;
 			lastFocusedRef.current?.focus();
 		};
-	}, [onClose, open]);
+	}, [open]);
 
-	if (!open) return null;
+	if (!open || typeof document === "undefined") return null;
 
-	return (
-		<div className="fixed inset-0 z-50 bg-slate-950/82 p-4 backdrop-blur-md">
+	return createPortal(
+		<div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/82 p-4 backdrop-blur-md">
 			<div
 				className="flex min-h-full items-center justify-center py-4"
 				onMouseDown={(event) => {
@@ -570,10 +566,6 @@ export function Modal({ open, title, description, onClose, children, footer }: M
 					aria-labelledby={titleId}
 					aria-describedby={description ? descriptionId : undefined}
 					tabIndex={-1}
-					onCancel={(event) => {
-						event.preventDefault();
-						onClose();
-					}}
 					className="relative z-10 m-0 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-[1.75rem] border border-border-strong bg-surface-elevated p-6 shadow-elevation-3"
 				>
 					<div className="mb-5 flex items-start justify-between gap-4">
@@ -600,7 +592,8 @@ export function Modal({ open, title, description, onClose, children, footer }: M
 					{footer ? <div className="mt-6 flex items-center justify-end gap-3">{footer}</div> : null}
 				</dialog>
 			</div>
-		</div>
+		</div>,
+		document.body,
 	);
 }
 

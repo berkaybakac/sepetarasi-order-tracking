@@ -25,6 +25,7 @@ export function AnnouncementVolumeCard() {
 		<VolumeControlCard
 			title={UI_LABELS.AUDIO.ANNOUNCEMENT_VOLUME}
 			icon={ICON}
+			helperText={UI_LABELS.AUDIO.ANNOUNCEMENT_HELP}
 			defaultVolume={100}
 			colorScheme="blue"
 			onMount={fetchVolume}

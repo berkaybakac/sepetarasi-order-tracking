@@ -6,6 +6,9 @@ import { useOrdersByStatus } from "../../../stores/orderStore";
 import { EmptyState } from "../ui/primitives";
 import { OrderCard } from "./OrderCard";
 
+export const DELIVERED_SCROLL_TRIGGER_COUNT = 6;
+export const DELIVERED_SCROLL_THRESHOLD_PX = 640;
+
 /**
  * Kolon başlık ve görsel config'i — tek yerden yönetilir.
  */
@@ -37,6 +40,14 @@ type ColumnProps = (typeof COLUMN_CONFIG)[number];
  */
 export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps) {
 	const orders = useOrdersByStatus(status);
+	const isDeliveredOverflowList =
+		status === OrderStatus.DELIVERED && orders.length >= DELIVERED_SCROLL_TRIGGER_COUNT;
+	const orderListClassName = isDeliveredOverflowList
+		? "space-y-3 overflow-y-auto pr-1"
+		: "space-y-3";
+	const orderListStyle = isDeliveredOverflowList
+		? { maxHeight: `${DELIVERED_SCROLL_THRESHOLD_PX}px` }
+		: undefined;
 
 	return (
 		<div className="min-w-0 rounded-[1.4rem] border border-border-subtle bg-surface-3/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -54,7 +65,12 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 				</span>
 			</div>
 
-			<div className="space-y-3">
+			<div
+				className={orderListClassName}
+				style={orderListStyle}
+				data-order-list-status={status}
+				data-order-list-scrollable={isDeliveredOverflowList ? "true" : "false"}
+			>
 				<AnimatePresence initial={false}>
 					{orders.map((order) => (
 						<OrderCard key={order.id} order={order} status={status} />
@@ -63,7 +79,6 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 				{orders.length === 0 && (
 					<EmptyState
 						title={`${title} akışı şu an boş`}
-						description="Bağlantı açıksa yeni siparişler bu alanda otomatik belirecek."
 						icon={<OrdersIcon className="h-5 w-5" />}
 						compact
 					/>

@@ -28,6 +28,7 @@ export function MusicVolumeCard() {
 		<VolumeControlCard
 			title={UI_LABELS.AUDIO.MUSIC_VOLUME}
 			icon={ICON}
+			helperText={UI_LABELS.AUDIO.MUSIC_HELP}
 			defaultVolume={60}
 			colorScheme="purple"
 			onMount={fetchVolumeAndEnabled}

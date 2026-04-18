@@ -1,5 +1,5 @@
 import { PASSWORD_MIN_LENGTH } from "@sepetarasi/shared";
-import { type ChangeEvent, type SubmitEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { LockIcon } from "../../../components/icons";
 import { useActionFeedback } from "../../../hooks/useActionFeedback";
 import { ApiError, api } from "../../../lib/api";
@@ -50,22 +50,23 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 			setter(event.target.value);
 		};
 
-	useEffect(() => {
-		if (!open) {
-			setCurrentPassword("");
-			setNewPassword("");
-			setConfirmPassword("");
-			feedback.reset();
-		}
-	}, [feedback, open]);
+	const { reset, isSuccess } = feedback;
 
 	useEffect(() => {
-		if (!feedback.isSuccess) return;
+		if (!open) return;
+		setCurrentPassword("");
+		setNewPassword("");
+		setConfirmPassword("");
+		reset();
+	}, [open, reset]);
+
+	useEffect(() => {
+		if (!isSuccess) return;
 		const timeoutId = window.setTimeout(onClose, 900);
 		return () => window.clearTimeout(timeoutId);
-	}, [feedback.isSuccess, onClose]);
+	}, [isSuccess, onClose]);
 
-	const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
 		if (newPassword.length < PASSWORD_MIN_LENGTH) {
