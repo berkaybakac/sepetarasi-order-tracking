@@ -472,13 +472,13 @@ function buildTb1CompatDisplayHtml() {
 
         function maybeAdvancePages() {
           var now = Date.now();
-          var preparingCount = getPageCount(getPreparingOrders().length, state.config.maxVisiblePerColumn);
-          var readyCount = getPageCount(getReadyOrders().length, state.config.maxVisiblePerColumn);
+          var preparingPageCount = getPageCount(getPreparingOrders().length, state.config.maxVisiblePerColumn);
+          var readyPageCount = getPageCount(getReadyOrders().length, state.config.maxVisiblePerColumn);
 
           if (now < state.nextPageSwitchAt) return;
 
-          state.preparingPage = (state.preparingPage + 1) % preparingCount;
-          state.readyPage = (state.readyPage + 1) % readyCount;
+          state.preparingPage = (state.preparingPage + 1) % preparingPageCount;
+          state.readyPage = (state.readyPage + 1) % readyPageCount;
           state.nextPageSwitchAt = now + state.config.pageSeconds * 1000;
           render();
         }
