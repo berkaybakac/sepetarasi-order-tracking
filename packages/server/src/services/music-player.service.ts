@@ -100,7 +100,7 @@ export class MusicPlayerService {
 	private consecutiveLoadFailures = 0;
 	private static readonly LOAD_FAIL_THRESHOLD_MS = 500;
 	private static readonly MAX_CONSECUTIVE_FAILURES = 3;
-	private static readonly PLAYBACK_CONFIRMATION_TIMEOUT_MS = 1500;
+	private static readonly PLAYBACK_CONFIRMATION_TIMEOUT_MS = 3000;
 
 	private db: AppDatabase;
 	private broadcaster: Broadcaster;
@@ -118,6 +118,7 @@ export class MusicPlayerService {
 
 	start(): void {
 		if (this.proc) return;
+		this.clearRuntimeIssue();
 
 		try {
 			this.playlist = this.loadPlaylistFromDb();
@@ -868,6 +869,20 @@ export class MusicPlayerService {
 		return this.pickRandomIndexExcludingCurrent();
 	}
 
+	private tryRefreshPlaylistForIdle(): PlaybackBlocker | null {
+		try {
+			this.playlist = this.loadPlaylistFromDb();
+			this.currentIndex = this.playlist.length > 0 ? this.resolveStartIndex() : 0;
+			this.syncShuffleState();
+			return null;
+		} catch (err) {
+			return {
+				code: "PLAYLIST_LOAD_FAILED",
+				message: `Müzik listesi yüklenemedi: ${err instanceof Error ? err.message : String(err)}`,
+			};
+		}
+	}
+
 	private getPlaybackBlocker(): PlaybackBlocker | null {
 		if (!this.getEnabled()) {
 			return {
@@ -877,16 +892,8 @@ export class MusicPlayerService {
 		}
 
 		if (!this.proc) {
-			try {
-				this.playlist = this.loadPlaylistFromDb();
-				this.currentIndex = this.playlist.length > 0 ? this.resolveStartIndex() : 0;
-				this.syncShuffleState();
-			} catch (err) {
-				return {
-					code: "PLAYLIST_LOAD_FAILED",
-					message: `Müzik listesi yüklenemedi: ${err instanceof Error ? err.message : String(err)}`,
-				};
-			}
+			const blocker = this.tryRefreshPlaylistForIdle();
+			if (blocker) return blocker;
 		}
 
 		if (this.playlist.length === 0) {
