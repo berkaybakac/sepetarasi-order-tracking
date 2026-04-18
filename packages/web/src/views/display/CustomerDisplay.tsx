@@ -151,7 +151,10 @@ export function CustomerDisplay() {
 				.then((settings) => setDisplayConfig(parseDisplaySettings(settings)))
 				.catch((error) => {
 					logger.error("CustomerDisplay", "Failed to load public display settings.", error);
-					sendDisplayDiagnostic("settings-load-failed", error instanceof Error ? error.message : String(error));
+					sendDisplayDiagnostic(
+						"settings-load-failed",
+						error instanceof Error ? error.message : String(error),
+					);
 				});
 
 			await Promise.allSettled([hydrate(false, false), settingsRequest]);

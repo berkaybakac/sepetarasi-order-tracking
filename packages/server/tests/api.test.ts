@@ -924,6 +924,22 @@ describe("connectivity test pages", () => {
 		expect(res.body).toContain("window.onunhandledrejection = function");
 	});
 
+	it("serves /display/index.html as a TB1 compatibility page", async () => {
+		const res = await app.inject({ method: "GET", url: "/display/index.html" });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.body).toContain('id="prep-list"');
+		expect(res.body).toContain('id="ready-list"');
+		expect(res.body).toContain(API_ROUTES.V1.ORDERS);
+		expect(res.body).toContain(API_ROUTES.V1.SETTINGS_PUBLIC);
+		expect(res.body).not.toContain('type="module"');
+		expect(res.body).not.toContain('<div id="root"></div>');
+	});
+
 	it("keeps /display reachable after the generic API rate limit is exhausted", async () => {
 		await exhaustGenericApiRateLimit(app, adminCookie);
 

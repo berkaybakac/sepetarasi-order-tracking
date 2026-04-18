@@ -9,6 +9,7 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import {
+	API_ROUTES,
 	SETTING_KEYS,
 	WS_CHANNELS,
 	formatRateLimitMessage,
@@ -49,6 +50,489 @@ function normalizeDisplayDiagnosticField(value: unknown, maxLength = 240) {
 	if (normalized.length === 0) return undefined;
 	if (normalized.length <= maxLength) return normalized;
 	return `${normalized.slice(0, maxLength)}...`;
+}
+
+function buildTb1CompatDisplayHtml() {
+	return `<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sepetarasi Display</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #08111f;
+        color: #f8fafc;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        border-bottom: 2px solid #1f2937;
+        background: #0b1220;
+      }
+
+      .title {
+        font-size: 26px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+      }
+
+      .clock {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .screen {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+
+      .screen.stack {
+        flex-direction: column;
+      }
+
+      .panel {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        padding: 14px;
+        box-sizing: border-box;
+      }
+
+      .panel.preparing {
+        background: #21110a;
+        border-right: 2px solid rgba(217, 119, 6, 0.35);
+      }
+
+      .screen.stack .panel.preparing {
+        border-right: 0;
+        border-bottom: 2px solid rgba(217, 119, 6, 0.35);
+      }
+
+      .panel.ready {
+        background: #08180f;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .panel-title {
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: 0.03em;
+      }
+
+      .panel.preparing .panel-title {
+        color: #fbbf24;
+      }
+
+      .panel.ready .panel-title {
+        color: #4ade80;
+      }
+
+      .panel-count {
+        min-width: 54px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        text-align: center;
+        font-size: 22px;
+        font-weight: 900;
+      }
+
+      .panel.preparing .panel-count {
+        background: rgba(251, 191, 36, 0.16);
+        border: 1px solid rgba(251, 191, 36, 0.45);
+        color: #fef3c7;
+      }
+
+      .panel.ready .panel-count {
+        background: rgba(74, 222, 128, 0.16);
+        border: 1px solid rgba(74, 222, 128, 0.45);
+        color: #dcfce7;
+      }
+
+      .list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .screen.stack .list {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+      }
+
+      .item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 88px;
+        border-radius: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.08);
+        font-size: 42px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+      }
+
+      .panel.preparing .item {
+        background: rgba(251, 191, 36, 0.1);
+        border-color: rgba(251, 191, 36, 0.28);
+        color: #fef3c7;
+      }
+
+      .panel.ready .item {
+        background: rgba(74, 222, 128, 0.1);
+        border-color: rgba(74, 222, 128, 0.28);
+        color: #dcfce7;
+      }
+
+      .item.empty {
+        justify-content: flex-start;
+        padding: 18px 16px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0;
+        opacity: 0.86;
+      }
+
+      .footer {
+        padding: 10px 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 18px;
+        font-weight: 700;
+        color: #cbd5e1;
+        background: #0b1220;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="header">
+        <div class="title" id="restaurant-name">SEPET ARASI</div>
+        <div class="clock" id="clock">--:--</div>
+      </div>
+      <div class="screen stack" id="screen">
+        <div class="panel preparing">
+          <div class="panel-head">
+            <div class="panel-title">Hazırlananlar</div>
+            <div class="panel-count" id="prep-count">0</div>
+          </div>
+          <div class="list" id="prep-list">
+            <div class="item empty">Yükleniyor...</div>
+          </div>
+        </div>
+        <div class="panel ready">
+          <div class="panel-head">
+            <div class="panel-title">Hazır</div>
+            <div class="panel-count" id="ready-count">0</div>
+          </div>
+          <div class="list" id="ready-list">
+            <div class="item empty">Yükleniyor...</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer" id="footer-status">TB1 uyumlu ekran hazırlanıyor</div>
+    </div>
+    <script>
+      (function () {
+        var ORDERS_URL = "${API_ROUTES.V1.ORDERS}";
+        var SETTINGS_URL = "${API_ROUTES.V1.SETTINGS_PUBLIC}";
+        var BEACON_URL = "/display-beacon.gif";
+        var state = {
+          orders: [],
+          config: {
+            restaurantName: "SEPET ARASI",
+            profile: "led_256x512",
+            layoutPreference: "stack",
+            maxVisiblePerColumn: 4,
+            pageSeconds: 6,
+            readyDisplayMinutes: 5
+          },
+          preparingPage: 0,
+          readyPage: 0,
+          nextPageSwitchAt: 0
+        };
+
+        var screen = document.getElementById("screen");
+        var prepList = document.getElementById("prep-list");
+        var readyList = document.getElementById("ready-list");
+        var prepCount = document.getElementById("prep-count");
+        var readyCount = document.getElementById("ready-count");
+        var footerStatus = document.getElementById("footer-status");
+        var restaurantName = document.getElementById("restaurant-name");
+        var clock = document.getElementById("clock");
+
+        function safeString(value) {
+          if (value === null || value === undefined) return "";
+          return String(value);
+        }
+
+        function sendDiagnostic(phase, detail) {
+          try {
+            var img = new Image();
+            img.src =
+              BEACON_URL +
+              "?phase=" + encodeURIComponent(phase) +
+              "&detail=" + encodeURIComponent(detail || "") +
+              "&path=" + encodeURIComponent("/display/index.html");
+            window.__tb1CompatBeacon = img;
+          } catch (_error) {}
+        }
+
+        function setStatus(text) {
+          footerStatus.textContent = text;
+        }
+
+        function requestJson(url, onSuccess, onError) {
+          var xhr = new XMLHttpRequest();
+          xhr.open("GET", url, true);
+          xhr.onreadystatechange = function () {
+            var payload;
+
+            if (xhr.readyState !== 4) return;
+
+            if (xhr.status < 200 || xhr.status >= 300) {
+              onError("HTTP " + xhr.status);
+              return;
+            }
+
+            try {
+              payload = JSON.parse(xhr.responseText);
+            } catch (_error) {
+              onError("INVALID_JSON");
+              return;
+            }
+
+            if (!payload || payload.ok !== true) {
+              onError("API_ERROR");
+              return;
+            }
+
+            onSuccess(payload.data);
+          };
+          xhr.onerror = function () {
+            onError("NETWORK_ERROR");
+          };
+          xhr.send();
+        }
+
+        function parsePositiveInt(value, fallbackValue) {
+          var numberValue = Number(value);
+          if (!isFinite(numberValue) || numberValue < 1 || Math.floor(numberValue) !== numberValue) {
+            return fallbackValue;
+          }
+          return numberValue;
+        }
+
+        function applySettings(settings) {
+          state.config.restaurantName = safeString(settings.restaurant_name || "SEPET ARASI");
+          state.config.profile = safeString(settings.display_profile || "auto");
+          state.config.layoutPreference = safeString(settings.display_layout || "auto");
+          state.config.maxVisiblePerColumn = parsePositiveInt(settings.display_max_visible, 4);
+          state.config.pageSeconds = parsePositiveInt(settings.display_page_seconds, 6);
+          state.config.readyDisplayMinutes = parsePositiveInt(settings.display_ready_minutes, 5);
+          restaurantName.textContent = state.config.restaurantName || "SEPET ARASI";
+          state.nextPageSwitchAt = Date.now() + state.config.pageSeconds * 1000;
+        }
+
+        function isReadyVisible(order) {
+          var readyAt;
+          var diffMinutes;
+
+          if (order.status !== "READY") return false;
+          if (!order.ready_at) return true;
+
+          readyAt = new Date(order.ready_at).getTime();
+          if (!isFinite(readyAt)) return true;
+
+          diffMinutes = (Date.now() - readyAt) / 60000;
+          return diffMinutes <= state.config.readyDisplayMinutes;
+        }
+
+        function sortByDisplayNo(left, right) {
+          return Number(left.display_no || 0) - Number(right.display_no || 0);
+        }
+
+        function getPreparingOrders() {
+          return state.orders.filter(function (order) {
+            return order.status === "PREPARING";
+          }).sort(sortByDisplayNo);
+        }
+
+        function getReadyOrders() {
+          return state.orders.filter(isReadyVisible).sort(sortByDisplayNo);
+        }
+
+        function getPageCount(totalItems, pageSize) {
+          var safePageSize = Math.max(1, pageSize);
+          if (totalItems <= 0) return 1;
+          return Math.max(1, Math.ceil(totalItems / safePageSize));
+        }
+
+        function getPageSlice(items, pageSize, pageIndex) {
+          var safePageSize = Math.max(1, pageSize);
+          var pageCount = getPageCount(items.length, safePageSize);
+          var boundedPage = pageIndex % pageCount;
+          var start = boundedPage * safePageSize;
+          return items.slice(start, start + safePageSize);
+        }
+
+        function isStackLayout() {
+          var width = window.innerWidth || 0;
+          var height = window.innerHeight || 0;
+
+          if (state.config.layoutPreference === "stack") return true;
+          if (state.config.layoutPreference === "split") return false;
+          if (state.config.profile === "led_256x512") return true;
+          if (height > width) return true;
+          return width < 840;
+        }
+
+        function renderItems(container, items, emptyText) {
+          var fragment = document.createDocumentFragment();
+          var item;
+          var node;
+          var index;
+
+          container.innerHTML = "";
+
+          if (!items.length) {
+            node = document.createElement("div");
+            node.className = "item empty";
+            node.appendChild(document.createTextNode(emptyText));
+            container.appendChild(node);
+            return;
+          }
+
+          for (index = 0; index < items.length; index += 1) {
+            item = items[index];
+            node = document.createElement("div");
+            node.className = "item";
+            node.appendChild(document.createTextNode("#" + safeString(item.display_no)));
+            fragment.appendChild(node);
+          }
+
+          container.appendChild(fragment);
+        }
+
+        function renderClock() {
+          var now = new Date();
+          var hours = now.getHours();
+          var minutes = now.getMinutes();
+          clock.textContent =
+            (hours < 10 ? "0" : "") + hours + ":" + (minutes < 10 ? "0" : "") + minutes;
+        }
+
+        function render() {
+          var preparingOrders = getPreparingOrders();
+          var readyOrders = getReadyOrders();
+          var pageSize = Math.max(1, state.config.maxVisiblePerColumn);
+          var preparingPageCount = getPageCount(preparingOrders.length, pageSize);
+          var readyPageCount = getPageCount(readyOrders.length, pageSize);
+
+          if (state.preparingPage >= preparingPageCount) state.preparingPage = 0;
+          if (state.readyPage >= readyPageCount) state.readyPage = 0;
+
+          prepCount.textContent = safeString(preparingOrders.length);
+          readyCount.textContent = safeString(readyOrders.length);
+          screen.className = "screen " + (isStackLayout() ? "stack" : "split");
+
+          renderItems(
+            prepList,
+            getPageSlice(preparingOrders, pageSize, state.preparingPage),
+            "Bekleyen sipariş yok",
+          );
+          renderItems(
+            readyList,
+            getPageSlice(readyOrders, pageSize, state.readyPage),
+            "Hazır sipariş yok",
+          );
+        }
+
+        function maybeAdvancePages() {
+          var now = Date.now();
+          var preparingCount = getPageCount(getPreparingOrders().length, state.config.maxVisiblePerColumn);
+          var readyCount = getPageCount(getReadyOrders().length, state.config.maxVisiblePerColumn);
+
+          if (now < state.nextPageSwitchAt) return;
+
+          state.preparingPage = (state.preparingPage + 1) % preparingCount;
+          state.readyPage = (state.readyPage + 1) % readyCount;
+          state.nextPageSwitchAt = now + state.config.pageSeconds * 1000;
+          render();
+        }
+
+        function loadSettings() {
+          requestJson(
+            SETTINGS_URL,
+            function (data) {
+              applySettings(data || {});
+              render();
+              setStatus("Ayarlar alındı");
+              sendDiagnostic("tb1-compat-settings-ok");
+            },
+            function (errorCode) {
+              setStatus("Ayarlar alınamadı: " + errorCode);
+              sendDiagnostic("tb1-compat-settings-failed", errorCode);
+            },
+          );
+        }
+
+        function loadOrders() {
+          requestJson(
+            ORDERS_URL,
+            function (data) {
+              state.orders = data || [];
+              render();
+              setStatus("Siparişler güncellendi");
+              sendDiagnostic("tb1-compat-orders-ok", String(state.orders.length));
+            },
+            function (errorCode) {
+              setStatus("Siparişler alınamadı: " + errorCode);
+              sendDiagnostic("tb1-compat-orders-failed", errorCode);
+            },
+          );
+        }
+
+        sendDiagnostic("tb1-compat-inline-start");
+        renderClock();
+        render();
+        loadSettings();
+        loadOrders();
+
+        if (typeof window.addEventListener === "function") {
+          window.addEventListener("resize", render);
+        }
+
+        window.setInterval(renderClock, 1000);
+        window.setInterval(loadOrders, 1500);
+        window.setInterval(loadSettings, 30000);
+        window.setInterval(maybeAdvancePages, 1000);
+      })();
+    </script>
+  </body>
+</html>`;
 }
 
 function relativizeUrl(url: string) {
@@ -541,6 +1025,10 @@ export async function buildApp(opts: AppOptions) {
 
 	app.get("/test.html", sendConnectivityTestHtml);
 	app.get("/ping", sendConnectivityTestHtml);
+	app.get("/display/index.html", async (_request, reply) => {
+		setNoStoreHeaders(reply);
+		return reply.type("text/html; charset=utf-8").send(buildTb1CompatDisplayHtml());
+	});
 	app.get(
 		"/display-beacon.gif",
 		async (
