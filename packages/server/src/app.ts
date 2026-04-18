@@ -29,6 +29,7 @@ import { AnnouncementService } from "./services/announcement.service.js";
 import { AudioPlaybackService } from "./services/audio-playback.service.js";
 import { MusicPlayerService } from "./services/music-player.service.js";
 import { migrateLegacyMusicStorage } from "./services/music-storage-migration.service.js";
+import { setNoStoreHeaders } from "./utils/http-cache.js";
 import { AnnouncementWorker } from "./workers/announcement.worker.js";
 import { Broadcaster } from "./ws/broadcaster.js";
 
@@ -39,13 +40,6 @@ const MAX_MUSIC_UPLOAD_BYTES = 500 * 1024 * 1024;
 
 function replyRetryAfterSeconds(reply: FastifyReply) {
 	return parseRetryAfterSeconds(reply.getHeader("retry-after"));
-}
-
-function setNoStoreHeaders(reply: FastifyReply) {
-	reply.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-	reply.header("Pragma", "no-cache");
-	reply.header("Expires", "0");
-	reply.header("Surrogate-Control", "no-store");
 }
 
 function wsClientRemoteAddress(request: FastifyRequest): string | undefined {

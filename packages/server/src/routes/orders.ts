@@ -9,15 +9,9 @@ import { OrderQueryService } from "../services/order.query.service.js";
 import { StatsService } from "../services/stats.service.js";
 import { auditLog } from "../utils/audit-logger.js";
 import { requireAdmin, requireCashierOrAdmin } from "../utils/auth-middleware.js";
+import { setNoStoreHeaders } from "../utils/http-cache.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
 import { createOrderBodySchema, updateStatusBodySchema } from "./schemas.js";
-
-function setNoStoreHeaders(reply: { header: (name: string, value: string) => unknown }) {
-	reply.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-	reply.header("Pragma", "no-cache");
-	reply.header("Expires", "0");
-	reply.header("Surrogate-Control", "no-store");
-}
 
 export function registerOrderRoutes(
 	app: FastifyInstance,

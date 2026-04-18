@@ -15,14 +15,8 @@ import {
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
 import { requireAdmin } from "../utils/auth-middleware.js";
+import { setNoStoreHeaders } from "../utils/http-cache.js";
 import type { Broadcaster } from "../ws/broadcaster.js";
-
-function setNoStoreHeaders(reply: { header: (name: string, value: string) => unknown }) {
-	reply.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-	reply.header("Pragma", "no-cache");
-	reply.header("Expires", "0");
-	reply.header("Surrogate-Control", "no-store");
-}
 
 function getBroadcastChannelsForSetting(key: string): string[] {
 	const channels = new Set<string>();
