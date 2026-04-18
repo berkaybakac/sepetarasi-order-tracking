@@ -132,6 +132,20 @@ function buildRequestHeaders(options: RequestOptions) {
 	return headers;
 }
 
+const inflightGetRequests = new Map<string, Promise<unknown>>();
+
+function buildInFlightGetKey(
+	method: string,
+	path: string,
+	headers: Record<string, string>,
+	options: RequestOptions,
+) {
+	if (method !== "GET") return null;
+	if (options.body !== undefined || options.signal) return null;
+
+	return `${method}:${path}:${options.timeoutMs ?? "default"}:${JSON.stringify(headers)}`;
+}
+
 async function parseApiResponse<T>(
 	status: number,
 	jsonPromise: Promise<{ ok: boolean; data?: T; error?: { code?: string; message?: string } }>,
@@ -336,10 +350,27 @@ function requestWithXhr<T>(
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
 	const headers = buildRequestHeaders(options);
-	if (hasFetchTransport()) {
-		return requestWithFetch<T>(method, path, options, headers);
+	const inFlightKey = buildInFlightGetKey(method, path, headers, options);
+	if (inFlightKey) {
+		const existingRequest = inflightGetRequests.get(inFlightKey);
+		if (existingRequest) {
+			return existingRequest as Promise<T>;
+		}
 	}
-	return requestWithXhr<T>(method, path, options, headers);
+
+	const requestPromise = hasFetchTransport()
+		? requestWithFetch<T>(method, path, options, headers)
+		: requestWithXhr<T>(method, path, options, headers);
+
+	if (!inFlightKey) {
+		return requestPromise;
+	}
+
+	const trackedRequest = requestPromise.finally(() => {
+		inflightGetRequests.delete(inFlightKey);
+	});
+	inflightGetRequests.set(inFlightKey, trackedRequest);
+	return trackedRequest;
 }
 
 export const api = {

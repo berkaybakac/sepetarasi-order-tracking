@@ -25,6 +25,7 @@ function clampInt(value: number, min: number, max: number): number {
 }
 
 interface Props {
+	active?: boolean;
 	wsTrigger?: number;
 	reconnectedAt?: number;
 }
@@ -54,7 +55,7 @@ function resolveUiError(error: unknown): UiErrorState {
 	};
 }
 
-export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
+export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) {
 	const deliveryTargetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
 	const hydrateSettings = useSettingsStore((s) => s.hydrate);
 	const setDeliveryTargetMinutes = useSettingsStore((s) => s.setDeliveryTargetMinutes);
@@ -72,6 +73,7 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 	const analyticsRef = useRef<DeliveryAnalyticsResult | null>(null);
 	const silentRefreshInFlightRef = useRef(false);
 	const lastSilentRefreshAtRef = useRef(0);
+	const lastRequestedRangeKeyRef = useRef<string | null>(null);
 	// Son senkron edilen server değeri. Draft ile karşılaştırıp kullanıcının dirty edit'ini WS override'dan koruyoruz.
 	const lastSyncedTargetRef = useRef(deliveryTargetMinutes);
 
@@ -131,18 +133,25 @@ export function PeriodStats({ wsTrigger, reconnectedAt }: Props) {
 	}, [deliveryTargetMinutes]);
 
 	useEffect(() => {
-		fetchAnalytics(range.from, range.to);
-	}, [range, fetchAnalytics]);
+		if (!active) return;
+
+		const rangeKey = `${range.from}:${range.to}`;
+		const shouldSilentRefresh =
+			lastRequestedRangeKeyRef.current === rangeKey && analyticsRef.current !== null;
+		lastRequestedRangeKeyRef.current = rangeKey;
+
+		void fetchAnalytics(range.from, range.to, shouldSilentRefresh);
+	}, [active, range, fetchAnalytics]);
 
 	useEffect(() => {
-		if (!wsTrigger) return;
+		if (!active || !wsTrigger) return;
 		void fetchAnalytics(rangeRef.current.from, rangeRef.current.to, true);
-	}, [wsTrigger, fetchAnalytics]);
+	}, [active, wsTrigger, fetchAnalytics]);
 
 	useEffect(() => {
-		if (!reconnectedAt) return;
+		if (!active || !reconnectedAt) return;
 		void fetchAnalytics(rangeRef.current.from, rangeRef.current.to, true);
-	}, [reconnectedAt, fetchAnalytics]);
+	}, [active, reconnectedAt, fetchAnalytics]);
 
 	const handlePreset = (key: PresetKey) => {
 		setPreset(key);

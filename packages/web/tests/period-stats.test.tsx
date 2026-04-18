@@ -357,4 +357,26 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 		expect(container.textContent).toContain("8.5 dk");
 		expect(container.textContent).not.toContain("Çok fazla deneme. 1 dakika bekleyin.");
 	});
+
+	it("does not fetch analytics while the stats tab is inactive", async () => {
+		vi.mocked(api.getDeliveryAnalytics).mockResolvedValue(buildAnalytics());
+
+		await act(async () => {
+			root.render(<PeriodStats active={false} wsTrigger={0} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).not.toHaveBeenCalled();
+
+		await act(async () => {
+			root.render(<PeriodStats active wsTrigger={0} />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		expect(api.getDeliveryAnalytics).toHaveBeenCalledTimes(1);
+	});
 });

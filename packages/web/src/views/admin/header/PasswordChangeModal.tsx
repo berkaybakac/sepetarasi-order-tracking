@@ -94,10 +94,8 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 			await api.authChangePassword(currentPassword, newPassword);
 			feedback.setSuccess("Parolanız güncellendi.");
 		} catch (error) {
-			feedback.setError(
-				new Error(getPasswordChangeErrorMessage(error)),
-				"Parola değiştirilemedi. Lütfen tekrar deneyin.",
-			);
+			const message = getPasswordChangeErrorMessage(error);
+			feedback.setError(new Error(message), message);
 		}
 	};
 

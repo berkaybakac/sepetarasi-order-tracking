@@ -175,4 +175,37 @@ describe("api rate-limit handling", () => {
 			recoverable: true,
 		});
 	});
+
+	it("deduplicates concurrent identical GET requests", async () => {
+		let resolveResponse: ((value: Response) => void) | null = null;
+
+		vi.spyOn(globalThis, "fetch").mockImplementation(
+			() =>
+				new Promise<Response>((resolve) => {
+					resolveResponse = resolve;
+				}),
+		);
+
+		const requestA = api.getSettings();
+		const requestB = api.getSettings();
+
+		expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+		resolveResponse?.(
+			new Response(
+				JSON.stringify({
+					ok: true,
+					data: { foo: "bar" },
+				}),
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			),
+		);
+
+		await expect(Promise.all([requestA, requestB])).resolves.toEqual([{ foo: "bar" }, { foo: "bar" }]);
+	});
 });

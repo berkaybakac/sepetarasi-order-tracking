@@ -2,7 +2,6 @@ import type {
 	ButtonHTMLAttributes,
 	HTMLAttributes,
 	InputHTMLAttributes,
-	MouseEvent as ReactMouseEvent,
 	ReactNode,
 	PointerEvent as ReactPointerEvent,
 	SelectHTMLAttributes,
@@ -279,20 +278,7 @@ export function PasswordInput({
 		focusInput();
 	};
 
-	const handleShellClick = (event: ReactMouseEvent<HTMLDivElement>) => {
-		if (
-			props.disabled ||
-			isVisibilityToggleTarget(event.target) ||
-			event.target === inputRef.current
-		) {
-			return;
-		}
-
-		focusInput();
-	};
-
 	return (
-		// biome-ignore lint/a11y/useKeyWithClickEvents: wrapper forwards pointer focus to the input; keyboard entry uses the input itself.
 		<div
 			className={cn(
 				"flex h-11 items-center rounded-[1rem] border border-border-subtle bg-surface-1 transition focus-within:border-white/18 focus-within:shadow-[0_0_0_1px_rgba(8,17,31,0.7),0_0_0_4px_var(--color-focus-ring)]",
@@ -300,7 +286,6 @@ export function PasswordInput({
 				className,
 			)}
 			onPointerDown={handleShellPointerDown}
-			onClick={handleShellClick}
 		>
 			<input
 				ref={inputRef}

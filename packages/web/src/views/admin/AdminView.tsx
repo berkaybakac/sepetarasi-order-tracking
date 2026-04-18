@@ -1,6 +1,6 @@
 import { SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import type { MusicStatus, SettingsUpdatedPayload, WsMessage } from "@sepetarasi/shared";
-import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useBootScreenReady } from "../../hooks/useBootScreenReady";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -9,12 +9,22 @@ import { useOrderStore } from "../../stores/orderStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { AdminHeader } from "./AdminHeader";
 import { ADMIN_TABS } from "./admin-tabs";
-import { AudioTab } from "./tabs/AudioTab";
-import { DisplayTab } from "./tabs/DisplayTab";
-import { NotePresetsTab } from "./tabs/NotePresetsTab";
 import { OrdersTab } from "./tabs/OrdersTab";
-import { StatsTab } from "./tabs/StatsTab";
+import { AdminTabSkeleton } from "./ui/LoadingStates";
 import { AppShell } from "./ui/primitives";
+
+const StatsTab = lazy(() =>
+	import("./tabs/StatsTab").then((module) => ({ default: module.StatsTab })),
+);
+const AudioTab = lazy(() =>
+	import("./tabs/AudioTab").then((module) => ({ default: module.AudioTab })),
+);
+const DisplayTab = lazy(() =>
+	import("./tabs/DisplayTab").then((module) => ({ default: module.DisplayTab })),
+);
+const NotePresetsTab = lazy(() =>
+	import("./tabs/NotePresetsTab").then((module) => ({ default: module.NotePresetsTab })),
+);
 
 export function AdminView() {
 	const location = useLocation();
@@ -87,27 +97,6 @@ export function AdminView() {
 		setMountedTabs((current) => (current.includes(activeTab) ? current : [...current, activeTab]));
 	}, [activeTab]);
 
-	useEffect(() => {
-		if (!initialHydrationReady) return;
-
-		const preloadTimerId = window.setTimeout(() => {
-			setMountedTabs((current) => {
-				const next = [...current];
-				for (const tab of ADMIN_TABS) {
-					const tabId = tab.to.split("/").at(-1);
-					if (tabId && !next.includes(tabId)) {
-						next.push(tabId);
-					}
-				}
-				return next;
-			});
-		}, 220);
-
-		return () => {
-			window.clearTimeout(preloadTimerId);
-		};
-	}, [initialHydrationReady]);
-
 	if (location.pathname === "/admin" || location.pathname === "/admin/") {
 		return <Navigate to="/admin/orders" replace />;
 	}
@@ -127,25 +116,37 @@ export function AdminView() {
 
 				{mountedTabs.includes("stats") ? (
 					<section hidden={activeTab !== "stats"} aria-hidden={activeTab !== "stats"}>
-						<StatsTab wsTrigger={internalStatsTrigger} reconnectedAt={lastReconnectedAt} />
+						<Suspense fallback={<AdminTabSkeleton />}>
+							<StatsTab
+								active={activeTab === "stats"}
+								wsTrigger={internalStatsTrigger}
+								reconnectedAt={lastReconnectedAt}
+							/>
+						</Suspense>
 					</section>
 				) : null}
 
 				{mountedTabs.includes("audio") ? (
 					<section hidden={activeTab !== "audio"} aria-hidden={activeTab !== "audio"}>
-						<AudioTab />
+						<Suspense fallback={<AdminTabSkeleton />}>
+							<AudioTab />
+						</Suspense>
 					</section>
 				) : null}
 
 				{mountedTabs.includes("display") ? (
 					<section hidden={activeTab !== "display"} aria-hidden={activeTab !== "display"}>
-						<DisplayTab />
+						<Suspense fallback={<AdminTabSkeleton />}>
+							<DisplayTab />
+						</Suspense>
 					</section>
 				) : null}
 
 				{mountedTabs.includes("notes") ? (
 					<section hidden={activeTab !== "notes"} aria-hidden={activeTab !== "notes"}>
-						<NotePresetsTab />
+						<Suspense fallback={<AdminTabSkeleton />}>
+							<NotePresetsTab />
+						</Suspense>
 					</section>
 				) : null}
 			</div>

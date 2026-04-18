@@ -23,7 +23,7 @@ describe("PasswordInput", () => {
 		container.remove();
 	});
 
-	it("focuses the input when the field shell is clicked", async () => {
+	it("focuses the input when the field shell receives pointer down", async () => {
 		await act(async () => {
 			root.render(<PasswordInput id="admin-password" defaultValue="admin123" />);
 		});
@@ -38,7 +38,7 @@ describe("PasswordInput", () => {
 		}
 
 		await act(async () => {
-			shell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+			shell.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
 		});
 
 		expect(document.activeElement).toBe(input);
