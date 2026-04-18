@@ -19,7 +19,6 @@ import { eq } from "drizzle-orm";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
-import { GENERIC_API_RATE_LIMIT_MAX } from "./config/rate-limit.js";
 import type { AppDatabase } from "./db/connection.js";
 import { appSettings } from "./db/schema.js";
 import { registerAuthRoutes } from "./routes/auth.js";
@@ -64,8 +63,6 @@ function buildTb1CompatDisplayHtml() {
       body {
         margin: 0;
         min-height: 100%;
-        background: #08111f;
-        color: #f8fafc;
         font-family: "Segoe UI", Arial, sans-serif;
       }
 
@@ -74,9 +71,146 @@ function buildTb1CompatDisplayHtml() {
       }
 
       .shell {
+        --bg: #08111f;
+        --surface: #0b1220;
+        --text: #f8fafc;
+        --muted: #cbd5e1;
+        --header-border: #1f2937;
+        --panel-divider: rgba(255, 255, 255, 0.08);
+        --preparing-panel-bg: #21110a;
+        --preparing-panel-divider: rgba(217, 119, 6, 0.35);
+        --ready-panel-bg: #08180f;
+        --preparing-title: #fbbf24;
+        --ready-title: #4ade80;
+        --preparing-count-bg: rgba(251, 191, 36, 0.16);
+        --preparing-count-border: rgba(251, 191, 36, 0.45);
+        --preparing-count-text: #fef3c7;
+        --ready-count-bg: rgba(74, 222, 128, 0.16);
+        --ready-count-border: rgba(74, 222, 128, 0.45);
+        --ready-count-text: #dcfce7;
+        --item-border: rgba(255, 255, 255, 0.08);
+        --preparing-item-bg: rgba(251, 191, 36, 0.1);
+        --preparing-item-border: rgba(251, 191, 36, 0.28);
+        --preparing-item-text: #fef3c7;
+        --ready-item-bg: rgba(74, 222, 128, 0.1);
+        --ready-item-border: rgba(74, 222, 128, 0.28);
+        --ready-item-text: #dcfce7;
+        --title-size: 26px;
+        --clock-size: 24px;
+        --panel-title-size: 24px;
+        --count-size: 22px;
+        --item-size: 42px;
+        --empty-size: 26px;
+        --footer-size: 18px;
+        --item-min-height: 88px;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .shell.theme-light {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --header-border: #cbd5e1;
+        --panel-divider: rgba(15, 23, 42, 0.1);
+        --preparing-panel-bg: #fff7ed;
+        --preparing-panel-divider: rgba(245, 158, 11, 0.38);
+        --ready-panel-bg: #ecfdf5;
+        --preparing-title: #b45309;
+        --ready-title: #047857;
+        --preparing-count-bg: rgba(245, 158, 11, 0.12);
+        --preparing-count-border: rgba(245, 158, 11, 0.34);
+        --preparing-count-text: #78350f;
+        --ready-count-bg: rgba(16, 185, 129, 0.12);
+        --ready-count-border: rgba(16, 185, 129, 0.34);
+        --ready-count-text: #064e3b;
+        --item-border: rgba(15, 23, 42, 0.12);
+        --preparing-item-bg: rgba(245, 158, 11, 0.12);
+        --preparing-item-border: rgba(245, 158, 11, 0.3);
+        --preparing-item-text: #92400e;
+        --ready-item-bg: rgba(16, 185, 129, 0.12);
+        --ready-item-border: rgba(16, 185, 129, 0.3);
+        --ready-item-text: #065f46;
+      }
+
+      .shell.theme-vivid {
+        --bg: #09090b;
+        --surface: #18181b;
+        --text: #fafafa;
+        --muted: #cbd5e1;
+        --header-border: #3f3f46;
+        --panel-divider: rgba(255, 255, 255, 0.1);
+        --preparing-panel-bg: rgba(249, 115, 22, 0.1);
+        --preparing-panel-divider: rgba(249, 115, 22, 0.42);
+        --ready-panel-bg: rgba(20, 184, 166, 0.1);
+        --preparing-title: #fb923c;
+        --ready-title: #5eead4;
+        --preparing-count-bg: rgba(249, 115, 22, 0.18);
+        --preparing-count-border: rgba(251, 146, 60, 0.45);
+        --preparing-count-text: #ffedd5;
+        --ready-count-bg: rgba(20, 184, 166, 0.18);
+        --ready-count-border: rgba(94, 234, 212, 0.45);
+        --ready-count-text: #ccfbf1;
+        --item-border: rgba(255, 255, 255, 0.1);
+        --preparing-item-bg: rgba(249, 115, 22, 0.14);
+        --preparing-item-border: rgba(251, 146, 60, 0.34);
+        --preparing-item-text: #ffedd5;
+        --ready-item-bg: rgba(20, 184, 166, 0.14);
+        --ready-item-border: rgba(94, 234, 212, 0.34);
+        --ready-item-text: #ccfbf1;
+      }
+
+      .shell.theme-retro {
+        --bg: #000000;
+        --surface: #051b11;
+        --text: #86efac;
+        --muted: #4ade80;
+        --header-border: #14532d;
+        --panel-divider: rgba(34, 197, 94, 0.22);
+        --preparing-panel-bg: rgba(113, 63, 18, 0.18);
+        --preparing-panel-divider: rgba(234, 179, 8, 0.5);
+        --ready-panel-bg: rgba(20, 83, 45, 0.24);
+        --preparing-title: #fde047;
+        --ready-title: #86efac;
+        --preparing-count-bg: rgba(234, 179, 8, 0.18);
+        --preparing-count-border: rgba(250, 204, 21, 0.48);
+        --preparing-count-text: #fef08a;
+        --ready-count-bg: rgba(34, 197, 94, 0.18);
+        --ready-count-border: rgba(74, 222, 128, 0.48);
+        --ready-count-text: #bbf7d0;
+        --item-border: rgba(34, 197, 94, 0.16);
+        --preparing-item-bg: rgba(234, 179, 8, 0.14);
+        --preparing-item-border: rgba(250, 204, 21, 0.34);
+        --preparing-item-text: #fde68a;
+        --ready-item-bg: rgba(34, 197, 94, 0.14);
+        --ready-item-border: rgba(74, 222, 128, 0.34);
+        --ready-item-text: #bbf7d0;
+      }
+
+      .shell.scale-s {
+        --title-size: 22px;
+        --clock-size: 20px;
+        --panel-title-size: 20px;
+        --count-size: 18px;
+        --item-size: 34px;
+        --empty-size: 22px;
+        --footer-size: 15px;
+        --item-min-height: 72px;
+      }
+
+      .shell.scale-l {
+        --title-size: 30px;
+        --clock-size: 28px;
+        --panel-title-size: 28px;
+        --count-size: 24px;
+        --item-size: 52px;
+        --empty-size: 30px;
+        --footer-size: 20px;
+        --item-min-height: 96px;
       }
 
       .header {
@@ -84,18 +218,18 @@ function buildTb1CompatDisplayHtml() {
         align-items: center;
         justify-content: space-between;
         padding: 14px 18px;
-        border-bottom: 2px solid #1f2937;
-        background: #0b1220;
+        border-bottom: 2px solid var(--header-border);
+        background: var(--surface);
       }
 
       .title {
-        font-size: 26px;
+        font-size: var(--title-size);
         font-weight: 900;
         letter-spacing: 0.04em;
       }
 
       .clock {
-        font-size: 24px;
+        font-size: var(--clock-size);
         font-weight: 700;
       }
 
@@ -118,17 +252,17 @@ function buildTb1CompatDisplayHtml() {
       }
 
       .panel.preparing {
-        background: #21110a;
-        border-right: 2px solid rgba(217, 119, 6, 0.35);
+        background: var(--preparing-panel-bg);
+        border-right: 2px solid var(--preparing-panel-divider);
       }
 
       .screen.stack .panel.preparing {
         border-right: 0;
-        border-bottom: 2px solid rgba(217, 119, 6, 0.35);
+        border-bottom: 2px solid var(--preparing-panel-divider);
       }
 
       .panel.ready {
-        background: #08180f;
+        background: var(--ready-panel-bg);
       }
 
       .panel-head {
@@ -139,17 +273,17 @@ function buildTb1CompatDisplayHtml() {
       }
 
       .panel-title {
-        font-size: 24px;
+        font-size: var(--panel-title-size);
         font-weight: 900;
         letter-spacing: 0.03em;
       }
 
       .panel.preparing .panel-title {
-        color: #fbbf24;
+        color: var(--preparing-title);
       }
 
       .panel.ready .panel-title {
-        color: #4ade80;
+        color: var(--ready-title);
       }
 
       .panel-count {
@@ -157,20 +291,20 @@ function buildTb1CompatDisplayHtml() {
         padding: 6px 10px;
         border-radius: 999px;
         text-align: center;
-        font-size: 22px;
+        font-size: var(--count-size);
         font-weight: 900;
       }
 
       .panel.preparing .panel-count {
-        background: rgba(251, 191, 36, 0.16);
-        border: 1px solid rgba(251, 191, 36, 0.45);
-        color: #fef3c7;
+        background: var(--preparing-count-bg);
+        border: 1px solid var(--preparing-count-border);
+        color: var(--preparing-count-text);
       }
 
       .panel.ready .panel-count {
-        background: rgba(74, 222, 128, 0.16);
-        border: 1px solid rgba(74, 222, 128, 0.45);
-        color: #dcfce7;
+        background: var(--ready-count-bg);
+        border: 1px solid var(--ready-count-border);
+        color: var(--ready-count-text);
       }
 
       .list {
@@ -187,30 +321,30 @@ function buildTb1CompatDisplayHtml() {
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 88px;
+        min-height: var(--item-min-height);
         border-radius: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.08);
-        font-size: 42px;
+        border: 2px solid var(--item-border);
+        font-size: var(--item-size);
         font-weight: 900;
         letter-spacing: 0.02em;
       }
 
       .panel.preparing .item {
-        background: rgba(251, 191, 36, 0.1);
-        border-color: rgba(251, 191, 36, 0.28);
-        color: #fef3c7;
+        background: var(--preparing-item-bg);
+        border-color: var(--preparing-item-border);
+        color: var(--preparing-item-text);
       }
 
       .panel.ready .item {
-        background: rgba(74, 222, 128, 0.1);
-        border-color: rgba(74, 222, 128, 0.28);
-        color: #dcfce7;
+        background: var(--ready-item-bg);
+        border-color: var(--ready-item-border);
+        color: var(--ready-item-text);
       }
 
       .item.empty {
         justify-content: flex-start;
         padding: 18px 16px;
-        font-size: 26px;
+        font-size: var(--empty-size);
         font-weight: 700;
         letter-spacing: 0;
         opacity: 0.86;
@@ -218,16 +352,16 @@ function buildTb1CompatDisplayHtml() {
 
       .footer {
         padding: 10px 14px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        font-size: 18px;
+        border-top: 1px solid var(--panel-divider);
+        font-size: var(--footer-size);
         font-weight: 700;
-        color: #cbd5e1;
-        background: #0b1220;
+        color: var(--muted);
+        background: var(--surface);
       }
     </style>
   </head>
   <body>
-    <div class="shell">
+    <div class="shell theme-dark scale-m" id="shell">
       <div class="header">
         <div class="title" id="restaurant-name">SEPET ARASI</div>
         <div class="clock" id="clock">--:--</div>
@@ -267,7 +401,9 @@ function buildTb1CompatDisplayHtml() {
             layoutPreference: "stack",
             maxVisiblePerColumn: 4,
             pageSeconds: 6,
-            readyDisplayMinutes: 5
+            readyDisplayMinutes: 5,
+            textScale: "m",
+            theme: "dark"
           },
           preparingPage: 0,
           readyPage: 0,
@@ -275,6 +411,7 @@ function buildTb1CompatDisplayHtml() {
         };
 
         var screen = document.getElementById("screen");
+        var shell = document.getElementById("shell");
         var prepList = document.getElementById("prep-list");
         var readyList = document.getElementById("ready-list");
         var prepCount = document.getElementById("prep-count");
@@ -345,6 +482,25 @@ function buildTb1CompatDisplayHtml() {
           return numberValue;
         }
 
+        function normalizeTheme(value) {
+          if (value === "light" || value === "vivid" || value === "retro") return value;
+          return "dark";
+        }
+
+        function normalizeTextScale(value) {
+          if (value === "s" || value === "l") return value;
+          return "m";
+        }
+
+        function applyShellAppearance() {
+          if (!shell) return;
+          shell.className =
+            "shell theme-" +
+            normalizeTheme(state.config.theme) +
+            " scale-" +
+            normalizeTextScale(state.config.textScale);
+        }
+
         function applySettings(settings) {
           state.config.restaurantName = safeString(settings.restaurant_name || "SEPET ARASI");
           state.config.profile = safeString(settings.display_profile || "auto");
@@ -352,8 +508,11 @@ function buildTb1CompatDisplayHtml() {
           state.config.maxVisiblePerColumn = parsePositiveInt(settings.display_max_visible, 4);
           state.config.pageSeconds = parsePositiveInt(settings.display_page_seconds, 6);
           state.config.readyDisplayMinutes = parsePositiveInt(settings.display_ready_minutes, 5);
+          state.config.textScale = normalizeTextScale(safeString(settings.display_text_scale || "m"));
+          state.config.theme = normalizeTheme(safeString(settings.display_theme || "dark"));
           restaurantName.textContent = state.config.restaurantName || "SEPET ARASI";
           state.nextPageSwitchAt = Date.now() + state.config.pageSeconds * 1000;
+          applyShellAppearance();
         }
 
         function isReadyVisible(order) {
@@ -516,6 +675,7 @@ function buildTb1CompatDisplayHtml() {
         }
 
         sendDiagnostic("tb1-compat-inline-start");
+        applyShellAppearance();
         renderClock();
         render();
         loadSettings();
@@ -567,11 +727,6 @@ function buildRelativeDisplayShellHtml(indexHtml: string) {
 
 function replyRetryAfterSeconds(reply: FastifyReply) {
 	return parseRetryAfterSeconds(reply.getHeader("retry-after"));
-}
-
-function shouldBypassGenericRateLimit(request: FastifyRequest) {
-	const url = request.raw.url ?? request.url ?? "";
-	return request.method === "OPTIONS" || (!url.startsWith("/api/") && !url.startsWith("/ws"));
 }
 
 function wsClientRemoteAddress(request: FastifyRequest): string | undefined {
@@ -820,12 +975,9 @@ export async function buildApp(opts: AppOptions) {
 	);
 
 	// Setup Rate Limiting, Cookie, JWT
-	// Keep a generous default for API routes, but do not throttle local display/static/health flows.
-	await app.register(fastifyRateLimit, {
-		max: GENERIC_API_RATE_LIMIT_MAX,
-		timeWindow: "1 minute",
-		allowList: shouldBypassGenericRateLimit,
-	});
+	// Keep only route-specific limits (auth brute-force, analytics, uploads).
+	// A blanket global limiter was causing normal LAN traffic to trip 429s and break the admin UI.
+	await app.register(fastifyRateLimit, { global: false });
 	await app.register(fastifyCookie, { secret: AUTH_CONFIG.cookieSecret });
 	await app.register(fastifyJwt, {
 		secret: AUTH_CONFIG.jwtSecret,

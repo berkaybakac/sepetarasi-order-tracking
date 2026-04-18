@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
-import { GENERIC_API_RATE_LIMIT_MAX } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, terminals } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -14,28 +13,10 @@ let db: AppDatabase;
 let app: FastifyInstance;
 let adminCookie: string;
 
-async function exhaustGenericApiRateLimit(app: FastifyInstance, cookie: string) {
-	for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {
-		const res = await app.inject({
-			method: "GET",
-			url: API_ROUTES.V1.AUTH.ME,
-			headers: { cookie },
-		});
-		expect(res.statusCode).toBe(200);
-	}
-
-	const limitedRes = await app.inject({
-		method: "GET",
-		url: API_ROUTES.V1.AUTH.ME,
-		headers: { cookie },
-	});
-	expect(limitedRes.statusCode).toBe(429);
-}
-
 beforeEach(async () => {
 	db = createTestDb();
 	db.insert(terminals).values({ id: "t-1", name: "Kasa 1", type: "kasa", is_active: 1 }).run();
-	app = await buildApp({ db, disableWorker: true });
+	app = await buildApp({ db, disableWorker: true, disableStatic: true });
 	adminCookie = await loginAsAdmin(app);
 });
 
@@ -868,19 +849,21 @@ describe("GET /health", () => {
 			await localApp.close();
 		}
 	});
-
-	it("stays reachable after the generic API rate limit is exhausted", async () => {
-		await exhaustGenericApiRateLimit(app, adminCookie);
-
-		const res = await app.inject({ method: "GET", url: "/health" });
-		expect(res.statusCode).toBe(200);
-		expect(res.json().ok).toBe(true);
-	});
 });
 
 describe("connectivity test pages", () => {
+	let staticApp: FastifyInstance;
+
+	beforeEach(async () => {
+		staticApp = await buildApp({ db: createTestDb(), disableWorker: true });
+	});
+
+	afterEach(async () => {
+		await staticApp.close();
+	});
+
 	it("serves /display as no-store HTML shell", async () => {
-		const res = await app.inject({ method: "GET", url: "/display" });
+		const res = await staticApp.inject({ method: "GET", url: "/display" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -894,7 +877,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display/ as the same no-store HTML shell", async () => {
-		const res = await app.inject({ method: "GET", url: "/display/" });
+		const res = await staticApp.inject({ method: "GET", url: "/display/" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -905,7 +888,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display.html as a no-store relative-asset shell with diagnostics", async () => {
-		const res = await app.inject({ method: "GET", url: "/display.html?layout=split&max=4" });
+		const res = await staticApp.inject({ method: "GET", url: "/display.html?layout=split&max=4" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -925,7 +908,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display/index.html as a TB1 compatibility page", async () => {
-		const res = await app.inject({ method: "GET", url: "/display/index.html" });
+		const res = await staticApp.inject({ method: "GET", url: "/display/index.html" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -940,17 +923,8 @@ describe("connectivity test pages", () => {
 		expect(res.body).not.toContain('<div id="root"></div>');
 	});
 
-	it("keeps /display reachable after the generic API rate limit is exhausted", async () => {
-		await exhaustGenericApiRateLimit(app, adminCookie);
-
-		const res = await app.inject({ method: "GET", url: "/display" });
-		expect(res.statusCode).toBe(200);
-		expect(res.headers["content-type"]).toContain("text/html");
-		expect(res.body).toContain('<div id="root"></div>');
-	});
-
 	it("serves /test.html as plain HTML with no-store headers", async () => {
-		const res = await app.inject({ method: "GET", url: "/test.html" });
+		const res = await staticApp.inject({ method: "GET", url: "/test.html" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -964,7 +938,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /ping with the same static success page", async () => {
-		const res = await app.inject({ method: "GET", url: "/ping" });
+		const res = await staticApp.inject({ method: "GET", url: "/ping" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -972,7 +946,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("accepts display diagnostic beacons without auth", async () => {
-		const res = await app.inject({
+		const res = await staticApp.inject({
 			method: "GET",
 			url: "/display-beacon.gif?phase=react-mounted&path=%2Fdisplay.html",
 		});

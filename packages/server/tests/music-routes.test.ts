@@ -6,7 +6,6 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
-import { GENERIC_API_RATE_LIMIT_MAX } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { appSettings, musicTracks } from "../src/db/schema.js";
 import { createTestDb } from "../src/db/test-utils.js";
@@ -120,43 +119,6 @@ describe("Music routes", () => {
 			await localApp.close();
 			rmSync(localMusicDir, { recursive: true, force: true });
 		}
-	});
-
-	it("keeps music upload available after the generic API rate limit is exhausted", async () => {
-		for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {
-			const res = await app.inject({
-				method: "GET",
-				url: "/api/v1/auth/me",
-				headers: { cookie: adminCookie },
-			});
-			expect(res.statusCode).toBe(200);
-		}
-
-		const limitedRes = await app.inject({
-			method: "GET",
-			url: "/api/v1/auth/me",
-			headers: { cookie: adminCookie },
-		});
-		expect(limitedRes.statusCode).toBe(429);
-
-		const fileBuffer = Buffer.alloc(1024, 0x7);
-		const { boundary, payload } = buildMultipartPayload(
-			"rate-limit-bypass.mp3",
-			"audio/mpeg",
-			fileBuffer,
-		);
-		const uploadRes = await app.inject({
-			method: "POST",
-			url: API_ROUTES.V1.MUSIC.TRACKS,
-			headers: {
-				cookie: adminCookie,
-				"content-type": `multipart/form-data; boundary=${boundary}`,
-			},
-			payload,
-		});
-
-		expect(uploadRes.statusCode).toBe(201);
-		expect(uploadRes.json().data.file_size).toBe(fileBuffer.length);
 	});
 
 	it("does not expose removed download endpoints", async () => {

@@ -2,10 +2,7 @@ import { API_ROUTES } from "@sepetarasi/shared";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
-import {
-	DELIVERY_ANALYTICS_RATE_LIMIT,
-	GENERIC_API_RATE_LIMIT_MAX,
-} from "../src/config/rate-limit.js";
+import { DELIVERY_ANALYTICS_RATE_LIMIT } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { createTestDb } from "../src/db/test-utils.js";
 import { loginAsAdmin } from "./auth-helpers.js";
@@ -27,32 +24,6 @@ afterEach(async () => {
 });
 
 describe("Stats routes rate limiting", () => {
-	it("keeps delivery analytics available after the generic admin read limit is exhausted", async () => {
-		for (let i = 0; i < GENERIC_API_RATE_LIMIT_MAX; i += 1) {
-			const res = await app.inject({
-				method: "GET",
-				url: API_ROUTES.V1.AUTH.ME,
-				headers: { cookie: adminCookie },
-			});
-			expect(res.statusCode).toBe(200);
-		}
-
-		const limitedRes = await app.inject({
-			method: "GET",
-			url: API_ROUTES.V1.AUTH.ME,
-			headers: { cookie: adminCookie },
-		});
-		expect(limitedRes.statusCode).toBe(429);
-
-		const analyticsRes = await app.inject({
-			method: "GET",
-			url: ANALYTICS_URL,
-			headers: { cookie: adminCookie },
-		});
-		expect(analyticsRes.statusCode).toBe(200);
-		expect(analyticsRes.json().ok).toBe(true);
-	});
-
 	it("returns retryAfterSeconds in delivery analytics 429 responses", async () => {
 		for (let i = 0; i < DELIVERY_ANALYTICS_RATE_LIMIT.max; i += 1) {
 			const res = await app.inject({

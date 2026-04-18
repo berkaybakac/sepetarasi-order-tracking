@@ -142,20 +142,26 @@ export function CustomerDisplay() {
 
 	useWebSocket({ channel: WS_CHANNELS.DISPLAY, onMessage, onConnect, onDisconnect });
 
+	const loadDisplaySettings = useCallback(async (options?: { emitDiagnostic?: boolean }) => {
+		try {
+			const settings = await api.getPublicSettings();
+			setDisplayConfig(parseDisplaySettings(settings));
+		} catch (error) {
+			logger.error("CustomerDisplay", "Failed to load public display settings.", error);
+			if (options?.emitDiagnostic) {
+				sendDisplayDiagnostic(
+					"settings-load-failed",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
+		}
+	}, []);
+
 	useEffect(() => {
 		let cancelled = false;
 
 		const loadInitialState = async () => {
-			const settingsRequest = api
-				.getPublicSettings()
-				.then((settings) => setDisplayConfig(parseDisplaySettings(settings)))
-				.catch((error) => {
-					logger.error("CustomerDisplay", "Failed to load public display settings.", error);
-					sendDisplayDiagnostic(
-						"settings-load-failed",
-						error instanceof Error ? error.message : String(error),
-					);
-				});
+			const settingsRequest = loadDisplaySettings({ emitDiagnostic: true });
 
 			await Promise.allSettled([hydrate(false, false), settingsRequest]);
 			if (!cancelled) {
@@ -169,7 +175,7 @@ export function CustomerDisplay() {
 		return () => {
 			cancelled = true;
 		};
-	}, [hydrate]);
+	}, [hydrate, loadDisplaySettings]);
 
 	useEffect(() => {
 		if (connected) {
@@ -205,12 +211,7 @@ export function CustomerDisplay() {
 	);
 
 	useInterval(() => {
-		api
-			.getPublicSettings()
-			.then((settings) => setDisplayConfig(parseDisplaySettings(settings)))
-			.catch((error) =>
-				logger.error("CustomerDisplay", "Failed to refresh public display settings.", error),
-			);
+		void loadDisplaySettings();
 	}, 30_000);
 
 	// Re-render every minute so the auto-hide timer stays accurate.
