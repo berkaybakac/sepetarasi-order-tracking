@@ -33,6 +33,20 @@ function getBroadcastChannelsForSetting(key: string): string[] {
 
 type SettingEntry = [key: string, value: string];
 
+type MusicPlayerSync = {
+	setVolume(v: number): void;
+	setEnabled(v: boolean): void;
+};
+
+function syncMusicSettings(musicPlayer: MusicPlayerSync | null, entries: SettingEntry[]) {
+	if (!musicPlayer) return;
+	for (const [key, value] of entries) {
+		if (key === SETTING_KEYS.MUSIC_VOLUME)
+			musicPlayer.setVolume(Math.max(0, Math.min(100, Number(value))));
+		else if (key === SETTING_KEYS.MUSIC_ENABLED) musicPlayer.setEnabled(value === "1");
+	}
+}
+
 function validateSettingEntry(key: string, value: string) {
 	if (!isEditableSettingKey(key)) {
 		return {
@@ -76,6 +90,7 @@ export function registerSettingsRoutes(
 	app: FastifyInstance,
 	db: AppDatabase,
 	broadcaster: Broadcaster,
+	musicPlayer: MusicPlayerSync | null = null,
 ) {
 	const PRIVATE_ADMIN_KEYS = new Set<string>([SETTING_KEYS.ADMIN_PASSWORD_HASH]);
 
@@ -141,6 +156,7 @@ export function registerSettingsRoutes(
 
 			const now = new Date().toISOString();
 			upsertSettings(db, entries, now);
+			syncMusicSettings(musicPlayer, entries);
 
 			const changedKeys = entries.map(([key]) => key).sort();
 			request.log.info(
@@ -214,6 +230,7 @@ export function registerSettingsRoutes(
 
 			const now = new Date().toISOString();
 			upsertSettings(db, [[key, value]], now);
+			syncMusicSettings(musicPlayer, [[key, value]]);
 
 			request.log.info(
 				{

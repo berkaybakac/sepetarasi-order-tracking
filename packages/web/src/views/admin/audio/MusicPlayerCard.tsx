@@ -1,9 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UI_LABELS } from "../../../constants/labels";
 import { ApiError, api } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { useMusicStore } from "../../../stores/musicStore";
+import { useOrderStore } from "../../../stores/orderStore";
 import { ActionButton, InlineAlert } from "../ui/primitives";
+
+const SOUND_BARS: { key: string; style: CSSProperties }[] = ["a", "b", "c", "d", "e"].map(
+	(key, i) => ({
+		key,
+		style: {
+			"--eq-dur": `${0.7 + i * 0.12}s`,
+			animationDelay: `${i * 0.14}s`,
+		} as CSSProperties,
+	}),
+);
 
 function getMusicPlayerLoadErrorMessage(error: unknown) {
 	if (error instanceof ApiError) {
@@ -22,8 +33,17 @@ function getMusicPlayerLoadErrorMessage(error: unknown) {
 export function MusicPlayerCard() {
 	const status = useMusicStore((s) => s.status);
 	const setStatus = useMusicStore((s) => s.setStatus);
+	const lastReconnectedAt = useOrderStore((s) => s.lastReconnectedAt);
 	const [loading, setLoading] = useState(true);
 	const [loadError, setLoadError] = useState<string | null>(null);
+	const mountedRef = useRef(true);
+
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	const loadStatus = useCallback(async () => {
 		setLoading(true);
@@ -31,18 +51,26 @@ export function MusicPlayerCard() {
 
 		try {
 			const nextStatus = await api.getMusicStatus();
+			if (!mountedRef.current) return;
 			setStatus(nextStatus);
 		} catch (error) {
+			if (!mountedRef.current) return;
 			logger.error("MusicPlayerCard", "Failed to fetch music status.", error);
 			setLoadError(getMusicPlayerLoadErrorMessage(error));
 		} finally {
-			setLoading(false);
+			if (mountedRef.current) setLoading(false);
 		}
 	}, [setStatus]);
 
 	useEffect(() => {
 		void loadStatus();
 	}, [loadStatus]);
+
+	useEffect(() => {
+		if (lastReconnectedAt > 0 && loadError !== null) {
+			void loadStatus();
+		}
+	}, [lastReconnectedAt, loadError, loadStatus]);
 
 	const refreshStatus = useCallback(
 		() =>
@@ -118,8 +146,6 @@ export function MusicPlayerCard() {
 	const loopEnabled = status?.loop ?? true;
 	const shuffleEnabled = status?.shuffle ?? false;
 
-	const SOUND_BARS = ["a", "b", "c", "d", "e"] as const;
-
 	return (
 		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
 			<div className="absolute inset-0 bg-gradient-to-tr from-green-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -184,15 +210,11 @@ export function MusicPlayerCard() {
 						</div>
 						{status?.isPlaying && (
 							<div className="flex items-end gap-0.5 mt-2 h-4">
-								{SOUND_BARS.map((barKey, i) => (
+								{SOUND_BARS.map(({ key, style }) => (
 									<div
-										key={barKey}
-										className="w-1 bg-brand-success rounded-full animate-pulse"
-										style={{
-											height: `${40 + Math.sin(i * 1.2) * 30}%`,
-											animationDelay: `${i * 0.15}s`,
-											animationDuration: `${0.8 + i * 0.1}s`,
-										}}
+										key={key}
+										className="sound-bar w-1 h-full bg-brand-success rounded-full"
+										style={style}
 									/>
 								))}
 							</div>

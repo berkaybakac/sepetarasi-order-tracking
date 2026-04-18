@@ -186,6 +186,22 @@ export function registerMusicLibraryRoutes(
 				});
 			}
 
+			const existingTrack = db
+				.select({ id: musicTracks.id })
+				.from(musicTracks)
+				.where(eq(musicTracks.filename, data.filename))
+				.get();
+			if (existingTrack) {
+				await unlink(targetPath).catch(() => undefined);
+				return reply.status(409).send({
+					ok: false,
+					error: {
+						code: "DUPLICATE_TRACK",
+						message: `"${data.filename}" zaten kütüphanede mevcut`,
+					},
+				});
+			}
+
 			const displayName =
 				data.filename
 					.replace(/\.mp3$/i, "")

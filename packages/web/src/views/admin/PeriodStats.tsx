@@ -178,9 +178,17 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 
 		try {
 			await api.updateSetting(SETTING_KEYS.DELIVERY_TARGET_MINUTES, String(targetDraft));
-			setDeliveryTargetMinutes(targetDraft);
 			await hydrateSettings();
-			await fetchAnalytics(range.from, range.to, true);
+			const settingsState = useSettingsStore.getState();
+			const syncedTargetMinutes = settingsState.loadFailed
+				? targetDraft
+				: settingsState.deliveryTargetMinutes;
+			if (settingsState.loadFailed) {
+				setDeliveryTargetMinutes(targetDraft);
+			}
+			lastSyncedTargetRef.current = syncedTargetMinutes;
+			setTargetDraft(syncedTargetMinutes);
+			await fetchAnalytics(range.from, range.to);
 			setTargetSaveLabel("saved");
 			if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 			saveTimerRef.current = setTimeout(() => setTargetSaveLabel("idle"), 2000);
@@ -193,8 +201,11 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 
 	const handleRetryTargetLoad = async () => {
 		setTargetRetrying(true);
+		setTargetError(null);
 		try {
 			await hydrateSettings();
+		} catch (err) {
+			setTargetError(err instanceof Error ? err.message : "Ayarlar yeniden yüklenemedi.");
 		} finally {
 			setTargetRetrying(false);
 		}

@@ -13,13 +13,15 @@ export function PeriodStatsKpis({ summary, targetMinutes, trendPositive, onTarge
 		<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatsKpiCard
 				label="Ortalama Süre"
-				value={summary ? `${summary.averageDeliveryMinutes} dk` : "—"}
+				value={summary ? `${summary.averageDeliveryMinutes.toFixed(1)} dk` : "—"}
 				badge={
 					summary
 						? summary.previousPeriodAvgMinutes > 0
-							? `${trendPositive ? "↓" : "↑"} %${Math.abs(summary.trendPercent)} önceki döneme göre ${
-									trendPositive ? "hızlı" : "yavaş"
-								}`
+							? summary.trendPercent === 0
+								? "önceki dönemle aynı"
+								: `${trendPositive ? "↓" : "↑"} %${Math.abs(summary.trendPercent).toFixed(1)} önceki döneme göre ${
+										trendPositive ? "hızlı" : "yavaş"
+									}`
 							: "karşılaştırılacak önceki dönem yok"
 						: undefined
 				}

@@ -336,6 +336,37 @@ describe("Music routes", () => {
 		expect(missingRes.json().error.code).toBe("NOT_FOUND");
 	});
 
+	it("rejects duplicate filename upload with 409 and does not persist a second track", async () => {
+		const fileBuffer = Buffer.alloc(512, 0x9);
+		const { boundary: b1, payload: p1 } = buildMultipartPayload(
+			"duplicate.mp3",
+			"audio/mpeg",
+			fileBuffer,
+		);
+		const first = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
+			headers: { cookie: adminCookie, "content-type": `multipart/form-data; boundary=${b1}` },
+			payload: p1,
+		});
+		expect(first.statusCode).toBe(201);
+
+		const { boundary: b2, payload: p2 } = buildMultipartPayload(
+			"duplicate.mp3",
+			"audio/mpeg",
+			fileBuffer,
+		);
+		const second = await app.inject({
+			method: "POST",
+			url: API_ROUTES.V1.MUSIC.TRACKS,
+			headers: { cookie: adminCookie, "content-type": `multipart/form-data; boundary=${b2}` },
+			payload: p2,
+		});
+		expect(second.statusCode).toBe(409);
+		expect(second.json().error.code).toBe("DUPLICATE_TRACK");
+		expect(db.select().from(musicTracks).all()).toHaveLength(1);
+	});
+
 	it("updates enabled/loop/shuffle mode settings and reflects them in status", async () => {
 		const enableRes = await app.inject({
 			method: "PATCH",

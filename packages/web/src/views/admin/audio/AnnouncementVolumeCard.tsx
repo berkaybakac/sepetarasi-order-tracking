@@ -1,6 +1,7 @@
 import { SETTING_KEYS } from "@sepetarasi/shared";
 import { UI_LABELS } from "../../../constants/labels";
 import { api } from "../../../lib/api";
+import { useOrderStore } from "../../../stores/orderStore";
 import { VolumeControlCard } from "./VolumeControlCard";
 
 const ICON = (
@@ -21,6 +22,7 @@ async function fetchVolume() {
 }
 
 export function AnnouncementVolumeCard() {
+	const reconnectToken = useOrderStore((s) => s.lastReconnectedAt);
 	return (
 		<VolumeControlCard
 			title={UI_LABELS.AUDIO.ANNOUNCEMENT_VOLUME}
@@ -30,6 +32,7 @@ export function AnnouncementVolumeCard() {
 			colorScheme="blue"
 			onMount={fetchVolume}
 			onSave={(volume) => api.updateSetting(SETTING_KEYS.AUDIO_VOLUME, String(volume))}
+			reconnectToken={reconnectToken}
 		/>
 	);
 }

@@ -1,32 +1,41 @@
 import { OrderStatus } from "@sepetarasi/shared";
 import type { Order } from "@sepetarasi/shared";
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { ClockIcon } from "../../../components/icons";
+import { useMemo, useState } from "react";
+import { ClockIcon, TagIcon } from "../../../components/icons";
 import { useInterval } from "../../../hooks/useInterval";
 import { useSettingsStore } from "../../../stores/settingsStore";
 import { getDeliveredOrderDurationLabel, getOrderTimer } from "../../../utils/date";
 
+const ORDER_TIMESTAMP_FORMATTER = new Intl.DateTimeFormat("tr-TR", {
+	timeZone: "Europe/Istanbul",
+	day: "2-digit",
+	month: "2-digit",
+	year: "numeric",
+	hour: "2-digit",
+	minute: "2-digit",
+	hour12: false,
+});
+
 function formatOrderTimestamp(dateStr: string): string {
-	return new Intl.DateTimeFormat("tr-TR", {
-		timeZone: "Europe/Istanbul",
-		day: "2-digit",
-		month: "2-digit",
-		year: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: false,
-	}).format(new Date(dateStr));
+	return ORDER_TIMESTAMP_FORMATTER.format(new Date(dateStr));
 }
+
+type TimerResult = ReturnType<typeof getOrderTimer>;
 
 /**
  * TimerBadge — PREPARING/READY için canlı, DELIVERED için sabit süre rozetidir.
- * Canlı tick parent OrderCard'dan gelir; burada ayrı setInterval yok ki border/glow ile rozet
- * aynı render adımında güncellensin.
+ * timerResult: OrderCard'da hesaplanan timer; border/glow ile aynı render adımından gelir.
  */
-function TimerBadge({ order, status }: { order: Order; status: OrderStatus }) {
-	const targetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
-
+function TimerBadge({
+	order,
+	status,
+	timerResult,
+}: {
+	order: Order;
+	status: OrderStatus;
+	timerResult: TimerResult | null;
+}) {
 	if (status === OrderStatus.DELIVERED) {
 		const deliveredDuration = getDeliveredOrderDurationLabel(
 			order.created_at,
@@ -38,10 +47,11 @@ function TimerBadge({ order, status }: { order: Order; status: OrderStatus }) {
 		);
 	}
 
-	const { isUrgent, isOverdue, formatted, remainingMins } = getOrderTimer(
-		order.created_at,
-		targetMinutes,
-	);
+	if (timerResult == null) {
+		return null;
+	}
+
+	const { isUrgent, isOverdue, formatted, remainingMins } = timerResult;
 
 	if (isOverdue) {
 		return (
@@ -123,18 +133,25 @@ export const CARD_STYLES: Record<
 
 /**
  * OrderCard — Tek bir siparişi kart olarak gösterir.
+ * tick: OrderColumn'dan 30s'de bir gelen sayaç; border/glow ile rozet aynı render adımında güncellenir.
  */
-export function OrderCard({ order, status }: { order: Order; status: OrderStatus }) {
+export function OrderCard({
+	order,
+	status,
+	tick,
+}: { order: Order; status: OrderStatus; tick?: number }) {
 	const targetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
 	const isLive = status !== OrderStatus.DELIVERED && status !== OrderStatus.CANCELLED;
+	const [, setLocalTick] = useState(0);
 
-	// Parent tick: 30s'de bir re-render zorla ki warning/overdue border+glow canlı güncellensin.
-	const [, setTick] = useState(0);
-	useInterval(() => setTick((t) => t + 1), isLive ? 30_000 : null);
+	// Parent tick yoksa kartı kendi başına canlı tut ki tekil render/test senaryolarında
+	// urgency border ve glow eşik geçişleri güncellenmeye devam etsin.
+	useInterval(() => setLocalTick((value) => value + 1), tick == null && isLive ? 30_000 : null);
 
-	const { isOverdue, isUrgent } = isLive
-		? getOrderTimer(order.created_at, targetMinutes)
-		: { isOverdue: false, isUrgent: false };
+	const timerResult = isLive ? getOrderTimer(order.created_at, targetMinutes) : null;
+	const isOverdue = timerResult?.isOverdue ?? false;
+	const isUrgent = timerResult?.isUrgent ?? false;
+
 	const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
 	const styles = CARD_STYLES[status];
@@ -144,8 +161,19 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 		: isUrgent
 			? styles.urgentBorder
 			: styles.border;
-	const lineItemCounts = new Map<string, number>();
-	const orderMeta = [order.order_type ?? "Bilinmiyor", formatOrderTimestamp(order.created_at)];
+
+	const itemKeys = useMemo(() => {
+		const counts = new Map<string, number>();
+		return (order.items ?? []).map((item) => {
+			const baseKey = `${item.name}:${item.quantity}:${item.unit_price}`;
+			const nextCount = (counts.get(baseKey) ?? 0) + 1;
+			counts.set(baseKey, nextCount);
+			return `${order.id}:${baseKey}:${nextCount}`;
+		});
+	}, [order.id, order.items]);
+
+	const orderType = order.order_type ?? "Bilinmiyor";
+	const orderTimestamp = formatOrderTimestamp(order.created_at);
 
 	return (
 		<motion.article
@@ -171,7 +199,7 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 						#{order.display_no}
 					</span>
 				</div>
-				<TimerBadge order={order} status={status} />
+				<TimerBadge order={order} status={status} timerResult={timerResult} />
 			</div>
 
 			<div className="min-w-0 space-y-3 text-sm text-text-subtle">
@@ -179,15 +207,14 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 					{order.customer_name ?? "İsimsiz müşteri"}
 				</p>
 				<div className="flex flex-wrap gap-2">
-					{orderMeta.map((meta) => (
-						<span
-							key={meta}
-							className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-white/[0.04] px-2.5 py-1 text-xs text-text-muted"
-						>
-							<ClockIcon className="h-3.5 w-3.5" />
-							{meta}
-						</span>
-					))}
+					<span className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-white/[0.04] px-2.5 py-1 text-xs text-text-muted">
+						<TagIcon className="h-3.5 w-3.5" />
+						{orderType}
+					</span>
+					<span className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-white/[0.04] px-2.5 py-1 text-xs text-text-muted">
+						<ClockIcon className="h-3.5 w-3.5" />
+						{orderTimestamp}
+					</span>
 				</div>
 				{order.notes && (
 					<div className="min-w-0 rounded-[1rem] border border-brand-warning/15 bg-brand-warning/8 p-3 text-brand-warning">
@@ -215,21 +242,14 @@ export function OrderCard({ order, status }: { order: Order; status: OrderStatus
 
 			{order.items && order.items.length > 0 && (
 				<div className="mt-4 space-y-2 border-t border-border-subtle pt-4">
-					{order.items.map((item) => {
-						const baseKey = `${item.name}:${item.quantity}:${item.unit_price}`;
-						const nextCount = (lineItemCounts.get(baseKey) ?? 0) + 1;
-						lineItemCounts.set(baseKey, nextCount);
-						const key = `${order.id}:${baseKey}:${nextCount}`;
-
-						return (
-							<div key={key} className="flex items-center gap-2 text-xs text-text-subtle">
-								<span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white/6 border border-border-subtle text-[10px] font-bold text-text-strong">
-									{item.quantity}
-								</span>
-								<span className="truncate">{item.name}</span>
-							</div>
-						);
-					})}
+					{order.items.map((item, index) => (
+						<div key={itemKeys[index]} className="flex items-center gap-2 text-xs text-text-subtle">
+							<span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white/6 border border-border-subtle text-[10px] font-bold text-text-strong">
+								{item.quantity}
+							</span>
+							<span className="truncate">{item.name}</span>
+						</div>
+					))}
 				</div>
 			)}
 		</motion.article>

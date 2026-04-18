@@ -91,10 +91,10 @@ export function parseDisplaySettings(settings: Record<string, string>): DisplayC
 			: defaults.layoutPreference;
 
 	const maxVisible = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_MAX_VISIBLE]);
-	const maxVisiblePerColumn = Math.max(1, maxVisible ?? defaults.maxVisiblePerColumn);
+	const maxVisiblePerColumn = Math.min(99, Math.max(1, maxVisible ?? defaults.maxVisiblePerColumn));
 
 	const pageSecondsRaw = parsePositiveInt(settings[SETTING_KEYS.DISPLAY_PAGE_SECONDS]);
-	const pageSeconds = Math.max(1, pageSecondsRaw ?? defaults.pageSeconds);
+	const pageSeconds = Math.min(120, Math.max(1, pageSecondsRaw ?? defaults.pageSeconds));
 
 	const restaurantName =
 		settings[SETTING_KEYS.RESTAURANT_NAME] ?? DEFAULT_DISPLAY_CONFIG.restaurantName;
@@ -169,15 +169,15 @@ export function validateDisplaySettingValue(key: DisplaySettingKey, value: strin
 			return null;
 		case SETTING_KEYS.DISPLAY_MAX_VISIBLE: {
 			const maxVisible = Number(value);
-			if (!Number.isInteger(maxVisible) || maxVisible < 1) {
-				return "display_max_visible must be an integer >= 1";
+			if (!Number.isInteger(maxVisible) || maxVisible < 1 || maxVisible > 99) {
+				return "display_max_visible must be an integer between 1 and 99";
 			}
 			return null;
 		}
 		case SETTING_KEYS.DISPLAY_PAGE_SECONDS: {
 			const pageSeconds = Number(value);
-			if (!Number.isInteger(pageSeconds) || pageSeconds < 1) {
-				return "display_page_seconds must be an integer >= 1";
+			if (!Number.isInteger(pageSeconds) || pageSeconds < 1 || pageSeconds > 120) {
+				return "display_page_seconds must be an integer between 1 and 120";
 			}
 			return null;
 		}

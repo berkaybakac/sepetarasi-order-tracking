@@ -107,11 +107,24 @@ export class MusicPlayerService {
 	private alsaDevice: string | undefined;
 	private logger: MusicPlayerLogger;
 
+	private cachedVolume = 60;
+	private cachedEnabled = false;
+	private cachedLoop = true;
+	private cachedShuffle = false;
+
 	constructor(opts: MusicPlayerOptions) {
 		this.db = opts.db;
 		this.broadcaster = opts.broadcaster;
 		this.alsaDevice = opts.alsaDevice;
 		this.logger = opts.logger ?? createFallbackLogger();
+		this.loadSettingsCache();
+	}
+
+	private loadSettingsCache(): void {
+		this.cachedVolume = this.readVolume();
+		this.cachedEnabled = this.readEnabled();
+		this.cachedLoop = this.readLoop();
+		this.cachedShuffle = this.readShuffle();
 	}
 
 	// ── Public API ──────────────────────────────────────────────────────────
@@ -278,6 +291,7 @@ export class MusicPlayerService {
 	}
 
 	setEnabled(enabled: boolean): void {
+		this.cachedEnabled = enabled;
 		if (enabled) {
 			this.start();
 			this.broadcastStatus();
@@ -286,11 +300,13 @@ export class MusicPlayerService {
 		}
 	}
 
-	setLoop(_loopEnabled: boolean): void {
+	setLoop(loop: boolean): void {
+		this.cachedLoop = loop;
 		this.broadcastStatus();
 	}
 
 	setShuffle(shuffleEnabled: boolean): void {
+		this.cachedShuffle = shuffleEnabled;
 		if (shuffleEnabled) {
 			this.syncShuffleState();
 		} else {
@@ -361,8 +377,9 @@ export class MusicPlayerService {
 	}
 
 	setVolume(volume: number): void {
+		this.cachedVolume = clampVolume(volume);
 		if (!this.proc || this.isDucked) return;
-		this.sendCommand(`VOLUME ${clampVolume(volume)}`);
+		this.sendCommand(`VOLUME ${this.cachedVolume}`);
 		this.broadcastStatus();
 	}
 
@@ -747,6 +764,22 @@ export class MusicPlayerService {
 	}
 
 	private getMusicVolume(): number {
+		return this.cachedVolume;
+	}
+
+	private getEnabled(): boolean {
+		return this.cachedEnabled;
+	}
+
+	private getLoopEnabled(): boolean {
+		return this.cachedLoop;
+	}
+
+	private getShuffleEnabled(): boolean {
+		return this.cachedShuffle;
+	}
+
+	private readVolume(): number {
 		const row = this.db
 			.select()
 			.from(appSettings)
@@ -755,7 +788,7 @@ export class MusicPlayerService {
 		return row ? Math.max(0, Math.min(100, Number(row.value))) : 60;
 	}
 
-	private getEnabled(): boolean {
+	private readEnabled(): boolean {
 		const row = this.db
 			.select()
 			.from(appSettings)
@@ -764,7 +797,7 @@ export class MusicPlayerService {
 		return row?.value === "1";
 	}
 
-	private getLoopEnabled(): boolean {
+	private readLoop(): boolean {
 		const row = this.db
 			.select()
 			.from(appSettings)
@@ -773,7 +806,7 @@ export class MusicPlayerService {
 		return row ? row.value === "1" : true;
 	}
 
-	private getShuffleEnabled(): boolean {
+	private readShuffle(): boolean {
 		const row = this.db
 			.select()
 			.from(appSettings)

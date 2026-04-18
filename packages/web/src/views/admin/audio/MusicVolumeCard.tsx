@@ -1,6 +1,7 @@
 import { SETTING_KEYS } from "@sepetarasi/shared";
 import { UI_LABELS } from "../../../constants/labels";
 import { api } from "../../../lib/api";
+import { useOrderStore } from "../../../stores/orderStore";
 import { VolumeControlCard } from "./VolumeControlCard";
 
 const ICON = (
@@ -24,6 +25,7 @@ async function fetchVolumeAndEnabled() {
 }
 
 export function MusicVolumeCard() {
+	const reconnectToken = useOrderStore((s) => s.lastReconnectedAt);
 	return (
 		<VolumeControlCard
 			title={UI_LABELS.AUDIO.MUSIC_VOLUME}
@@ -38,6 +40,7 @@ export function MusicVolumeCard() {
 				disabledLabel: UI_LABELS.AUDIO.MUSIC_DISABLED,
 				onToggle: (next) => api.setMusicEnabled(next),
 			}}
+			reconnectToken={reconnectToken}
 		/>
 	);
 }

@@ -1,5 +1,5 @@
 import { parseNotePresets, serializeNotePresets } from "@sepetarasi/shared";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CloseIcon, NotesIcon, PlusIcon } from "../../components/icons";
 import { UI_LABELS } from "../../constants/labels";
 import { useActionFeedback } from "../../hooks/useActionFeedback";
@@ -25,9 +25,23 @@ export function NotePresetsCard() {
 	const [presets, setPresets] = useState<string[]>([]);
 	const [savedPresets, setSavedPresets] = useState<string[]>([]);
 	const [newPreset, setNewPreset] = useState("");
+	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const feedback = useActionFeedback();
+	const isSubmittingRef = useRef(false);
+
+	const isEditing = editingIndex !== null;
+
+	const startEditingPreset = useCallback(
+		(idx: number, preset: string) => {
+			setEditingIndex(idx);
+			setNewPreset(preset);
+			feedback.reset();
+			document.getElementById("note-preset-input")?.focus();
+		},
+		[feedback],
+	);
 
 	const loadPresets = useCallback(async () => {
 		setLoading(true);
@@ -60,6 +74,8 @@ export function NotePresetsCard() {
 				restoreInputValue?: string;
 			},
 		) => {
+			if (isSubmittingRef.current) return;
+			isSubmittingRef.current = true;
 			const rollbackPresets = savedPresets;
 			setPresets(nextPresets);
 			feedback.setPending(UI_LABELS.NOTE_PRESETS.SAVING);
@@ -75,12 +91,20 @@ export function NotePresetsCard() {
 				}
 				logger.error("NotePresetsCard", "Failed to save note presets.", error);
 				feedback.setError(error, UI_LABELS.NOTE_PRESETS.SAVE_ERROR);
+			} finally {
+				isSubmittingRef.current = false;
 			}
 		},
 		[feedback, savedPresets],
 	);
 
-	const handleAddPreset = async () => {
+	const handleCancelEdit = useCallback(() => {
+		setEditingIndex(null);
+		setNewPreset("");
+		feedback.reset();
+	}, [feedback]);
+
+	const handleSavePreset = useCallback(async () => {
 		const trimmed = newPreset.trim();
 		if (!trimmed) {
 			feedback.setError(
@@ -96,36 +120,56 @@ export function NotePresetsCard() {
 			);
 			return;
 		}
-		if (presets.length >= 20) {
-			feedback.setError(
-				new Error(UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR),
-				UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR,
-			);
-			return;
-		}
-		if (presets.includes(trimmed)) {
-			feedback.setError(
-				new Error(UI_LABELS.NOTE_PRESETS.DUPLICATE_ERROR),
-				UI_LABELS.NOTE_PRESETS.DUPLICATE_ERROR,
-			);
-			return;
-		}
 
-		setNewPreset("");
-		feedback.reset();
-		await persistPresets([...presets, trimmed], {
-			successMessage: UI_LABELS.NOTE_PRESETS.ADD_SUCCESS,
-			restoreInputValue: trimmed,
-		});
-	};
+		if (isEditing) {
+			const isDuplicate = presets.some((p, i) => p === trimmed && i !== editingIndex);
+			if (isDuplicate) {
+				feedback.setError(
+					new Error(UI_LABELS.NOTE_PRESETS.DUPLICATE_ERROR),
+					UI_LABELS.NOTE_PRESETS.DUPLICATE_ERROR,
+				);
+				return;
+			}
+			const next = presets.map((p, i) => (i === editingIndex ? trimmed : p));
+			setEditingIndex(null);
+			setNewPreset("");
+			feedback.reset();
+			await persistPresets(next, { successMessage: "Not güncellendi" });
+		} else {
+			if (presets.length >= 20) {
+				feedback.setError(
+					new Error(UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR),
+					UI_LABELS.NOTE_PRESETS.MAX_ITEMS_ERROR,
+				);
+				return;
+			}
+			if (presets.includes(trimmed)) {
+				feedback.setError(
+					new Error(UI_LABELS.NOTE_PRESETS.DUPLICATE_ERROR),
+					UI_LABELS.NOTE_PRESETS.DUPLICATE_ERROR,
+				);
+				return;
+			}
+			setNewPreset("");
+			feedback.reset();
+			await persistPresets([...presets, trimmed], {
+				successMessage: UI_LABELS.NOTE_PRESETS.ADD_SUCCESS,
+				restoreInputValue: trimmed,
+			});
+		}
+	}, [feedback, newPreset, presets, editingIndex, isEditing, persistPresets]);
 
-	const handleRemovePreset = async (idx: number) => {
-		feedback.reset();
-		await persistPresets(
-			presets.filter((_, i) => i !== idx),
-			{ successMessage: UI_LABELS.NOTE_PRESETS.REMOVE_SUCCESS },
-		);
-	};
+	const handleRemovePreset = useCallback(
+		async (idx: number) => {
+			if (editingIndex === idx) handleCancelEdit();
+			feedback.reset();
+			await persistPresets(
+				presets.filter((_, i) => i !== idx),
+				{ successMessage: UI_LABELS.NOTE_PRESETS.REMOVE_SUCCESS },
+			);
+		},
+		[feedback, presets, editingIndex, handleCancelEdit, persistPresets],
+	);
 
 	return (
 		<SectionCard
@@ -199,61 +243,68 @@ export function NotePresetsCard() {
 								</p>
 							</div>
 						) : (
-							<div className="grid max-h-[26rem] gap-3 overflow-y-auto pr-1 md:grid-cols-2 2xl:grid-cols-3">
-								{presets.map((preset, idx) => (
-									<div
-										key={preset}
-										className="group relative overflow-hidden rounded-[1.15rem] border border-white/8 bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] p-4 shadow-[0_18px_32px_rgba(3,7,18,0.16)] transition duration-200 hover:border-cyan-300/18 hover:shadow-[0_22px_38px_rgba(8,145,178,0.12)]"
-									>
-										<div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
-										<div className="mb-4 flex items-center justify-between gap-3">
-											<span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-cyan-400/18 bg-cyan-400/10 px-2 text-[0.68rem] font-semibold tracking-[0.18em] text-cyan-100">
-												{String(idx + 1).padStart(2, "0")}
-											</span>
+							<div className="relative">
+								<div className="grid max-h-[26rem] gap-3 overflow-y-auto pr-1 md:grid-cols-2 2xl:grid-cols-3">
+									{presets.map((preset, idx) => (
+										<div
+											key={preset}
+											className={`group relative cursor-pointer overflow-hidden rounded-[1.15rem] border p-4 shadow-[0_18px_32px_rgba(3,7,18,0.16)] transition duration-200 ${
+												editingIndex === idx
+													? "border-cyan-400/50 bg-[linear-gradient(145deg,rgba(34,211,238,0.12),rgba(34,211,238,0.04))] shadow-[0_0_0_1px_rgba(34,211,238,0.2)]"
+													: "border-white/8 bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] hover:border-cyan-300/18 hover:shadow-[0_22px_38px_rgba(8,145,178,0.12)]"
+											}`}
+										>
+											<div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
+											<div className="mb-4 flex items-center justify-between gap-3">
+												<span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-cyan-400/18 bg-cyan-400/10 px-2 text-[0.68rem] font-semibold tracking-[0.18em] text-cyan-100">
+													{String(idx + 1).padStart(2, "0")}
+												</span>
+												<button
+													type="button"
+													className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-transparent text-text-muted transition hover:border-white/10 hover:bg-white/8 hover:text-text-strong"
+													onClick={(e) => {
+														e.stopPropagation();
+														void handleRemovePreset(idx);
+													}}
+													aria-label={`${preset} notunu sil`}
+												>
+													<CloseIcon className="h-3.5 w-3.5" />
+													<span className="sr-only">{UI_LABELS.NOTE_PRESETS.REMOVE_BUTTON}</span>
+												</button>
+											</div>
 											<button
 												type="button"
-												className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-transparent text-text-muted transition hover:border-white/10 hover:bg-white/8 hover:text-text-strong"
-												onClick={() => void handleRemovePreset(idx)}
-												aria-label={`${preset} notunu sil`}
+												className="block w-full text-left"
+												onClick={() => startEditingPreset(idx, preset)}
+												aria-label={`${preset} notunu düzenle`}
 											>
-												<CloseIcon className="h-3.5 w-3.5" />
-												<span className="sr-only">{UI_LABELS.NOTE_PRESETS.REMOVE_BUTTON}</span>
+												<p className="min-w-0 break-words text-[1.02rem] font-semibold leading-6 text-text-strong [overflow-wrap:anywhere] [word-break:break-word]">
+													{preset}
+												</p>
+												<div className="mt-4 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-text-subtle">
+													<span className="h-1.5 w-1.5 rounded-full bg-brand-primary/80" />
+													{editingIndex === idx ? "Düzenleniyor" : "Hazır not"}
+												</div>
 											</button>
 										</div>
-										<button
-											type="button"
-											className="block w-full text-left"
-											onClick={() => {
-												setNewPreset(preset);
-												feedback.reset();
-											}}
-											aria-label={`${preset} notunu düzenlemek için alana taşı`}
-										>
-											<p className="min-w-0 break-words text-[1.02rem] font-semibold leading-6 text-text-strong [overflow-wrap:anywhere] [word-break:break-word]">
-												{preset}
-											</p>
-											<div className="mt-4 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-text-subtle">
-												<span className="h-1.5 w-1.5 rounded-full bg-brand-primary/80" />
-												Hazır not
-											</div>
-										</button>
-									</div>
-								))}
+									))}
+								</div>
+								<div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-surface-1/80 to-transparent" />
 							</div>
 						)}
 					</div>
 
-					<div className="relative overflow-hidden rounded-[1.4rem] border border-cyan-400/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_20px_45px_rgba(8,145,178,0.10)]">
+					<div className="relative self-start overflow-hidden rounded-[1.4rem] border border-cyan-400/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_20px_45px_rgba(8,145,178,0.10)]">
 						<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_34%)]" />
 						<div className="relative z-10">
 							<div className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.06] text-brand-primary shadow-[0_12px_30px_rgba(34,211,238,0.10)]">
 								<PlusIcon className="h-5 w-5" />
 							</div>
 							<p className="mt-5 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-brand-primary/90">
-								Yeni Hazır Not
+								{isEditing ? "Notu Düzenle" : "Yeni Hazır Not"}
 							</p>
 							<h3 className="mt-2 text-[1.35rem] font-semibold leading-8 tracking-tight text-text-strong">
-								Kasaya hızlı bir seçenek ekle
+								{isEditing ? "Notu değiştir ve kaydet" : "Kasaya hızlı bir seçenek ekle"}
 							</h3>
 
 							<div className="mt-5 space-y-3">
@@ -267,7 +318,10 @@ export function NotePresetsCard() {
 									onKeyDown={(event) => {
 										if (event.key === "Enter") {
 											event.preventDefault();
-											void handleAddPreset();
+											void handleSavePreset();
+										}
+										if (event.key === "Escape" && isEditing) {
+											handleCancelEdit();
 										}
 									}}
 									maxLength={50}
@@ -278,15 +332,26 @@ export function NotePresetsCard() {
 									<p className="text-xs font-medium text-text-subtle">
 										{remainingCharacters} karakter kaldı
 									</p>
-									<ActionButton
-										tone="primary"
-										className="h-12 min-w-[11rem] px-5"
-										leadingIcon={<PlusIcon className="h-4 w-4" />}
-										onClick={() => void handleAddPreset()}
-										busy={feedback.isPending}
-									>
-										{UI_LABELS.NOTE_PRESETS.ADD_BUTTON}
-									</ActionButton>
+									<div className="flex items-center gap-2">
+										{isEditing && (
+											<ActionButton
+												tone="secondary"
+												className="h-12 px-4"
+												onClick={handleCancelEdit}
+											>
+												İptal
+											</ActionButton>
+										)}
+										<ActionButton
+											tone="primary"
+											className="h-12 min-w-[11rem] px-5"
+											leadingIcon={<PlusIcon className="h-4 w-4" />}
+											onClick={() => void handleSavePreset()}
+											busy={feedback.isPending}
+										>
+											{isEditing ? "Güncelle" : UI_LABELS.NOTE_PRESETS.ADD_BUTTON}
+										</ActionButton>
+									</div>
 								</div>
 							</div>
 						</div>

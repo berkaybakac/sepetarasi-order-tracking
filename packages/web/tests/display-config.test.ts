@@ -191,8 +191,8 @@ describe("display-config (sad path)", () => {
 			display_page_seconds: "999",
 		});
 
-		expect(config.maxVisiblePerColumn).toBe(999);
-		expect(config.pageSeconds).toBe(999);
+		expect(config.maxVisiblePerColumn).toBe(99);
+		expect(config.pageSeconds).toBe(120);
 	});
 });
 

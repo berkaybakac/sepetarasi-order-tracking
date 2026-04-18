@@ -82,6 +82,8 @@ function resolveStoreTimeZone(): string {
 	}
 }
 
+const STORE_TIMEZONE = resolveStoreTimeZone();
+
 function createHourBucketFormatter(timeZone: string) {
 	const formatter = new Intl.DateTimeFormat("en-CA", {
 		timeZone,
@@ -107,6 +109,8 @@ function createHourBucketFormatter(timeZone: string) {
 	};
 }
 
+const toHourBucket = createHourBucketFormatter(STORE_TIMEZONE);
+
 type DeliveryTimeSeriesRow = {
 	createdAt: string;
 	deliveredAt: string;
@@ -116,19 +120,18 @@ export class StatsService {
 	constructor(private db: AppDatabase) {}
 
 	getToday(businessDate?: string): DayStats {
-		const tz = resolveStoreTimeZone();
-		const date = businessDate ?? new Date().toLocaleDateString("en-CA", { timeZone: tz });
+		const date =
+			businessDate ?? new Date().toLocaleDateString("en-CA", { timeZone: STORE_TIMEZONE });
 		return this.buildDayStats(eq(orders.business_date, date));
 	}
 
 	getByPeriod(period: "daily" | "weekly" | "monthly"): DayStats {
-		const tz = resolveStoreTimeZone();
-		const toDate = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+		const toDate = new Date().toLocaleDateString("en-CA", { timeZone: STORE_TIMEZONE });
 
 		const daysBack = period === "daily" ? 0 : period === "weekly" ? 6 : 29;
 		const fromDateObj = new Date();
 		fromDateObj.setDate(fromDateObj.getDate() - daysBack);
-		const fromDate = fromDateObj.toLocaleDateString("en-CA", { timeZone: tz });
+		const fromDate = fromDateObj.toLocaleDateString("en-CA", { timeZone: STORE_TIMEZONE });
 
 		const dateFilter =
 			and(gte(orders.business_date, fromDate), lte(orders.business_date, toDate)) ?? sql`1 = 1`;
@@ -278,8 +281,6 @@ export class StatsService {
 			}));
 		}
 
-		const timeZone = resolveStoreTimeZone();
-		const toHourBucket = createHourBucketFormatter(timeZone);
 		const rows = this.db
 			.select({
 				createdAt: orders.created_at,
@@ -425,6 +426,8 @@ export class StatsService {
 		return { onTargetCount: onTarget, onTargetRate: rate, totalDelivered: total };
 	}
 
+	private static readonly MAX_RANGE_DAYS = 366;
+
 	getDeliveryAnalytics(from: string, to: string): DeliveryAnalyticsResult {
 		assertIsoCalendarDate(from, "from");
 		assertIsoCalendarDate(to, "to");
@@ -434,6 +437,11 @@ export class StatsService {
 
 		const targetMinutes = this.getDeliveryTargetMinutes();
 		const rangeDays = daysBetweenInclusive(from, to);
+		if (rangeDays > StatsService.MAX_RANGE_DAYS) {
+			throw new InvalidDeliveryAnalyticsRangeError(
+				`date range must not exceed ${StatsService.MAX_RANGE_DAYS} days`,
+			);
+		}
 		const granularity: DeliveryAnalyticsGranularity = rangeDays <= 2 ? "hour" : "day";
 
 		const previousTo = shiftIsoDate(from, -1);

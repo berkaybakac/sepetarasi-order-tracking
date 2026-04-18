@@ -1,7 +1,9 @@
 import { OrderStatus } from "@sepetarasi/shared";
 import { AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { OrdersIcon } from "../../../components/icons";
 import { UI_LABELS } from "../../../constants/labels";
+import { useInterval } from "../../../hooks/useInterval";
 import { useOrdersByStatus } from "../../../stores/orderStore";
 import { EmptyState } from "../ui/primitives";
 import { OrderCard } from "./OrderCard";
@@ -40,6 +42,9 @@ type ColumnProps = (typeof COLUMN_CONFIG)[number];
  */
 export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps) {
 	const orders = useOrdersByStatus(status);
+	const isLiveColumn = status === OrderStatus.PREPARING || status === OrderStatus.READY;
+	const [tick, setTick] = useState(0);
+	useInterval(() => setTick((t) => t + 1), isLiveColumn ? 30_000 : null);
 	const isDeliveredOverflowList =
 		status === OrderStatus.DELIVERED && orders.length >= DELIVERED_SCROLL_TRIGGER_COUNT;
 	const orderListClassName = isDeliveredOverflowList
@@ -73,7 +78,7 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 			>
 				<AnimatePresence initial={false}>
 					{orders.map((order) => (
-						<OrderCard key={order.id} order={order} status={status} />
+						<OrderCard key={order.id} order={order} status={status} tick={tick} />
 					))}
 				</AnimatePresence>
 				{orders.length === 0 && (

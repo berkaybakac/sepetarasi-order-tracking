@@ -1,6 +1,7 @@
-import { type OrderStatus, applyAnnouncementWsEvent, applyOrderWsEvent } from "@sepetarasi/shared";
+import { OrderStatus, applyAnnouncementWsEvent, applyOrderWsEvent } from "@sepetarasi/shared";
 import type { AnnouncementPayload, DayStats, Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { api } from "../lib/api";
 import { logger } from "../lib/logger";
 
@@ -222,8 +223,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 }));
 
 export function useOrdersByStatus(status: OrderStatus) {
-	const orders = useOrderStore((s) => s.orders);
-	return Array.from(orders.values())
-		.filter((o) => o.status === status)
-		.sort((a, b) => a.display_no - b.display_no);
+	return useOrderStore(
+		useShallow((s) => {
+			const filtered = Array.from(s.orders.values()).filter((o) => o.status === status);
+			// DELIVERED: en yeni önce; diğerleri: en eski önce (önce gelen önce teslim edilmeli)
+			return status === OrderStatus.DELIVERED
+				? filtered.sort((a, b) => b.display_no - a.display_no)
+				: filtered.sort((a, b) => a.display_no - b.display_no);
+		}),
+	);
 }

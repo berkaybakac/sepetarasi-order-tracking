@@ -108,3 +108,18 @@ textarea {
 	appearance: textfield;
 	-moz-appearance: textfield;
 }
+
+@keyframes eq-bar {
+	0%,
+	100% {
+		transform: scaleY(0.35);
+	}
+	50% {
+		transform: scaleY(1);
+	}
+}
+
+.sound-bar {
+	transform-origin: bottom;
+	animation: eq-bar var(--eq-dur, 0.8s) ease-in-out infinite;
+}

@@ -4,6 +4,7 @@ import { UI_LABELS } from "../../../constants/labels";
 import { ApiError, api } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { useMusicStore } from "../../../stores/musicStore";
+import { useOrderStore } from "../../../stores/orderStore";
 import { ActionButton, InlineAlert } from "../ui/primitives";
 
 interface UploadItem {
@@ -79,19 +80,32 @@ export function MusicLibraryCard() {
 
 	const status = useMusicStore((s) => s.status);
 	const setMusicStatus = useMusicStore((s) => s.setStatus);
+	const lastReconnectedAt = useOrderStore((s) => s.lastReconnectedAt);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const mountedRef = useRef(true);
+
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	const refreshDisk = useCallback(() => {
 		api
 			.getMusicDisk()
-			.then(setDiskInfo)
+			.then((d) => {
+				if (mountedRef.current) setDiskInfo(d);
+			})
 			.catch(() => undefined);
 	}, []);
 
 	const refreshMusicStatus = useCallback(() => {
 		api
 			.getMusicStatus()
-			.then(setMusicStatus)
+			.then((s) => {
+				if (mountedRef.current) setMusicStatus(s);
+			})
 			.catch(() => undefined);
 	}, [setMusicStatus]);
 
@@ -101,26 +115,29 @@ export function MusicLibraryCard() {
 
 		try {
 			const nextTracks = await api.getMusicTracks();
+			if (!mountedRef.current) return;
 			setTracks(nextTracks);
 		} catch (error) {
+			if (!mountedRef.current) return;
 			logger.error("MusicLibraryCard", "Failed to load music tracks.", error);
 			setLoadError(getMusicLibraryLoadErrorMessage(error));
 		} finally {
-			setLoading(false);
+			if (mountedRef.current) setLoading(false);
 		}
 	}, []);
 
 	useEffect(() => {
 		void loadTracks();
 		refreshDisk();
-	}, [loadTracks, refreshDisk]);
+		refreshMusicStatus();
+	}, [loadTracks, refreshDisk, refreshMusicStatus]);
 
 	useEffect(() => {
-		api
-			.getMusicStatus()
-			.then(setMusicStatus)
-			.catch(() => undefined);
-	}, [setMusicStatus]);
+		if (lastReconnectedAt > 0 && loadError !== null) {
+			void loadTracks();
+			refreshDisk();
+		}
+	}, [lastReconnectedAt, loadError, loadTracks, refreshDisk]);
 
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = Array.from(e.target.files ?? []);
@@ -136,6 +153,7 @@ export function MusicLibraryCard() {
 		setUploads(items);
 
 		// Upload sequentially to avoid overwhelming Pi4.
+		let anySucceeded = false;
 		for (let i = 0; i < files.length; i++) {
 			try {
 				const newTrack = await api.uploadMusicTrack(files[i], (pct) =>
@@ -145,14 +163,17 @@ export function MusicLibraryCard() {
 				setUploads((prev) =>
 					prev.map((u, idx) => (idx === i ? { ...u, done: true, progress: 100 } : u)),
 				);
+				anySucceeded = true;
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : UI_LABELS.MUSIC_LIBRARY.UPLOAD_ERROR;
 				setUploads((prev) => prev.map((u, idx) => (idx === i ? { ...u, error: msg } : u)));
 			}
 		}
 
-		refreshMusicStatus();
-		refreshDisk();
+		if (anySucceeded) {
+			refreshMusicStatus();
+			refreshDisk();
+		}
 	};
 
 	const handleDelete = (track: MusicTrack) => {
@@ -442,10 +463,10 @@ export function MusicLibraryCard() {
 							return (
 								<div
 									key={track.id}
-									className={`flex items-center gap-3 p-3 rounded-2xl border transition-colors group/item ${
+									className={`flex items-center gap-3 p-3 rounded-2xl transition-colors group/item ${
 										isActive
-											? "border-l-2 border-emerald-400/60 bg-emerald-500/5 border-r border-t border-b border-white/5"
-											: "bg-white/3 hover:bg-white/5 border-white/5"
+											? "border border-l-2 border-l-emerald-400/60 border-r-white/5 border-t-white/5 border-b-white/5 bg-emerald-500/5"
+											: "border border-white/5 bg-white/3 hover:bg-white/5"
 									} ${selectMode ? "cursor-pointer" : ""}`}
 									onClick={selectMode ? () => handleToggleSelect(track.id) : undefined}
 									onKeyDown={

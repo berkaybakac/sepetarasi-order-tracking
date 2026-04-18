@@ -81,6 +81,23 @@ describe("display-settings (sad path)", () => {
 		expect(config.readyDisplayMinutes).toBe(60);
 	});
 
+	it("clamps max_visible and page_seconds to their upper bounds", () => {
+		const config = parseDisplaySettings({
+			[SETTING_KEYS.DISPLAY_MAX_VISIBLE]: "999",
+			[SETTING_KEYS.DISPLAY_PAGE_SECONDS]: "999",
+		});
+
+		expect(config.maxVisiblePerColumn).toBe(99);
+		expect(config.pageSeconds).toBe(120);
+	});
+
+	it("returns validation errors for values exceeding upper bounds", () => {
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_MAX_VISIBLE, "100")).not.toBeNull();
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_PAGE_SECONDS, "121")).not.toBeNull();
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_MAX_VISIBLE, "99")).toBeNull();
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_PAGE_SECONDS, "120")).toBeNull();
+	});
+
 	it("returns validation errors for invalid per-key values", () => {
 		const invalidValues: Record<DisplaySettingKey, string> = {
 			[SETTING_KEYS.RESTAURANT_NAME]: "x".repeat(61),

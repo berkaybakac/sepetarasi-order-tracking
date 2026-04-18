@@ -441,11 +441,25 @@ export const api = {
 	setMusicMode: (mode: { loop?: boolean; shuffle?: boolean }) =>
 		request<null>("PATCH", API_ROUTES.V1.MUSIC.MODE, { body: mode }),
 
-	uploadMusicTrack: (file: File, onProgress?: (pct: number) => void): Promise<MusicTrack> =>
+	uploadMusicTrack: (
+		file: File,
+		onProgress?: (pct: number) => void,
+		signal?: AbortSignal,
+	): Promise<MusicTrack> =>
 		new Promise((resolve, reject) => {
+			if (signal?.aborted) {
+				reject(createAbortError(signal));
+				return;
+			}
+
 			const xhr = new XMLHttpRequest();
 			const form = new FormData();
 			form.append("file", file);
+
+			const abort = () => xhr.abort();
+			signal?.addEventListener("abort", abort);
+
+			const cleanup = () => signal?.removeEventListener("abort", abort);
 
 			xhr.upload.onprogress = (e) => {
 				if (e.lengthComputable && onProgress) {
@@ -454,6 +468,7 @@ export const api = {
 			};
 
 			xhr.onload = () => {
+				cleanup();
 				if (xhr.status === 429) {
 					reject(
 						buildRateLimitErrorFromParts(xhr.getResponseHeader("retry-after"), xhr.responseText),
@@ -485,7 +500,16 @@ export const api = {
 				}
 			};
 
-			xhr.onerror = () => reject(new Error("Ağ hatası. Bağlantıyı kontrol edin."));
+			xhr.onerror = () => {
+				cleanup();
+				reject(new ApiError("Ağ hatası. Bağlantıyı kontrol edin.", { code: "NETWORK_ERROR" }));
+			};
+
+			xhr.onabort = () => {
+				cleanup();
+				reject(createAbortError(signal));
+			};
+
 			xhr.open("POST", API_ROUTES.V1.MUSIC.TRACKS);
 			xhr.withCredentials = true;
 			xhr.send(form);

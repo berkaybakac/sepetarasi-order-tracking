@@ -38,6 +38,7 @@ interface VolumeControlCardProps {
 	onMount: () => Promise<{ volume: number; enabled?: boolean }>;
 	onSave: (volume: number) => Promise<unknown>;
 	enabledToggle?: EnabledToggleConfig;
+	reconnectToken?: number;
 }
 
 function getVolumeLoadErrorMessage(error: unknown) {
@@ -63,6 +64,7 @@ export function VolumeControlCard({
 	onMount,
 	onSave,
 	enabledToggle,
+	reconnectToken,
 }: VolumeControlCardProps) {
 	const [volume, setVolume] = useState(defaultVolume);
 	const [savedVolume, setSavedVolume] = useState(defaultVolume);
@@ -74,8 +76,16 @@ export function VolumeControlCard({
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const onMountRef = useRef(onMount);
+	const mountedRef = useRef(true);
 	const colors = COLORS[colorScheme];
 	onMountRef.current = onMount;
+
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	const loadSettings = useCallback(async () => {
 		setLoading(true);
@@ -83,20 +93,28 @@ export function VolumeControlCard({
 
 		try {
 			const { volume: v, enabled: en } = await onMountRef.current();
+			if (!mountedRef.current) return;
 			setVolume(v);
 			setSavedVolume(v);
 			if (en !== undefined) setEnabled(en);
 		} catch (error) {
+			if (!mountedRef.current) return;
 			logger.error("VolumeControlCard", "Failed to load volume settings.", error);
 			setLoadError(getVolumeLoadErrorMessage(error));
 		} finally {
-			setLoading(false);
+			if (mountedRef.current) setLoading(false);
 		}
 	}, []);
 
 	useEffect(() => {
 		void loadSettings();
 	}, [loadSettings]);
+
+	useEffect(() => {
+		if (reconnectToken && reconnectToken > 0 && loadError !== null) {
+			void loadSettings();
+		}
+	}, [reconnectToken, loadError, loadSettings]);
 
 	const handleSave = () => {
 		setSaving(true);

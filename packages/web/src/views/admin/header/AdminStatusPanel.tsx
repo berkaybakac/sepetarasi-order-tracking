@@ -19,13 +19,22 @@ export function AdminStatusPanel({
 	const [isCondensed, setIsCondensed] = useState(false);
 
 	useEffect(() => {
+		let rafId: number | null = null;
+
 		const handleScroll = () => {
-			setIsCondensed(window.scrollY > 56);
+			if (rafId !== null) return;
+			rafId = requestAnimationFrame(() => {
+				rafId = null;
+				setIsCondensed(window.scrollY > 56);
+			});
 		};
 
 		handleScroll();
 		window.addEventListener("scroll", handleScroll, { passive: true });
-		return () => window.removeEventListener("scroll", handleScroll);
+		return () => {
+			window.removeEventListener("scroll", handleScroll);
+			if (rafId !== null) cancelAnimationFrame(rafId);
+		};
 	}, []);
 
 	return (

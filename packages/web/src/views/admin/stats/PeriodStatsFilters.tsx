@@ -263,17 +263,45 @@ export function PeriodStatsFilters({ preset, range, onPresetChange, onCustomChan
 												type="button"
 												aria-label="Önceki ay"
 												onClick={() => setViewMonth((current) => shiftMonth(current, -1))}
-												className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-border-subtle bg-surface-1 text-lg text-text-muted transition hover:border-white/18 hover:text-text-strong"
+												className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-border-subtle bg-surface-1 text-text-muted transition hover:border-white/18 hover:text-text-strong"
 											>
-												{"<"}
+												<svg
+													width="16"
+													height="16"
+													viewBox="0 0 16 16"
+													fill="none"
+													aria-hidden="true"
+												>
+													<path
+														d="M10 12L6 8l4-4"
+														stroke="currentColor"
+														strokeWidth="1.75"
+														strokeLinecap="round"
+														strokeLinejoin="round"
+													/>
+												</svg>
 											</button>
 											<button
 												type="button"
 												aria-label="Sonraki ay"
 												onClick={() => setViewMonth((current) => shiftMonth(current, 1))}
-												className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-border-subtle bg-surface-1 text-lg text-text-muted transition hover:border-white/18 hover:text-text-strong"
+												className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] border border-border-subtle bg-surface-1 text-text-muted transition hover:border-white/18 hover:text-text-strong"
 											>
-												{">"}
+												<svg
+													width="16"
+													height="16"
+													viewBox="0 0 16 16"
+													fill="none"
+													aria-hidden="true"
+												>
+													<path
+														d="M6 4l4 4-4 4"
+														stroke="currentColor"
+														strokeWidth="1.75"
+														strokeLinecap="round"
+														strokeLinejoin="round"
+													/>
+												</svg>
 											</button>
 										</div>
 									</div>
