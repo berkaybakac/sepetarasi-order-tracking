@@ -1,4 +1,5 @@
 import type { Order } from "@sepetarasi/shared";
+import type { CashierTokensByServerUrl } from "./connection-config";
 import { type StructuredLogLevel, sanitizeLogValue, serializeLogError } from "./logging";
 
 export interface KasaConfig {
@@ -10,6 +11,7 @@ export interface KasaConfig {
 	printerCodePage: number;
 	printerEncoding: string;
 	cashierToken: string;
+	cashierTokensByServerUrl: CashierTokensByServerUrl;
 }
 
 export interface PrintReceiptResult {

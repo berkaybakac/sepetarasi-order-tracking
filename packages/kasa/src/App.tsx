@@ -336,6 +336,7 @@ export default function App() {
 				printerCodePage: 61,
 				printerEncoding: "cp857",
 				cashierToken: "",
+				cashierTokensByServerUrl: {},
 			};
 
 			if (window.electronAPI) {

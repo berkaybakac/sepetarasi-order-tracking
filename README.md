@@ -22,6 +22,9 @@ npm run dev:web
 cd packages/kasa && npm run dev
 ```
 
+http://localhost:3000
+http://sepetarasi.local:3000
+
 **Mod 2 — Pi4 verisiyle geliştirme (gerçek sipariş akışı, entegrasyon):**
 Pi4 çalışıyor olmalı. Hot reload Mac'te, data Pi4'ten gelir. Lokal server açma.
 
@@ -33,7 +36,7 @@ npm run dev:web:pi4
 cd packages/kasa && npm run dev
 ```
 
-> Kasa ilk açılışta config ekranında server URL'yi `http://sepetarasi.local:3000` yap ve kaydet — bir daha sormaz.
+> Kasa ilk açılışta config ekranında server URL'yi bağlanacağın ortama göre ayarla ve kaydet. `http://localhost:3000` seçilirse kasiyer token'ı otomatik kullanılır; `http://sepetarasi.local:3000` seçilirse prod token akışı `Gelişmiş > Token Değiştir` üzerinden ilerler.
 > **İstisna:** `packages/server` kodunu değiştirdiysen hot reload olmaz — değişiklik Pi4'e ancak `bash scripts/deploy.sh` ile gider. O durumda Mod 1'e geç.
 
 Pi4 verisiyle geliştirme modunda web adresleri local ile aynıdır; fark, `npm run dev:web:pi4` ile web'in API isteklerini Pi4'e yönlendirmesidir.
@@ -61,7 +64,7 @@ cd packages/kasa && npm run build
 open "$PWD/release/mac-arm64/SEPET ARASI KASA.app"
 ```
 
-Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla.
+Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla. Prod bağlantısında kasiyer token'ı normal ayarlarda görünmez; `Gelişmiş > Token Değiştir` ile açılır.
 
 ### Lokal Production Simülasyonu
 
@@ -81,7 +84,10 @@ Bu akış özellikle `/display`, `/ping` ve static shell davranışını dev ser
 | Mac (lokal dev) | `http://localhost:3000` | `local-dev-cashier-token` |
 | Pi4 (production) | `http://sepetarasi.local:3000` | `grep CASHIER_TOKEN /opt/sepetarasi/.env` |
 
-Kasa Electron uygulaması bu bilgileri `config.json`'a kaydeder — deploy sonrası tekrar girilmesine gerek yok.
+Kasa Electron uygulaması URL ve doğrulanmış kasiyer token'ını `config.json`'a kaydeder.
+
+- Mac lokal dev: `http://localhost:3000` için `local-dev-cashier-token` otomatik kullanılır ve UI'da token alanı gizlenir.
+- Pi4 production: token normal ayarlarda görünmez; `Gelişmiş > Token Değiştir` ile açılır. Kasa her sunucu adresi için token'ı ayrı hatırlar. Alan boş bırakılırsa o adres için kayıtlı doğrulanmış token korunur, yeni token girilirse kaydetmeden önce doğrulanır.
 
 > Yazıcı fişinde Türkçe karakterler bozuk görünürse kasa config ekranındaki `Code Page` ve `Encoding` alanlarını kontrol et. Varsayılan `cp857` + `61`; sorun devam ederse `cp1254` + `24` deneyin.
 
@@ -293,6 +299,7 @@ cp packages/kasa/.env.example packages/kasa/.env
 | PATCH | `/api/v1/settings/:key` | Ayar güncelle |
 | POST | `/api/v1/auth/logout` | Çıkış |
 | GET | `/api/v1/auth/me` | Oturum bilgisi |
+| GET | `/api/v1/auth/verify-cashier-token` | Kasiyer token doğrulama |
 | GET | `/health` | Sunucu sağlık kontrolü |
 | WS | `/ws?channel=orders` | Canlı sipariş güncellemeleri |
 | WS | `/ws?channel=display` | Anons olayları |
@@ -352,10 +359,11 @@ ssh admin@sepetarasi.local "grep CASHIER_TOKEN /opt/sepetarasi/.env"
 http://sepetarasi.local:3000
 ```
 
-3. Kasa config ekranına yeni `cashierToken` değerini gir ve kaydet.
-4. Yazıcı kullanılacaksa `printerIp` girildiğini doğrula. Boş bırakılırsa fiş yazdırma devre dışı kalır.
-5. Yeni veya temiz DB ile kurulum yapıldıysa admin şifresini kontrol et. İlk varsayılan şifre `admin123` olur; müşteriye teslim etmeden değiştirmen önerilir.
-6. Son doğrulama olarak Pi4 smoke test çalıştır:
+3. Kasa config ekranında `Gelişmiş > Token Değiştir` bölümünü aç.
+4. Gerekliyse yeni `cashierToken` değerini gir ve kaydet. Alan boş bırakılırsa mevcut doğrulanmış token korunur. Yeni token girilirse uygulama kaydetmeden önce doğrular; doğrulama başarısızsa ayar kaydolmaz.
+5. Yazıcı kullanılacaksa `printerIp` girildiğini doğrula. Boş bırakılırsa fiş yazdırma devre dışı kalır.
+6. Yeni veya temiz DB ile kurulum yapıldıysa admin şifresini kontrol et. İlk varsayılan şifre `admin123` olur; müşteriye teslim etmeden değiştirmen önerilir.
+7. Son doğrulama olarak Pi4 smoke test çalıştır:
 
 ```bash
 bash scripts/pi4-smoke-test.sh
@@ -363,5 +371,5 @@ bash scripts/pi4-smoke-test.sh
 
 Kısa özet:
 
-- Aynı kasa cihazı ve aynı URL kullanılıyorsa çoğu durumda sadece yeni token girmek yeterlidir.
-- Müşteriye teslim standardı: `cashierToken` kontrolü, admin şifre kontrolü, gerekiyorsa `printerIp`, ardından smoke test.
+- Aynı kasa cihazı ve aynı URL kullanılıyorsa çoğu durumda o adres için kayıtlı token korunur; yalnızca gerektiğinde `Gelişmiş > Token Değiştir` üzerinden yenisini girmek yeterlidir.
+- Müşteriye teslim standardı: `cashierToken` doğrulaması, admin şifre kontrolü, gerekiyorsa `printerIp`, ardından smoke test.

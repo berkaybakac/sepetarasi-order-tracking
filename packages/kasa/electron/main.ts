@@ -2,6 +2,15 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { dirname, join } from "node:path";
 import { BrowserWindow, app, globalShortcut, ipcMain, nativeImage } from "electron";
 import {
+	type CashierTokensByServerUrl,
+	LOCAL_DEV_CASHIER_TOKEN,
+	LOCAL_DEV_SERVER_URL,
+	getEffectiveCashierToken,
+	getSavedCashierTokenForServerUrl,
+	normalizeCashierTokensByServerUrl,
+	normalizeServerUrl,
+} from "../src/lib/connection-config";
+import {
 	type StructuredLogLevel,
 	sanitizeLogValue,
 	serializeLogError,
@@ -19,6 +28,7 @@ interface KasaConfig {
 	printerCodePage: number;
 	printerEncoding: string;
 	cashierToken: string;
+	cashierTokensByServerUrl: CashierTokensByServerUrl;
 }
 
 interface StoredKasaConfig extends Partial<KasaConfig> {
@@ -34,7 +44,10 @@ const DEFAULT_CONFIG: KasaConfig = {
 	printerIp: "",
 	printerCodePage: 61,
 	printerEncoding: "cp857",
-	cashierToken: "local-dev-cashier-token",
+	cashierToken: LOCAL_DEV_CASHIER_TOKEN,
+	cashierTokensByServerUrl: {
+		[LOCAL_DEV_SERVER_URL]: LOCAL_DEV_CASHIER_TOKEN,
+	},
 };
 
 const KASA_EVENT_LOG_FILENAME = "kasa-events.log";
@@ -140,19 +153,43 @@ function loadConfig(): KasaConfig {
 		if (existsSync(configPath)) {
 			const saved = JSON.parse(readFileSync(configPath, "utf-8")) as StoredKasaConfig;
 			const savedCodePage = saved.printerCodePage ?? saved.printerCodepage;
+			const normalizedServerUrl = normalizeServerUrl(saved.serverUrl ?? DEFAULT_CONFIG.serverUrl);
+			const normalizedCashierTokensByServerUrl = normalizeCashierTokensByServerUrl(
+				saved.cashierTokensByServerUrl,
+			);
+			const fallbackCashierToken =
+				typeof saved.cashierToken === "string" ? saved.cashierToken : DEFAULT_CONFIG.cashierToken;
+			const resolvedCashierToken = getEffectiveCashierToken(
+				normalizedServerUrl,
+				getSavedCashierTokenForServerUrl(
+					normalizedServerUrl,
+					normalizedCashierTokensByServerUrl,
+					fallbackCashierToken,
+				),
+			);
 			const config: KasaConfig = {
 				...DEFAULT_CONFIG,
 				...saved,
+				serverUrl: normalizedServerUrl,
 				printerIp: saved.printerIp ?? saved.printerName ?? DEFAULT_CONFIG.printerIp,
 				printerCodePage: normalizePrinterCodePage(savedCodePage),
 				printerEncoding: normalizePrinterEncoding(saved.printerEncoding),
+				cashierToken: resolvedCashierToken,
+				cashierTokensByServerUrl: {
+					...normalizedCashierTokensByServerUrl,
+					[normalizedServerUrl]: resolvedCashierToken,
+				},
 			};
 			// One-time migration: printerName → printerIp. Persist so the old field is gone.
 			if (
 				(saved.printerName && !saved.printerIp) ||
 				saved.printerCodepage !== undefined ||
 				saved.printerCodePage !== config.printerCodePage ||
-				saved.printerEncoding !== config.printerEncoding
+				saved.printerEncoding !== config.printerEncoding ||
+				saved.serverUrl !== config.serverUrl ||
+				saved.cashierToken !== config.cashierToken ||
+				JSON.stringify(saved.cashierTokensByServerUrl ?? {}) !==
+					JSON.stringify(config.cashierTokensByServerUrl)
 			) {
 				saveConfig(config);
 			}
@@ -168,7 +205,34 @@ function loadConfig(): KasaConfig {
 }
 
 function saveConfig(config: KasaConfig) {
-	writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
+	const normalizedServerUrl = normalizeServerUrl(config.serverUrl);
+	const normalizedCashierTokensByServerUrl = normalizeCashierTokensByServerUrl(
+		config.cashierTokensByServerUrl,
+	);
+	const normalizedConfig: KasaConfig = {
+		...config,
+		serverUrl: normalizedServerUrl,
+		cashierToken: getEffectiveCashierToken(
+			normalizedServerUrl,
+			getSavedCashierTokenForServerUrl(
+				normalizedServerUrl,
+				normalizedCashierTokensByServerUrl,
+				config.cashierToken,
+			),
+		),
+		cashierTokensByServerUrl: {
+			...normalizedCashierTokensByServerUrl,
+			[normalizedServerUrl]: getEffectiveCashierToken(
+				normalizedServerUrl,
+				getSavedCashierTokenForServerUrl(
+					normalizedServerUrl,
+					normalizedCashierTokensByServerUrl,
+					config.cashierToken,
+				),
+			),
+		},
+	};
+	writeFileSync(getConfigPath(), JSON.stringify(normalizedConfig, null, 2));
 }
 
 function logPrintError(orderId: string, printerIp: string, message: string) {

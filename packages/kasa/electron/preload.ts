@@ -9,6 +9,7 @@ interface KasaConfig {
 	printerCodePage: number;
 	printerEncoding: string;
 	cashierToken: string;
+	cashierTokensByServerUrl: Record<string, string>;
 }
 
 interface PrintReceiptResult {

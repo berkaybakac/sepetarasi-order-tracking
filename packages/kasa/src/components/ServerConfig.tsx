@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ApiError,
 	getBaseUrl,
@@ -8,10 +8,12 @@ import {
 	verifyCashierToken,
 } from "../lib/api";
 import {
-	LOCAL_DEV_CASHIER_TOKEN,
 	getEffectiveCashierToken,
+	getSavedCashierTokenForServerUrl,
 	isLocalDevServerUrl,
+	normalizeCashierTokensByServerUrl,
 	normalizeServerUrl,
+	upsertCashierTokenForServerUrl,
 } from "../lib/connection-config";
 import { type KasaConfig, getElectronAPI, reportRendererError } from "../lib/electron";
 import { getUserErrorMessage } from "../lib/user-error";
@@ -36,7 +38,10 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [printerIp, setPrinterIp] = useState("");
 	const [printerCodePage, setPrinterCodePage] = useState("61");
 	const [printerEncoding, setPrinterEncoding] = useState("cp857");
-	const [cashierToken, setCashierToken] = useState("");
+	const [cashierTokensByServerUrl, setCashierTokensByServerUrl] = useState<Record<string, string>>(
+		{},
+	);
+	const [cashierTokenDraft, setCashierTokenDraft] = useState("");
 	const [tokenEditorOpen, setTokenEditorOpen] = useState(false);
 	const [testing, setTesting] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
@@ -45,7 +50,12 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 
 	const normalizedUrl = normalizeServerUrl(url);
 	const isLocalDev = isLocalDevServerUrl(normalizedUrl);
-	const previousIsLocalDevRef = useRef(isLocalDev);
+	const savedCashierToken = getSavedCashierTokenForServerUrl(
+		normalizedUrl,
+		cashierTokensByServerUrl,
+	);
+	const hasSavedCashierToken = savedCashierToken.trim().length > 0;
+	const hasCashierTokenDraft = cashierTokenDraft.trim().length > 0;
 
 	useEffect(() => {
 		async function load() {
@@ -59,24 +69,30 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 			setPrinterIp(config.printerIp);
 			setPrinterCodePage(String(config.printerCodePage));
 			setPrinterEncoding(config.printerEncoding);
-			setCashierToken(config.cashierToken);
+			setCashierTokensByServerUrl(
+				upsertCashierTokenForServerUrl(
+					normalizeCashierTokensByServerUrl(config.cashierTokensByServerUrl),
+					config.serverUrl,
+					config.cashierToken,
+				),
+			);
+			setCashierTokenDraft("");
 		}
 
 		void load();
 	}, []);
 
 	useEffect(() => {
-		const wasLocalDev = previousIsLocalDevRef.current;
-
-		if (wasLocalDev && !isLocalDev && cashierToken === LOCAL_DEV_CASHIER_TOKEN) {
-			setCashierToken("");
-		}
 		if (isLocalDev && tokenEditorOpen) {
 			setTokenEditorOpen(false);
+			setCashierTokenDraft("");
 		}
+	}, [isLocalDev, tokenEditorOpen]);
 
-		previousIsLocalDevRef.current = isLocalDev;
-	}, [cashierToken, isLocalDev, tokenEditorOpen]);
+	const effectiveCashierToken = getEffectiveCashierToken(
+		normalizedUrl,
+		hasCashierTokenDraft ? cashierTokenDraft : savedCashierToken,
+	);
 
 	const handleDiscover = async () => {
 		const electronAPI = getElectronAPI();
@@ -121,7 +137,6 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 			return;
 		}
 
-		const effectiveCashierToken = getEffectiveCashierToken(normalizedUrl, cashierToken);
 		if (!effectiveCashierToken) {
 			setError("Kasiyer token gereklidir.");
 			setTesting(false);
@@ -144,6 +159,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 			setBaseUrl(normalizedUrl);
 			setApiTerminalId(terminalId);
 			setApiCashierToken(effectiveCashierToken);
+			const updatedCashierTokensByServerUrl = upsertCashierTokenForServerUrl(
+				cashierTokensByServerUrl,
+				normalizedUrl,
+				effectiveCashierToken,
+			);
 
 			const config: KasaConfig = {
 				serverUrl: normalizedUrl,
@@ -154,8 +174,10 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				printerCodePage: parsedCodePage,
 				printerEncoding: printerEncoding.trim().toLowerCase() || "cp857",
 				cashierToken: effectiveCashierToken,
+				cashierTokensByServerUrl: updatedCashierTokensByServerUrl,
 			};
 			await getElectronAPI()?.saveConfig(config);
+			setCashierTokensByServerUrl(updatedCashierTokensByServerUrl);
 			onConnected();
 		} catch (error) {
 			reportRendererError({
@@ -177,6 +199,16 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 		} finally {
 			setTesting(false);
 		}
+	};
+
+	const handleTokenEditorToggle = () => {
+		setError(null);
+		if (tokenEditorOpen) {
+			setTokenEditorOpen(false);
+			setCashierTokenDraft("");
+			return;
+		}
+		setTokenEditorOpen(true);
 	};
 
 	return (
@@ -287,12 +319,12 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 									Gelişmiş
 								</p>
 								<p className="mt-1 text-sm text-slate-200">
-									Kasiyer token: {cashierToken.trim() ? "kayıtlı" : "gerekli"}
+									Kasiyer token: {hasSavedCashierToken ? "kayıtlı" : "gerekli"}
 								</p>
 							</div>
 							<button
 								type="button"
-								onClick={() => setTokenEditorOpen((current) => !current)}
+								onClick={handleTokenEditorToggle}
 								className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
 							>
 								{tokenEditorOpen ? "Token Alanını Kapat" : "Token Değiştir"}
@@ -307,13 +339,22 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 								<input
 									id="cashier-token"
 									type="password"
-									value={cashierToken}
-									onChange={(e) => setCashierToken(e.target.value)}
-									placeholder="Yeni kasiyer token'ı"
+									value={cashierTokenDraft}
+									onChange={(e) => setCashierTokenDraft(e.target.value)}
+									placeholder={
+										hasSavedCashierToken
+											? "Boş bırakırsan mevcut token korunur"
+											: "Yeni kasiyer token'ı"
+									}
 									className={`${inputClass} font-mono text-sm`}
 									autoComplete="off"
 									spellCheck={false}
 								/>
+								<p className="mt-2 text-xs text-slate-500">
+									{hasSavedCashierToken
+										? "Alanı boş bırakırsan mevcut doğrulanmış token korunur."
+										: "Bağlanmadan önce yeni kasiyer token'ını gir."}
+								</p>
 							</div>
 						) : null}
 					</div>

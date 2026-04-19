@@ -45,6 +45,10 @@ const baseConfig = {
 	printerCodePage: 61,
 	printerEncoding: "cp857",
 	cashierToken: "cashier-secret",
+	cashierTokensByServerUrl: {
+		"http://localhost:3000": "local-dev-cashier-token",
+		"http://sepetarasi.local:3000": "cashier-secret",
+	},
 };
 
 function normalizeText(value: string | null | undefined) {
@@ -162,7 +166,7 @@ describe("ServerConfig", () => {
 		await render({
 			...baseConfig,
 			serverUrl: "http://localhost:3000",
-			cashierToken: "",
+			cashierToken: "local-dev-cashier-token",
 		});
 
 		expect(container.querySelector("#cashier-token")).toBeNull();
@@ -206,29 +210,40 @@ describe("ServerConfig", () => {
 		}
 
 		expect(tokenInput.type).toBe("password");
-		expect(tokenInput.value).toBe("cashier-secret");
+		expect(tokenInput.value).toBe("");
+		expect(tokenInput.placeholder).toBe("Boş bırakırsan mevcut token korunur");
+		expect(container.textContent).toContain(
+			"Alanı boş bırakırsan mevcut doğrulanmış token korunur.",
+		);
 	});
 
-	it("does not save or connect when prod token verification fails", async () => {
+	it("does not save or connect when a new prod token verification fails", async () => {
 		vi.mocked(verifyCashierToken).mockRejectedValue(
 			new ApiError("UNAUTHORIZED", "Kasiyer token doğrulanamadı.", 401),
 		);
 		await render();
 
+		await click(getButton(container, "Token Değiştir"));
+
+		const tokenInput = container.querySelector("#cashier-token");
+		if (!(tokenInput instanceof HTMLInputElement)) {
+			throw new Error("Cashier token input not found");
+		}
+
+		await changeInputValue(tokenInput, "wrong-token");
 		await click(getButton(container, "Bağlan"));
 
-		expect(verifyCashierToken).toHaveBeenCalledWith(
-			"http://sepetarasi.local:3000",
-			"cashier-secret",
-		);
+		expect(verifyCashierToken).toHaveBeenCalledWith("http://sepetarasi.local:3000", "wrong-token");
 		expect(saveConfig).not.toHaveBeenCalled();
 		expect(onConnected).not.toHaveBeenCalled();
 		expect(container.textContent).toContain("Kasiyer token doğrulanamadı. Token'ı kontrol edin.");
+		expect(container.textContent).toContain("Kasiyer token: kayıtlı");
 	});
 
-	it("keeps the connect flow intact after successful prod token verification", async () => {
+	it("keeps the stored prod token when the token editor stays blank", async () => {
 		await render();
 
+		await click(getButton(container, "Token Değiştir"));
 		await click(getButton(container, "Bağlan"));
 
 		expect(globalThis.fetch).toHaveBeenCalledWith("http://sepetarasi.local:3000/health");
@@ -243,7 +258,7 @@ describe("ServerConfig", () => {
 		expect(onConnected).toHaveBeenCalledTimes(1);
 	});
 
-	it("clears the auto dev token when the URL changes from localhost to prod", async () => {
+	it("restores the saved prod token when the URL changes from localhost to prod", async () => {
 		await render({
 			...baseConfig,
 			serverUrl: "http://localhost:3000",
@@ -257,7 +272,7 @@ describe("ServerConfig", () => {
 
 		await changeInputValue(serverUrlInput, "http://sepetarasi.local:3000");
 
-		expect(container.textContent).toContain("Kasiyer token: gerekli");
+		expect(container.textContent).toContain("Kasiyer token: kayıtlı");
 
 		await click(getButton(container, "Token Değiştir"));
 
@@ -267,5 +282,33 @@ describe("ServerConfig", () => {
 		}
 
 		expect(tokenInput.value).toBe("");
+		expect(tokenInput.placeholder).toBe("Boş bırakırsan mevcut token korunur");
+	});
+
+	it("uses the remembered prod token after switching back from localhost", async () => {
+		await render({
+			...baseConfig,
+			serverUrl: "http://localhost:3000",
+			cashierToken: "local-dev-cashier-token",
+		});
+
+		const serverUrlInput = container.querySelector("#server-url");
+		if (!(serverUrlInput instanceof HTMLInputElement)) {
+			throw new Error("Server URL input not found");
+		}
+
+		await changeInputValue(serverUrlInput, "http://sepetarasi.local:3000");
+		await click(getButton(container, "Bağlan"));
+
+		expect(verifyCashierToken).toHaveBeenCalledWith(
+			"http://sepetarasi.local:3000",
+			"cashier-secret",
+		);
+		expect(saveConfig).toHaveBeenCalledWith({
+			...baseConfig,
+			serverUrl: "http://sepetarasi.local:3000",
+			cashierToken: "cashier-secret",
+		});
+		expect(onConnected).toHaveBeenCalledTimes(1);
 	});
 });
