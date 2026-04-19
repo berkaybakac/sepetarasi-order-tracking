@@ -70,7 +70,7 @@ describe("App auth gate", () => {
 				originalScrollRestorationDescriptor,
 			);
 		} else {
-			delete (window.history as History & { scrollRestoration?: string }).scrollRestoration;
+			Reflect.deleteProperty(window.history, "scrollRestoration");
 		}
 		vi.clearAllMocks();
 		localStorage.clear();

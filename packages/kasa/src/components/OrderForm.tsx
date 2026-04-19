@@ -66,7 +66,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 		updatePresetFade();
 		window.addEventListener("resize", updatePresetFade);
 		return () => window.removeEventListener("resize", updatePresetFade);
-	}, [presets, updatePresetFade]);
+	}, [updatePresetFade]);
 
 	const printOrder = async (order: Order) => {
 		if (!window.electronAPI) {

@@ -229,14 +229,12 @@ function friendlyPrintError(err: unknown): string {
 	const msg = err instanceof Error ? err.message : String(err);
 	if (msg.includes("ECONNREFUSED"))
 		return "Yazıcıya bağlanılamadı. Yazıcının açık olduğunu kontrol edin.";
-	if (msg.includes("timeout") || msg.includes("ETIMEDOUT"))
-		return "Yazıcı yanıt vermedi.";
+	if (msg.includes("timeout") || msg.includes("ETIMEDOUT")) return "Yazıcı yanıt vermedi.";
 	if (msg.includes("ENOTFOUND") || msg.includes("EADDRNOTAVAIL"))
 		return "Yazıcı adresi bulunamadı. Ayarları kontrol edin.";
 	if (msg.includes("ENETUNREACH") || msg.includes("EHOSTUNREACH"))
 		return "Yazıcıya erişilemiyor. Ağ bağlantısını kontrol edin.";
-	if (msg.includes("EPIPE") || msg.includes("ECONNRESET"))
-		return "Yazıcı bağlantısı kesildi.";
+	if (msg.includes("EPIPE") || msg.includes("ECONNRESET")) return "Yazıcı bağlantısı kesildi.";
 	if (msg.includes("Unsupported printer encoding"))
 		return "Yazıcı karakter seti ayarı geçersiz. Ayarlar'dan kontrol edin.";
 	return "Yazıcı hatası oluştu.";
