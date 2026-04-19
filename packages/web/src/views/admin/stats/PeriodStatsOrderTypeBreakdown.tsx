@@ -8,16 +8,18 @@ interface Props {
 
 export function PeriodStatsOrderTypeBreakdown({ byOrderType, empty }: Props) {
 	return (
-		<div className="rounded-[1.45rem] border border-border-subtle bg-surface-1/85 p-4">
-			<h3 className="mb-3 text-sm font-semibold text-text-strong">Sipariş Tipi Kırılımı</h3>
+		<div className="flex h-full flex-col rounded-[1.45rem] border border-border-subtle bg-surface-1/85 p-4">
+			<h3 className="mb-3 text-sm font-semibold text-text-strong">
+				Sipariş Tiplerine Göre Özet
+			</h3>
 			{empty || !byOrderType || byOrderType.length === 0 ? (
 				<StatsEmptyState label="Tip bilgisi olan teslim yok" compact />
 			) : (
-				<div className="space-y-3">
+				<div className="flex flex-1 flex-col justify-center gap-4">
 					{byOrderType.map((t) => (
 						<div
 							key={t.orderType}
-							className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-1 px-3 py-2"
+							className="flex min-h-[3.75rem] items-center justify-between rounded-lg border border-border-subtle bg-surface-1 px-4 py-3"
 						>
 							<span className="text-sm font-medium text-text-strong">{t.orderType}</span>
 							<div className="flex items-center gap-4 text-xs text-text-subtle">

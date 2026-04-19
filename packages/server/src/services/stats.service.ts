@@ -340,23 +340,22 @@ export class StatsService {
 			)
 			.all();
 
-		const buckets: Record<string, number> = {
-			"0-5dk": 0,
-			"5-10dk": 0,
-			"10-15dk": 0,
-			"15+dk": 0,
-		};
+		const buckets: DeliveryAnalyticsDistributionBucket[] = [
+			{ bucket: "0-5dk", count: 0 },
+			{ bucket: "5-10dk", count: 0 },
+			{ bucket: "10-15dk", count: 0 },
+			{ bucket: "15-20dk", count: 0 },
+			{ bucket: "20+dk", count: 0 },
+		];
 		for (const row of rows) {
 			const m = row.minutes ?? 0;
-			if (m < 5) buckets["0-5dk"]++;
-			else if (m < 10) buckets["5-10dk"]++;
-			else if (m < 15) buckets["10-15dk"]++;
-			else buckets["15+dk"]++;
+			if (m < 5) buckets[0].count++;
+			else if (m < 10) buckets[1].count++;
+			else if (m < 15) buckets[2].count++;
+			else if (m < 20) buckets[3].count++;
+			else buckets[4].count++;
 		}
-		return (Object.keys(buckets) as Array<keyof typeof buckets>).map((bucket) => ({
-			bucket,
-			count: buckets[bucket],
-		}));
+		return buckets;
 	}
 
 	private computeByOrderType(fromDate: string, toDate: string): DeliveryAnalyticsByOrderType[] {

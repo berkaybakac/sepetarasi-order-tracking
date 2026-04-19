@@ -105,7 +105,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 			open={open}
 			onClose={onClose}
 			title="Güvenlik Ayarları"
-			description="Yönetici parolasını güncelleyin. Yeni parola hemen geçerli olur, bu oturum açık kalır."
+			description="Yeni parola hemen geçerli olur, bu oturum açık kalır."
 		>
 			<form className="space-y-4" onSubmit={handleSubmit}>
 				<div className="flex items-start gap-3 rounded-[1rem] border border-border-subtle bg-white/[0.03] p-4">

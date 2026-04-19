@@ -186,7 +186,8 @@ describe("StatsService.getDeliveryAnalytics()", () => {
 				makeDelivered("1", 0, 3), // 0-5dk
 				makeDelivered("2", 0, 7), // 5-10dk
 				makeDelivered("3", 0, 12), // 10-15dk
-				makeDelivered("4", 0, 20), // 15+dk
+				makeDelivered("4", 0, 18), // 15-20dk
+				makeDelivered("5", 0, 20), // 20+dk
 			])
 			.run();
 
@@ -196,7 +197,8 @@ describe("StatsService.getDeliveryAnalytics()", () => {
 		expect(byBucket["0-5dk"]).toBe(1);
 		expect(byBucket["5-10dk"]).toBe(1);
 		expect(byBucket["10-15dk"]).toBe(1);
-		expect(byBucket["15+dk"]).toBe(1);
+		expect(byBucket["15-20dk"]).toBe(1);
+		expect(byBucket["20+dk"]).toBe(1);
 	});
 
 	it("breaks down averages by order type", () => {

@@ -56,15 +56,17 @@ export function AdminStatusPanel({
 					<div className="flex min-w-0 items-center gap-2.5">
 						<div
 							className={cn(
-								"flex items-center justify-center border border-border-subtle bg-white/[0.04] transition-[width,height,border-radius] duration-200",
-								isCondensed ? "h-9 w-9 rounded-[0.95rem]" : "h-10 w-10 rounded-[1rem]",
+								"flex shrink-0 items-center justify-center border bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-[width,height,border-radius,transform,background-color,border-color] duration-200",
+								isCondensed
+									? "h-9 w-9 translate-y-px rounded-[0.95rem] border-white/[0.08]"
+									: "h-10 w-10 translate-y-[2px] rounded-[1rem] border-white/[0.07]",
 							)}
 						>
 							<BrandLogo
 								variant="dark"
 								className={cn(
 									"h-auto transition-[max-width] duration-200",
-									isCondensed ? "w-full max-w-[1.65rem]" : "w-full max-w-[1.92rem]",
+									isCondensed ? "w-full max-w-[1.74rem]" : "w-full max-w-[2.02rem]",
 								)}
 							/>
 						</div>
@@ -112,7 +114,9 @@ export function AdminStatusPanel({
 							isCondensed ? "pt-1.5" : "pt-2.5",
 						)}
 					>
-						{children}
+						<div className={cn(isCondensed ? "lg:pl-5" : "lg:pl-6")}>
+							{children}
+						</div>
 					</div>
 				) : null}
 			</div>

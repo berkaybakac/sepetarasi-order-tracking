@@ -19,6 +19,29 @@ interface Props {
 	empty: boolean;
 }
 
+function renderTargetLabel({
+	viewBox,
+}: {
+	viewBox?: { x?: number; y?: number; width?: number };
+}) {
+	if (viewBox?.x == null || viewBox.y == null || viewBox.width == null) {
+		return null;
+	}
+
+	return (
+		<text
+			x={viewBox.x + viewBox.width - 8}
+			y={viewBox.y}
+			fill="#facc15"
+			fontSize={11}
+			textAnchor="end"
+			dominantBaseline="middle"
+		>
+			Hedef
+		</text>
+	);
+}
+
 export function PeriodStatsTimeSeries({ analytics, targetMinutes, empty }: Props) {
 	const chartData = useMemo(() => {
 		if (!analytics) return [];
@@ -66,7 +89,7 @@ export function PeriodStatsTimeSeries({ analytics, targetMinutes, empty }: Props
 							y={targetMinutes}
 							stroke="#facc15"
 							strokeDasharray="4 4"
-							label={{ value: "Hedef", fill: "#facc15", fontSize: 11, position: "right" }}
+							label={renderTargetLabel}
 						/>
 						<Line
 							type="monotone"
