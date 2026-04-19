@@ -906,6 +906,13 @@ describe("connectivity test pages", () => {
 	let staticApp: FastifyInstance | undefined;
 	let staticRootPath: string | undefined;
 
+	function getStaticApp() {
+		if (!staticApp) {
+			throw new Error("Static app test fixture was not initialized.");
+		}
+		return staticApp;
+	}
+
 	beforeEach(async () => {
 		staticRootPath = createStaticWebFixture();
 		staticApp = await buildApp({
@@ -925,7 +932,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display as no-store HTML shell", async () => {
-		const res = await staticApp.inject({ method: "GET", url: "/display" });
+		const res = await getStaticApp().inject({ method: "GET", url: "/display" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -939,7 +946,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display/ as the same no-store HTML shell", async () => {
-		const res = await staticApp.inject({ method: "GET", url: "/display/" });
+		const res = await getStaticApp().inject({ method: "GET", url: "/display/" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -950,7 +957,10 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display.html as a no-store relative-asset shell with diagnostics", async () => {
-		const res = await staticApp.inject({ method: "GET", url: "/display.html?layout=split&max=4" });
+		const res = await getStaticApp().inject({
+			method: "GET",
+			url: "/display.html?layout=split&max=4",
+		});
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -970,7 +980,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /display/index.html as a TB1 compatibility page", async () => {
-		const res = await staticApp.inject({ method: "GET", url: "/display/index.html" });
+		const res = await getStaticApp().inject({ method: "GET", url: "/display/index.html" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -986,7 +996,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /test.html as plain HTML with no-store headers", async () => {
-		const res = await staticApp.inject({ method: "GET", url: "/test.html" });
+		const res = await getStaticApp().inject({ method: "GET", url: "/test.html" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -1000,7 +1010,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("serves /ping with the same static success page", async () => {
-		const res = await staticApp.inject({ method: "GET", url: "/ping" });
+		const res = await getStaticApp().inject({ method: "GET", url: "/ping" });
 
 		expect(res.statusCode).toBe(200);
 		expect(res.headers["content-type"]).toContain("text/html");
@@ -1008,7 +1018,7 @@ describe("connectivity test pages", () => {
 	});
 
 	it("accepts display diagnostic beacons without auth", async () => {
-		const res = await staticApp.inject({
+		const res = await getStaticApp().inject({
 			method: "GET",
 			url: "/display-beacon.gif?phase=react-mounted&path=%2Fdisplay.html",
 		});
