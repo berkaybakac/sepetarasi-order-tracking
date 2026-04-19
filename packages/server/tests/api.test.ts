@@ -1,3 +1,7 @@
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { API_ROUTES, SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
@@ -9,9 +13,36 @@ import { createTestDb } from "../src/db/test-utils.js";
 import { OrderCommandService } from "../src/services/order.command.service.js";
 import { buildCreateOrderInput, loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
+const testsDir = dirname(fileURLToPath(import.meta.url));
+const webDir = resolve(testsDir, "../../web");
+const webIndexHtml = readFileSync(resolve(webDir, "index.html"), "utf8");
+
 let db: AppDatabase;
 let app: FastifyInstance;
 let adminCookie: string;
+
+function createStaticWebFixture() {
+	const staticRootPath = mkdtempSync(join(tmpdir(), "sepetarasi-web-dist-"));
+	const assetsDir = join(staticRootPath, "assets");
+	const builtLikeIndexHtml = webIndexHtml
+		.replace("</head>", '    <link rel="stylesheet" href="/assets/app.css" />\n  </head>')
+		.replace(
+			'<script type="module" src="/src/main.tsx"></script>',
+			'<script type="module" src="/assets/main.js"></script>',
+		);
+
+	mkdirSync(assetsDir, { recursive: true });
+	writeFileSync(join(staticRootPath, "index.html"), builtLikeIndexHtml);
+	writeFileSync(join(assetsDir, "app.css"), "body { background: #08111f; }");
+	writeFileSync(join(assetsDir, "main.js"), 'document.documentElement.dataset.appShell = "ready";');
+	copyFileSync(
+		resolve(webDir, "public/brand-loader-logo.svg"),
+		join(staticRootPath, "brand-loader-logo.svg"),
+	);
+	copyFileSync(resolve(webDir, "public/favicon.png"), join(staticRootPath, "favicon.png"));
+
+	return staticRootPath;
+}
 
 beforeEach(async () => {
 	db = createTestDb();
@@ -854,6 +885,7 @@ describe("GET /health", () => {
 			disableAudio: true,
 			enableTtsFallback: true,
 			alsaDevice: "plughw:CARD=Headphones,DEV=0",
+			disableStatic: true,
 		});
 
 		try {
@@ -871,14 +903,25 @@ describe("GET /health", () => {
 });
 
 describe("connectivity test pages", () => {
-	let staticApp: FastifyInstance;
+	let staticApp: FastifyInstance | undefined;
+	let staticRootPath: string | undefined;
 
 	beforeEach(async () => {
-		staticApp = await buildApp({ db: createTestDb(), disableWorker: true });
+		staticRootPath = createStaticWebFixture();
+		staticApp = await buildApp({
+			db: createTestDb(),
+			disableWorker: true,
+			staticRootPath,
+		});
 	});
 
 	afterEach(async () => {
-		await staticApp.close();
+		await staticApp?.close();
+		if (staticRootPath) {
+			rmSync(staticRootPath, { recursive: true, force: true });
+		}
+		staticApp = undefined;
+		staticRootPath = undefined;
 	});
 
 	it("serves /display as no-store HTML shell", async () => {

@@ -751,6 +751,8 @@ export interface AppOptions {
 	alsaDevice?: string;
 	/** Disable static file serving (useful for tests) */
 	disableStatic?: boolean;
+	/** Override the static web root directory (useful for tests) */
+	staticRootPath?: string;
 	/** Max single MP3 upload size in bytes (default: 500MB) */
 	musicUploadMaxBytes?: number;
 }
@@ -1217,7 +1219,7 @@ export async function buildApp(opts: AppOptions) {
 
 	// Serve web frontend in production
 	if (!opts.disableStatic) {
-		const webDistPath = join(__dirname, "../../web/dist");
+		const webDistPath = opts.staticRootPath ?? join(__dirname, "../../web/dist");
 		if (existsSync(webDistPath)) {
 			const webIndexHtmlPath = join(webDistPath, "index.html");
 			if (!existsSync(webIndexHtmlPath)) {
