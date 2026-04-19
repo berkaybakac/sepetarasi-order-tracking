@@ -122,12 +122,19 @@ export function validateSettingValue(key: string, value: string): string | null 
 			return null;
 		}
 		case "business_name":
-		case "receipt_business_name":
 			if (value.trim().length === 0) {
 				return "İşletme adı boş bırakılamaz.";
 			}
 			if (value.length > 120) {
 				return "İşletme adı en fazla 120 karakter olabilir.";
+			}
+			return null;
+		case "receipt_business_name":
+			if (value.trim().length === 0) {
+				return "Fiş işletme adı boş bırakılamaz.";
+			}
+			if (value.length > 120) {
+				return "Fiş işletme adı en fazla 120 karakter olabilir.";
 			}
 			return null;
 		case "receipt_address":
@@ -141,9 +148,13 @@ export function validateSettingValue(key: string, value: string): string | null 
 			}
 			return null;
 		case "receipt_tax_id":
+			if (value.length > 64) {
+				return "Vergi numarası en fazla 64 karakter olabilir.";
+			}
+			return null;
 		case "receipt_tax_office":
 			if (value.length > 64) {
-				return "Vergi bilgisi en fazla 64 karakter olabilir.";
+				return "Vergi dairesi en fazla 64 karakter olabilir.";
 			}
 			return null;
 		default:

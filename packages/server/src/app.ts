@@ -438,11 +438,6 @@ function buildTb1CompatDisplayHtml() {
           } catch (_error) {}
         }
 
-        function setStatus() {
-          if (!footerStatus) return;
-          footerStatus.textContent = "";
-        }
-
         function requestJson(url, onSuccess, onError) {
           var xhr = new XMLHttpRequest();
           xhr.open("GET", url, true);
@@ -650,11 +645,9 @@ function buildTb1CompatDisplayHtml() {
             function (data) {
               applySettings(data || {});
               render();
-              setStatus("Ayarlar alındı");
               sendDiagnostic("tb1-compat-settings-ok");
             },
             function (errorCode) {
-              setStatus("Ayarlar alınamadı: " + errorCode);
               sendDiagnostic("tb1-compat-settings-failed", errorCode);
             },
           );
@@ -666,11 +659,9 @@ function buildTb1CompatDisplayHtml() {
             function (data) {
               state.orders = data || [];
               render();
-              setStatus("Siparişler güncellendi");
               sendDiagnostic("tb1-compat-orders-ok", String(state.orders.length));
             },
             function (errorCode) {
-              setStatus("Siparişler alınamadı: " + errorCode);
               sendDiagnostic("tb1-compat-orders-failed", errorCode);
             },
           );

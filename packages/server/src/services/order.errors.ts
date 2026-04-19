@@ -1,5 +1,5 @@
 export class OrderNotFoundError extends Error {
-	constructor(_id: string) {
+	constructor() {
 		super("Sipariş bulunamadı.");
 		this.name = "OrderNotFoundError";
 	}

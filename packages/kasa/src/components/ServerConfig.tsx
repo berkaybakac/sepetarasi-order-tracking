@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+	ApiError,
 	getBaseUrl,
 	setCashierToken as setApiCashierToken,
 	setTerminalId as setApiTerminalId,
@@ -25,11 +26,7 @@ const inputClass =
 const labelClass = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1";
 
 function isUnauthorizedError(error: unknown) {
-	if (typeof error !== "object" || error === null || !("code" in error)) {
-		return false;
-	}
-
-	return (error as { code?: string }).code === "UNAUTHORIZED";
+	return error instanceof ApiError && error.code === "UNAUTHORIZED";
 }
 
 export function ServerConfig({ onConnected }: ServerConfigProps) {

@@ -107,7 +107,7 @@ export class OrderCommandService {
 	private changeStatusInternal(orderId: string, input: UpdateStatusInput) {
 		const order = this.db.select().from(orders).where(eq(orders.id, orderId)).get();
 		if (!order) {
-			throw new OrderNotFoundError(orderId);
+			throw new OrderNotFoundError();
 		}
 
 		const fromStatus = order.status as OrderStatus;
@@ -198,7 +198,7 @@ export class OrderCommandService {
 	delete(orderId: string) {
 		const order = this.db.select().from(orders).where(eq(orders.id, orderId)).get();
 		if (!order) {
-			throw new OrderNotFoundError(orderId);
+			throw new OrderNotFoundError();
 		}
 
 		this.db.transaction((tx) => {
