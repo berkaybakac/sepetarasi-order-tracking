@@ -287,6 +287,43 @@ describe("AnnouncementWorker", () => {
 		expect(broadcastSpy).not.toHaveBeenCalled();
 	});
 
+	it("should stop future announcements after disable without interrupting the already processed one", async () => {
+		seedOrder("o-1", 1);
+		seedOrder("o-2", 2);
+		seedAnnouncement("aq-1", "o-1", 1);
+		seedAnnouncement("aq-2", "o-2", 2);
+
+		let enabled = true;
+		const audioPlayer = {
+			play: vi.fn().mockResolvedValue(undefined),
+		} as unknown as AudioPlaybackService;
+		const toggleableWorker = new AnnouncementWorker({
+			announcementService,
+			broadcaster,
+			audioPlayer,
+			isAnnouncementEnabled: () => enabled,
+		});
+
+		await toggleableWorker.processOne();
+		enabled = false;
+		await toggleableWorker.processOne();
+
+		const first = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-1"))
+			.get()!;
+		const second = db
+			.select()
+			.from(announcementQueue)
+			.where(eq(announcementQueue.id, "aq-2"))
+			.get()!;
+		expect(first.status).toBe("played");
+		expect(second.status).toBe("played");
+		expect(audioPlayer.play).toHaveBeenCalledTimes(1);
+		expect(audioPlayer.play).toHaveBeenCalledWith(1);
+	});
+
 	it("should call duck() before and unduck() after audio playback", async () => {
 		seedOrder("o-1", 1);
 		seedAnnouncement("aq-1", "o-1", 1);

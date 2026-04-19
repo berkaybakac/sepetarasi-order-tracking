@@ -404,7 +404,7 @@ export class MusicPlayerService {
 		// Try to keep current track position
 		const newIndex = this.playlist.findIndex((t) => t.id === oldTrackId);
 		this.currentIndex = newIndex >= 0 ? newIndex : 0;
-		this.syncShuffleState();
+		this.reconcileShuffleStateAfterReload();
 		this.broadcastStatus();
 	}
 
@@ -715,17 +715,44 @@ export class MusicPlayerService {
 		this.shuffleHistory = [];
 	}
 
-	private buildShuffleQueue(excludeTrackId: string | null): string[] {
-		const queue = this.playlist
-			.map((track) => track.id)
-			.filter((trackId) => trackId !== excludeTrackId);
-
-		for (let i = queue.length - 1; i > 0; i -= 1) {
+	private shuffleTrackIds(trackIds: string[]): string[] {
+		const shuffled = [...trackIds];
+		for (let i = shuffled.length - 1; i > 0; i -= 1) {
 			const j = Math.floor(Math.random() * (i + 1));
-			[queue[i], queue[j]] = [queue[j], queue[i]];
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+		return shuffled;
+	}
+
+	private buildShuffleQueue(excludeTrackId: string | null): string[] {
+		return this.shuffleTrackIds(
+			this.playlist
+				.map((track) => track.id)
+				.filter((trackId) => trackId !== excludeTrackId),
+		);
+	}
+
+	private reconcileShuffleStateAfterReload(): void {
+		if (!this.getShuffleEnabled() || this.playlist.length === 0) {
+			this.clearShuffleState();
+			return;
 		}
 
-		return queue;
+		const currentTrackId = this.getCurrentTrackId();
+		const validTrackIds = new Set(this.playlist.map((track) => track.id));
+		const nextHistory = this.shuffleHistory.filter(
+			(trackId) => validTrackIds.has(trackId) && trackId !== currentTrackId,
+		);
+		const nextQueue = this.shuffleQueue.filter(
+			(trackId) => validTrackIds.has(trackId) && trackId !== currentTrackId,
+		);
+		const accountedTrackIds = new Set([...nextHistory, ...nextQueue]);
+		const newTrackIds = this.playlist
+			.map((track) => track.id)
+			.filter((trackId) => trackId !== currentTrackId && !accountedTrackIds.has(trackId));
+
+		this.shuffleHistory = nextHistory;
+		this.shuffleQueue = [...nextQueue, ...this.shuffleTrackIds(newTrackIds)];
 	}
 
 	private removeTrackFromShuffleState(trackId: string): void {

@@ -187,7 +187,7 @@ export function BaseAdminCard({
 					<div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 						<div className="min-w-0">
 							{title ? (
-								<div className="flex items-start gap-3">
+								<div className={cn("flex gap-3", description ? "items-start" : "items-center")}>
 									{icon ? (
 										<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border-subtle bg-surface-1/45 text-brand-primary">
 											{icon}

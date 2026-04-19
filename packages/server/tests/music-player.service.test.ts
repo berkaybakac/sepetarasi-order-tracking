@@ -921,6 +921,89 @@ describe("MusicPlayerService — getStatus / reloadPlaylist", () => {
 		}
 	});
 
+	it("reloadPlaylist() preserves shuffle progress and appends newly added tracks", () => {
+		const db = createTestDb();
+		const now = new Date().toISOString();
+		db.insert(appSettings)
+			.values([
+				{ key: SETTING_KEYS.MUSIC_LOOP_ENABLED, value: "1", updated_at: now },
+				{ key: SETTING_KEYS.MUSIC_SHUFFLE_ENABLED, value: "1", updated_at: now },
+			])
+			.run();
+
+		const { player } = buildPlayer(db);
+		const internal = player as unknown as InternalPlayer;
+		const musicDir = mkdtempSync(join(tmpdir(), "sepetarasi-music-player-shuffle-reload-"));
+		const trackAPath = join(musicDir, "a.mp3");
+		const trackBPath = join(musicDir, "b.mp3");
+		const trackCPath = join(musicDir, "c.mp3");
+		const trackDPath = join(musicDir, "d.mp3");
+		writeFileSync(trackAPath, "a");
+		writeFileSync(trackBPath, "b");
+		writeFileSync(trackCPath, "c");
+		writeFileSync(trackDPath, "d");
+
+		try {
+			db.insert(musicTracks)
+				.values([
+					{
+						id: "t1",
+						filename: "a.mp3",
+						display_name: "A",
+						file_path: trackAPath,
+						file_size: 100,
+						sort_order: 0,
+						uploaded_at: now,
+					},
+					{
+						id: "t2",
+						filename: "b.mp3",
+						display_name: "B",
+						file_path: trackBPath,
+						file_size: 100,
+						sort_order: 1,
+						uploaded_at: now,
+					},
+					{
+						id: "t3",
+						filename: "c.mp3",
+						display_name: "C",
+						file_path: trackCPath,
+						file_size: 100,
+						sort_order: 2,
+						uploaded_at: now,
+					},
+					{
+						id: "t4",
+						filename: "d.mp3",
+						display_name: "D",
+						file_path: trackDPath,
+						file_size: 100,
+						sort_order: 3,
+						uploaded_at: now,
+					},
+				])
+				.run();
+
+			internal.playlist = [
+				{ id: "t1", file_path: trackAPath, display_name: "A" },
+				{ id: "t2", file_path: trackBPath, display_name: "B" },
+				{ id: "t3", file_path: trackCPath, display_name: "C" },
+			];
+			internal.currentIndex = 1;
+			internal.shuffleHistory = ["t1"];
+			internal.shuffleQueue = ["t3"];
+
+			player.reloadPlaylist();
+
+			expect(internal.currentIndex).toBe(1);
+			expect(internal.shuffleHistory).toEqual(["t1"]);
+			expect(internal.shuffleQueue).toEqual(["t3", "t4"]);
+		} finally {
+			rmSync(musicDir, { recursive: true, force: true });
+		}
+	});
+
 	it("reloadPlaylist() skips DB rows whose files are missing", () => {
 		const db = createTestDb();
 		const { player } = buildPlayer(db);

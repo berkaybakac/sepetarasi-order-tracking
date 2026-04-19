@@ -6,15 +6,16 @@ import { useMusicStore } from "../../../stores/musicStore";
 import { useOrderStore } from "../../../stores/orderStore";
 import { ActionButton, BaseAdminCard, BaseAdminCardSection, InlineAlert } from "../ui/primitives";
 
-const SOUND_BARS: { key: string; style: CSSProperties }[] = ["a", "b", "c", "d", "e"].map(
-	(key, i) => ({
-		key,
-		style: {
-			"--eq-dur": `${0.7 + i * 0.12}s`,
-			animationDelay: `${i * 0.14}s`,
-		} as CSSProperties,
-	}),
-);
+const SOUND_BARS: { key: string; style: CSSProperties }[] = [
+	0.56, 0.84, 0.68, 1, 0.74, 0.9, 0.62,
+].map((height, i) => ({
+	key: `bar-${i + 1}`,
+	style: {
+		"--eq-dur": `${0.7 + i * 0.12}s`,
+		animationDelay: `${i * 0.14}s`,
+		height: `${Math.round(height * 100)}%`,
+	} as CSSProperties,
+}));
 
 function getMusicPlayerLoadErrorMessage(error: unknown) {
 	if (error instanceof ApiError) {
@@ -141,10 +142,27 @@ export function MusicPlayerCard() {
 		return "border-border-subtle bg-surface-1/45 text-text-subtle";
 	}, [status]);
 
+	const stageStatusClass = useMemo(() => {
+		if (!status) return "text-text-subtle";
+		if (status.isDucked) return "text-amber-300";
+		if (status.isPlaying) return "text-emerald-300";
+		if (status.isPaused) return "text-blue-300";
+		return "text-text-subtle";
+	}, [status]);
+
+	const stageStatusDotClass = useMemo(() => {
+		if (!status) return "bg-white/35";
+		if (status.isDucked) return "bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.42)]";
+		if (status.isPlaying) return "bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.45)]";
+		if (status.isPaused) return "bg-blue-300 shadow-[0_0_12px_rgba(147,197,253,0.4)]";
+		return "bg-white/35";
+	}, [status]);
+
 	const trackName = status?.currentTrackName ?? UI_LABELS.MUSIC_PLAYER.NO_TRACK;
 	const showPause = status?.isPlaying ?? false;
 	const loopEnabled = status?.loop ?? true;
 	const shuffleEnabled = status?.shuffle ?? false;
+	const animateStage = status?.isPlaying ?? false;
 
 	return (
 		<BaseAdminCard
@@ -191,34 +209,67 @@ export function MusicPlayerCard() {
 				</div>
 			) : (
 				<>
-					<BaseAdminCardSection className="space-y-3">
-						<p className="text-xs font-medium text-text-subtle">Seçili parça</p>
-						<p className="truncate text-lg font-medium text-text-strong" title={trackName}>
-							{trackName}
-						</p>
-						<div className="flex flex-wrap gap-2">
-							{shuffleEnabled ? (
-								<span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[0.72rem] font-medium text-cyan-200">
-									{UI_LABELS.MUSIC_PLAYER.SHUFFLE_BADGE}
-								</span>
-							) : null}
-							{loopEnabled ? (
-								<span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[0.72rem] font-medium text-emerald-200">
-									{UI_LABELS.MUSIC_PLAYER.LOOP_BADGE}
-								</span>
-							) : null}
-						</div>
-						{status?.isPlaying && (
-							<div className="flex items-end gap-0.5 mt-2 h-4">
-								{SOUND_BARS.map(({ key, style }) => (
-									<div
-										key={key}
-										className="sound-bar w-1 h-full bg-brand-success rounded-full"
-										style={style}
-									/>
-								))}
+					<BaseAdminCardSection className="px-4 py-4 sm:px-5">
+						<div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+							<div className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-[1.35rem] border border-emerald-400/12 bg-[linear-gradient(145deg,rgba(16,185,129,0.12),rgba(9,18,31,0.78))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(3,8,18,0.28)]">
+								<div className="flex h-9 items-end gap-1">
+									{SOUND_BARS.map(({ key, style }) => (
+										<div
+											key={key}
+											className={`sound-bar w-1.5 rounded-full bg-gradient-to-t from-emerald-500 via-emerald-400 to-cyan-300 shadow-[0_0_12px_rgba(16,185,129,0.26)] ${
+												animateStage ? "" : "opacity-45"
+											}`}
+											style={{
+												...style,
+												animation: animateStage ? undefined : "none",
+												transform: animateStage ? undefined : "scaleY(0.55)",
+											}}
+										/>
+									))}
+								</div>
 							</div>
-						)}
+
+							<div className="min-w-0 text-left">
+								<p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-text-subtle">
+									Seçili parça
+								</p>
+								<p
+									className="mt-1 truncate text-xl font-semibold tracking-tight text-text-strong sm:text-[1.7rem]"
+									title={trackName}
+								>
+									{trackName}
+								</p>
+								<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-medium">
+									<span className={`inline-flex items-center gap-2 ${stageStatusClass}`}>
+										<span className={`h-2 w-2 rounded-full ${stageStatusDotClass}`} />
+										{statusLabel}
+									</span>
+								</div>
+							</div>
+
+							<div className="flex flex-col items-start gap-2 text-left lg:items-end lg:text-right">
+								<p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-text-subtle">
+									Çalma modu
+								</p>
+								<div className="flex flex-wrap items-center gap-2 lg:justify-end">
+									{shuffleEnabled ? (
+										<span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[0.72rem] font-medium text-cyan-200">
+											{UI_LABELS.MUSIC_PLAYER.SHUFFLE_BADGE}
+										</span>
+									) : null}
+									{loopEnabled ? (
+										<span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[0.72rem] font-medium text-emerald-200">
+											{UI_LABELS.MUSIC_PLAYER.LOOP_BADGE}
+										</span>
+									) : null}
+									{!shuffleEnabled && !loopEnabled ? (
+										<span className="inline-flex items-center rounded-full border border-border-subtle bg-surface-1/60 px-2.5 py-1 text-[0.72rem] font-medium text-text-muted">
+											Standart akış
+										</span>
+									) : null}
+								</div>
+							</div>
+						</div>
 					</BaseAdminCardSection>
 
 					{/* Kontrol Satırı: [karıştır] [önceki] [oynat/duraklat] [sonraki] [döngü] */}
