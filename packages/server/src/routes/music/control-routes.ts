@@ -70,7 +70,7 @@ export function registerMusicControlRoutes(
 				ok: false,
 				error: {
 					code: "MUSIC_PLAYER_UNAVAILABLE",
-					message: "Müzik oynatıcı servisi hazır değil.",
+					message: "Müzik servisi şu anda kullanılamıyor.",
 				},
 			});
 		}
@@ -81,7 +81,7 @@ export function registerMusicControlRoutes(
 				ok: false,
 				error: {
 					code: result.code ?? "PLAYBACK_FAILED",
-					message: result.message ?? "Müzik oynatma başlatılamadı.",
+					message: result.message ?? "Müzik başlatılamadı.",
 				},
 			});
 		}
@@ -110,7 +110,7 @@ export function registerMusicControlRoutes(
 		if (!Number.isInteger(volume) || volume < 0 || volume > 100) {
 			return reply.status(400).send({
 				ok: false,
-				error: { code: "VALIDATION_ERROR", message: "volume must be an integer between 0 and 100" },
+				error: { code: "VALIDATION_ERROR", message: "Ses seviyesi 0 ile 100 arasında olmalıdır." },
 			});
 		}
 
@@ -124,7 +124,7 @@ export function registerMusicControlRoutes(
 		if (typeof body.enabled !== "boolean") {
 			return reply.status(400).send({
 				ok: false,
-				error: { code: "VALIDATION_ERROR", message: "enabled must be a boolean" },
+				error: { code: "VALIDATION_ERROR", message: "Açık veya kapalı bilgisi geçersiz." },
 			});
 		}
 
@@ -141,7 +141,7 @@ export function registerMusicControlRoutes(
 		if (!hasLoop && !hasShuffle) {
 			return reply.status(400).send({
 				ok: false,
-				error: { code: "VALIDATION_ERROR", message: "loop or shuffle must be provided as boolean" },
+				error: { code: "VALIDATION_ERROR", message: "Çalma modu bilgisi geçersiz." },
 			});
 		}
 

@@ -126,7 +126,7 @@ describe("Kasa App header", () => {
 		await click(getStatusButton(container));
 
 		expect(onReconfigure).not.toHaveBeenCalled();
-		expect(container.textContent).toContain("Yönetici Şifresi");
+		expect(container.textContent).toContain("Admin Parolası");
 		expect(vi.mocked(api.verifyAdminPassword)).not.toHaveBeenCalled();
 	});
 
@@ -219,8 +219,8 @@ describe("Kasa App header", () => {
 
 		expect(onReconfigure).not.toHaveBeenCalled();
 		expect(vi.mocked(api.verifyAdminPassword)).toHaveBeenCalledWith("wrong-password");
-		expect(container.textContent).toContain("Yönetici şifresi hatalı.");
-		expect(container.textContent).toContain("Yönetici Şifresi");
+		expect(container.textContent).toContain("Admin parolası hatalı.");
+		expect(container.textContent).toContain("Admin Parolası");
 	});
 
 	it("opens config after a correct admin password", async () => {
@@ -263,6 +263,6 @@ describe("Kasa App header", () => {
 
 		expect(onReconfigure).toHaveBeenCalledTimes(1);
 		expect(vi.mocked(api.verifyAdminPassword)).not.toHaveBeenCalled();
-		expect(container.textContent).not.toContain("Yönetici Şifresi");
+		expect(container.textContent).not.toContain("Admin Parolası");
 	});
 });

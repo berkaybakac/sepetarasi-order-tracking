@@ -1,6 +1,6 @@
 # SEPET ARASI Order Tracking
 
-LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetici Paneli ve Sipariş Takip Ekranı.
+LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetim Paneli ve Sipariş Takip Ekranı.
 
 ---
 
@@ -15,7 +15,7 @@ Pi4 gerekmez. Mac'te local server + local DB ile çalışır.
 # Terminal 1 — Server
 npm run dev:server
 
-# Terminal 2 — Web (Yönetici + Sipariş Takip Ekranı)
+# Terminal 2 — Web (Yönetim Paneli + Sipariş Takip Ekranı)
 npm run dev:web
 
 # Terminal 3 — Kasa (Electron)
@@ -26,7 +26,7 @@ cd packages/kasa && npm run dev
 Pi4 çalışıyor olmalı. Hot reload Mac'te, data Pi4'ten gelir. Lokal server açma.
 
 ```bash
-# Terminal 1 — Web UI (yönetici ekranı, sipariş takip ekranı)
+# Terminal 1 — Web UI (Yönetim Paneli, Sipariş Takip Ekranı)
 npm run dev:web:pi4
 
 # Terminal 2 — Kasa Electron
@@ -40,7 +40,7 @@ Pi4 verisiyle geliştirme modunda web adresleri local ile aynıdır; fark, `npm 
 
 ### Local
 
-- Yönetici ekranı: `http://localhost:5173/admin`
+- Yönetim Paneli: `http://localhost:5173/admin`
 - Sipariş takip ekranı: `http://localhost:5173/display`
 - API: `http://localhost:3000`
 - Kasa (terminal):
@@ -51,7 +51,7 @@ cd packages/kasa && npm run dev
 
 ### Prod
 
-- Yönetici ekranı: `http://sepetarasi.local:3000/admin`
+- Yönetim Paneli: `http://sepetarasi.local:3000/admin`
 - Sipariş takip ekranı: `http://sepetarasi.local:3000/display`
 - API: `http://sepetarasi.local:3000`
 - Kasa (terminal, macOS build):
@@ -314,7 +314,7 @@ Bu proje bir **Monorepo** yapısındadır. Tüm paketler `packages/shared` üzer
 | Paket | Açıklama |
 | --- | --- |
 | `packages/kasa` | Electron tabanlı kasiyer arayüzü (Windows/macOS) |
-| `packages/web` | Yönetici paneli ve Müşteri takip ekranı (Vite/React) |
+| `packages/web` | Yönetim Paneli ve Müşteri takip ekranı (Vite/React) |
 | `packages/server` | Fastify tabanlı API ve WebSocket sunucusu |
 | `packages/shared` | **Single Source of Truth:** Ortak mantık ve tipler (React bağımlılığı yok) |
 

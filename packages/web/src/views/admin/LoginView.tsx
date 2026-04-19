@@ -89,7 +89,7 @@ export function LoginView() {
 					</span>
 					<div>
 						<p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-brand-primary/85">
-							Yönetici erişimi
+							Admin erişimi
 						</p>
 						<h2 className="mt-1 text-[1.72rem] font-semibold tracking-tight text-text-strong">
 							Giriş yapın
@@ -98,12 +98,11 @@ export function LoginView() {
 				</div>
 
 				<p className="mt-4 text-sm leading-7 text-text-subtle">
-					Bu alan yalnızca yetkili yönetici parolasıyla açılır. Oturum bilgisi güvenli çerezlerle
-					korunur.
+					Bu alan yalnızca admin parolasıyla açılır. Oturum bilgisi güvenli çerezlerle korunur.
 				</p>
 
 				<form onSubmit={handleLogin} className="mt-7 space-y-5">
-					<Field htmlFor="admin-password" label="Yönetici Parolası">
+					<Field htmlFor="admin-password" label="Admin Parolası">
 						<PasswordInput
 							id="admin-password"
 							value={password}

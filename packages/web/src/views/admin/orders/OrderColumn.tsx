@@ -35,12 +35,20 @@ export const COLUMN_CONFIG = [
 	},
 ] as const;
 
-type ColumnProps = (typeof COLUMN_CONFIG)[number];
+type ColumnProps = (typeof COLUMN_CONFIG)[number] & {
+	animateEntries?: boolean;
+};
 
 /**
  * OrderColumn — Bir durum sütununu (Başlık + Kartlar) render eder.
  */
-export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps) {
+export function OrderColumn({
+	status,
+	title,
+	dotClass,
+	countClass,
+	animateEntries = true,
+}: ColumnProps) {
 	const orders = useOrdersByStatus(status);
 	const isLiveColumn = status === OrderStatus.PREPARING || status === OrderStatus.READY;
 	const [tick, setTick] = useState(0);
@@ -78,7 +86,13 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 			>
 				<AnimatePresence initial={false}>
 					{orders.map((order) => (
-						<OrderCard key={order.id} order={order} status={status} tick={tick} />
+						<OrderCard
+							key={order.id}
+							order={order}
+							status={status}
+							tick={tick}
+							animateEntry={animateEntries}
+						/>
 					))}
 				</AnimatePresence>
 				{orders.length === 0 && (

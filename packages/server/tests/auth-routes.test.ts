@@ -9,7 +9,7 @@ import { buildApp } from "../src/app.js";
 import { AUTH_RATE_LIMIT } from "../src/config/rate-limit.js";
 import type { AppDatabase } from "../src/db/connection.js";
 import { createTestDb } from "../src/db/test-utils.js";
-import { loginAsAdmin } from "./auth-helpers.js";
+import { loginAsAdmin, withCashierAuth } from "./auth-helpers.js";
 
 type JwtEnabledFastify = FastifyInstance & {
 	jwt: {
@@ -86,6 +86,50 @@ describe("Auth routes contract", () => {
 		expect(res.json().ok).toBe(false);
 		expect(res.json().error.code).toBe("UNAUTHORIZED");
 		expect(res.headers["set-cookie"]).toBeUndefined();
+	});
+
+	it("GET /auth/verify-cashier-token accepts a valid cashier token", async () => {
+		const res = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.AUTH.VERIFY_CASHIER_TOKEN,
+			headers: withCashierAuth(),
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+		expect(res.json().data).toBeNull();
+	});
+
+	it("GET /auth/verify-cashier-token rejects missing or invalid cashier tokens", async () => {
+		const missingToken = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.AUTH.VERIFY_CASHIER_TOKEN,
+		});
+		expect(missingToken.statusCode).toBe(401);
+		expect(missingToken.json().error.code).toBe("UNAUTHORIZED");
+
+		const invalidToken = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.AUTH.VERIFY_CASHIER_TOKEN,
+			headers: { "x-cashier-token": "wrong-token" },
+		});
+		expect(invalidToken.statusCode).toBe(401);
+		expect(invalidToken.json().error.code).toBe("UNAUTHORIZED");
+	});
+
+	it("GET /auth/verify-cashier-token does not fall back to admin auth", async () => {
+		const adminCookie = await loginAsAdmin(app);
+		const res = await app.inject({
+			method: "GET",
+			url: API_ROUTES.V1.AUTH.VERIFY_CASHIER_TOKEN,
+			headers: {
+				cookie: adminCookie,
+				"x-cashier-token": "wrong-token",
+			},
+		});
+
+		expect(res.statusCode).toBe(401);
+		expect(res.json().error.code).toBe("UNAUTHORIZED");
 	});
 
 	it("GET /auth/me returns 401 for anonymous", async () => {

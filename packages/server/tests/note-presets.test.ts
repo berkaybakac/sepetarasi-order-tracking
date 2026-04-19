@@ -32,30 +32,36 @@ describe("note_presets validation", () => {
 	});
 
 	it("rejects invalid JSON", () => {
-		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, "not-json")).toMatch(/valid JSON/);
+		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, "not-json")).toMatch(
+			/Hazır not listesi geçersiz/,
+		);
 	});
 
 	it("rejects non-array JSON", () => {
-		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, '{"a":"b"}')).toMatch(/JSON array/);
+		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, '{"a":"b"}')).toMatch(
+			/Hazır not listesi geçersiz/,
+		);
 	});
 
 	it("rejects more than 20 items", () => {
 		const value = JSON.stringify(Array.from({ length: 21 }, (_, i) => `n${i}`));
-		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, value)).toMatch(/more than 20/);
+		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, value)).toMatch(/En fazla 20/);
 	});
 
 	it("rejects non-string items", () => {
-		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, '["ok",1]')).toMatch(/only strings/);
+		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, '["ok",1]')).toMatch(
+			/Hazır not listesi geçersiz/,
+		);
 	});
 
 	it("rejects empty string item", () => {
-		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, '["ok",""]')).toMatch(/1-50/);
+		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, '["ok",""]')).toMatch(/1 ile 50/);
 	});
 
 	it("rejects item longer than 50 chars", () => {
 		const tooLong = "x".repeat(51);
 		expect(validateSettingValue(SETTING_KEYS.NOTE_PRESETS, JSON.stringify([tooLong]))).toMatch(
-			/1-50/,
+			/1 ile 50/,
 		);
 	});
 });

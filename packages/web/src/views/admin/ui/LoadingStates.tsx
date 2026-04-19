@@ -17,12 +17,10 @@ export function AdminBootSplash() {
 					Sepetarası
 				</p>
 				<h1 className="mt-2 text-[1.72rem] font-semibold tracking-tight text-text-strong">
-					Giriş katmanı hazırlanıyor
+					Giriş hazırlanıyor
 				</h1>
 
-				<p className="mt-4 text-sm leading-7 text-text-subtle">
-					Yetkili oturum kontrolü kurulurken ilk ekran tek katmanda tutulur.
-				</p>
+				<p className="mt-4 text-sm leading-7 text-text-subtle">Lütfen bekleyin.</p>
 
 				<div className="mt-7 space-y-3">
 					<SkeletonBlock className="h-11 w-full rounded-[1rem]" />

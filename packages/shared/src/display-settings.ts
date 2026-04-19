@@ -154,51 +154,51 @@ export function validateDisplaySettingValue(key: DisplaySettingKey, value: strin
 	switch (key) {
 		case SETTING_KEYS.RESTAURANT_NAME:
 			if (value.length > 60) {
-				return "restaurant_name must be <= 60 characters";
+				return "Restoran adı en fazla 60 karakter olabilir.";
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_PROFILE:
 			if (!DISPLAY_PROFILE_SET.has(value as DisplayProfile)) {
-				return `display_profile must be one of: ${formatAllowed(DISPLAY_PROFILES)}`;
+				return "Ekran profili geçersiz.";
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_LAYOUT:
 			if (!DISPLAY_LAYOUT_SET.has(value as DisplayLayoutPreference)) {
-				return `display_layout must be one of: ${formatAllowed(DISPLAY_LAYOUT_PREFERENCES)}`;
+				return "Ekran düzeni geçersiz.";
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_MAX_VISIBLE: {
 			const maxVisible = Number(value);
 			if (!Number.isInteger(maxVisible) || maxVisible < 1 || maxVisible > 99) {
-				return "display_max_visible must be an integer between 1 and 99";
+				return "Kolon başına sipariş sayısı 1 ile 99 arasında olmalıdır.";
 			}
 			return null;
 		}
 		case SETTING_KEYS.DISPLAY_PAGE_SECONDS: {
 			const pageSeconds = Number(value);
 			if (!Number.isInteger(pageSeconds) || pageSeconds < 1 || pageSeconds > 120) {
-				return "display_page_seconds must be an integer between 1 and 120";
+				return "Sayfa süresi 1 ile 120 saniye arasında olmalıdır.";
 			}
 			return null;
 		}
 		case SETTING_KEYS.DISPLAY_READY_MINUTES: {
 			const minutes = Number(value);
 			if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
-				return "display_ready_minutes must be an integer between 1 and 60";
+				return "Hazır gösterim süresi 1 ile 60 dakika arasında olmalıdır.";
 			}
 			return null;
 		}
 		case SETTING_KEYS.DISPLAY_TEXT_SCALE:
 			if (!DISPLAY_TEXT_SCALE_SET.has(value as DisplayTextScale)) {
-				return `display_text_scale must be one of: ${formatAllowed(DISPLAY_TEXT_SCALES)}`;
+				return "Yazı ölçeği geçersiz.";
 			}
 			return null;
 		case SETTING_KEYS.DISPLAY_THEME:
 			if (!DISPLAY_THEME_SET.has(value as DisplayTheme)) {
-				return `display_theme must be one of: ${formatAllowed(DISPLAY_THEMES)}`;
+				return "Tema seçimi geçersiz.";
 			}
 			return null;
 		default:
-			return "Unknown display setting key";
+			return "Ekran ayarı geçersiz.";
 	}
 }

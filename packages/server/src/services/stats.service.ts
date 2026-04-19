@@ -47,7 +47,7 @@ export function isValidIsoCalendarDate(value: string): boolean {
 function assertIsoCalendarDate(value: string, label: "from" | "to") {
 	if (!isValidIsoCalendarDate(value)) {
 		throw new InvalidDeliveryAnalyticsRangeError(
-			`${label} must be a real calendar date in YYYY-MM-DD`,
+			label === "from" ? "Başlangıç tarihi geçersiz." : "Bitiş tarihi geçersiz.",
 		);
 	}
 }
@@ -431,14 +431,16 @@ export class StatsService {
 		assertIsoCalendarDate(from, "from");
 		assertIsoCalendarDate(to, "to");
 		if (from > to) {
-			throw new InvalidDeliveryAnalyticsRangeError("from must be <= to");
+			throw new InvalidDeliveryAnalyticsRangeError(
+				"Başlangıç tarihi bitiş tarihinden sonra olamaz.",
+			);
 		}
 
 		const targetMinutes = this.getDeliveryTargetMinutes();
 		const rangeDays = daysBetweenInclusive(from, to);
 		if (rangeDays > StatsService.MAX_RANGE_DAYS) {
 			throw new InvalidDeliveryAnalyticsRangeError(
-				`date range must not exceed ${StatsService.MAX_RANGE_DAYS} days`,
+				`Tarih aralığı en fazla ${StatsService.MAX_RANGE_DAYS} gün olabilir.`,
 			);
 		}
 		const granularity: DeliveryAnalyticsGranularity = rangeDays <= 2 ? "hour" : "day";

@@ -726,9 +726,7 @@ export class MusicPlayerService {
 
 	private buildShuffleQueue(excludeTrackId: string | null): string[] {
 		return this.shuffleTrackIds(
-			this.playlist
-				.map((track) => track.id)
-				.filter((trackId) => trackId !== excludeTrackId),
+			this.playlist.map((track) => track.id).filter((trackId) => trackId !== excludeTrackId),
 		);
 	}
 

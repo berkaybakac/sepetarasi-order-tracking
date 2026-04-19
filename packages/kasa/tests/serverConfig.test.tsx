@@ -4,13 +4,31 @@ import { act } from "react";
 import { type Root, createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../src/components/ServerConfig";
-import { setBaseUrl, setCashierToken, setTerminalId } from "../src/lib/api";
+import {
+	ApiError,
+	setBaseUrl,
+	setCashierToken,
+	setTerminalId,
+	verifyCashierToken,
+} from "../src/lib/api";
 
 vi.mock("../src/lib/api", () => ({
+	ApiError: class ApiError extends Error {
+		code: string;
+		statusCode: number;
+
+		constructor(code: string, message: string, statusCode: number) {
+			super(message);
+			this.name = "ApiError";
+			this.code = code;
+			this.statusCode = statusCode;
+		}
+	},
 	getBaseUrl: vi.fn(() => "http://localhost:3000"),
 	setBaseUrl: vi.fn(),
 	setTerminalId: vi.fn(),
 	setCashierToken: vi.fn(),
+	verifyCashierToken: vi.fn(),
 }));
 
 vi.mock("../src/lib/electron", () => ({
@@ -33,23 +51,65 @@ function normalizeText(value: string | null | undefined) {
 	return value?.replace(/\s+/g, " ").trim() ?? "";
 }
 
+async function click(element: HTMLElement) {
+	await act(async () => {
+		element.click();
+	});
+}
+
+async function changeInputValue(input: HTMLInputElement, value: string) {
+	const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+	if (!setter) {
+		throw new Error("HTMLInputElement value setter not found");
+	}
+
+	await act(async () => {
+		setter.call(input, value);
+		input.dispatchEvent(new Event("input", { bubbles: true }));
+	});
+}
+
+function getButton(container: HTMLDivElement, label: string) {
+	const button = Array.from(container.querySelectorAll("button")).find(
+		(node) => normalizeText(node.textContent) === label,
+	);
+	if (!(button instanceof HTMLButtonElement)) {
+		throw new Error(`Button not found: ${label}`);
+	}
+	return button;
+}
+
 describe("ServerConfig", () => {
 	let container: HTMLDivElement;
 	let root: Root;
 	let onConnected: ReturnType<typeof vi.fn>;
 	let saveConfig: ReturnType<typeof vi.fn>;
+	let getConfig: ReturnType<typeof vi.fn>;
 
-	beforeEach(async () => {
+	async function render(config = baseConfig) {
+		getConfig.mockResolvedValue(config);
+
+		await act(async () => {
+			root.render(<ServerConfig onConnected={onConnected} />);
+		});
+
+		await act(async () => {
+			await Promise.resolve();
+		});
+	}
+
+	beforeEach(() => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		container = document.createElement("div");
 		document.body.appendChild(container);
 		root = createRoot(container);
 		onConnected = vi.fn();
 		saveConfig = vi.fn().mockResolvedValue(true);
+		getConfig = vi.fn();
 
 		Object.defineProperty(window, "electronAPI", {
 			value: {
-				getConfig: vi.fn().mockResolvedValue(baseConfig),
+				getConfig,
 				saveConfig,
 				discoverServer: vi.fn().mockResolvedValue(null),
 				printReceipt: vi.fn(),
@@ -66,13 +126,7 @@ describe("ServerConfig", () => {
 			}),
 		);
 
-		await act(async () => {
-			root.render(<ServerConfig onConnected={onConnected} />);
-		});
-
-		await act(async () => {
-			await Promise.resolve();
-		});
+		vi.mocked(verifyCashierToken).mockResolvedValue(null);
 	});
 
 	afterEach(async () => {
@@ -85,7 +139,9 @@ describe("ServerConfig", () => {
 		vi.clearAllMocks();
 	});
 
-	it("renders the shortened printer copy without the optional suffix", () => {
+	it("renders the shortened printer copy without the optional suffix", async () => {
+		await render();
+
 		const printerLabel = container.querySelector('label[for="printer-ip"]');
 		if (!(printerLabel instanceof HTMLLabelElement)) {
 			throw new Error("Printer label not found");
@@ -95,30 +151,121 @@ describe("ServerConfig", () => {
 
 		expect(normalizeText(printerLabel.textContent)).toBe("Yazıcı IP Adresi");
 		expect(text).toContain("Boşsa fiş yazdırılmaz");
-		expect(text).toContain("Önerilen: 61 + cp857. Türkçe bozulursa 24 + cp1254.");
+		expect(text).toContain("Önerilen ayar: 61 ve cp857. Türkçe bozulursa 24 ve cp1254 deneyin.");
 		expect(text).not.toContain("(opsiyonel)");
 		expect(text).not.toContain(
 			"Varsayılan: cp857 + 61. Türkçe karakter bozuksa alternatif olarak cp1254 + 24 deneyin.",
 		);
 	});
 
-	it("keeps the connect flow unchanged after the copy update", async () => {
-		const connectButton = Array.from(container.querySelectorAll("button")).find(
-			(button) => button.textContent === "Bağlan",
-		);
-		if (!(connectButton instanceof HTMLButtonElement)) {
-			throw new Error("Connect button not found");
-		}
-
-		await act(async () => {
-			connectButton.click();
+	it("hides the token field for localhost and uses the local dev token automatically", async () => {
+		await render({
+			...baseConfig,
+			serverUrl: "http://localhost:3000",
+			cashierToken: "",
 		});
 
+		expect(container.querySelector("#cashier-token")).toBeNull();
+		expect(container.textContent).not.toContain("Kasiyer token:");
+
+		await click(getButton(container, "Bağlan"));
+
+		expect(globalThis.fetch).toHaveBeenCalledWith("http://localhost:3000/health");
+		expect(verifyCashierToken).toHaveBeenCalledWith(
+			"http://localhost:3000",
+			"local-dev-cashier-token",
+		);
+		expect(setBaseUrl).toHaveBeenCalledWith("http://localhost:3000");
+		expect(setTerminalId).toHaveBeenCalledWith("KASA-1");
+		expect(setCashierToken).toHaveBeenCalledWith("local-dev-cashier-token");
+		expect(saveConfig).toHaveBeenCalledWith({
+			...baseConfig,
+			serverUrl: "http://localhost:3000",
+			cashierToken: "local-dev-cashier-token",
+		});
+		expect(onConnected).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the prod token field hidden until Token Değiştir is pressed", async () => {
+		await render();
+
+		expect(container.querySelector("#cashier-token")).toBeNull();
+		expect(container.textContent).toContain("Kasiyer token: kayıtlı");
+		expect(container.textContent).toContain("Gelişmiş");
+		expect(container.textContent).toContain("Token Değiştir");
+	});
+
+	it("reveals a masked prod token input after Token Değiştir", async () => {
+		await render();
+
+		await click(getButton(container, "Token Değiştir"));
+
+		const tokenInput = container.querySelector("#cashier-token");
+		if (!(tokenInput instanceof HTMLInputElement)) {
+			throw new Error("Cashier token input not found");
+		}
+
+		expect(tokenInput.type).toBe("password");
+		expect(tokenInput.value).toBe("cashier-secret");
+	});
+
+	it("does not save or connect when prod token verification fails", async () => {
+		vi.mocked(verifyCashierToken).mockRejectedValue(
+			new ApiError("UNAUTHORIZED", "Kasiyer token doğrulanamadı.", 401),
+		);
+		await render();
+
+		await click(getButton(container, "Bağlan"));
+
+		expect(verifyCashierToken).toHaveBeenCalledWith(
+			"http://sepetarasi.local:3000",
+			"cashier-secret",
+		);
+		expect(saveConfig).not.toHaveBeenCalled();
+		expect(onConnected).not.toHaveBeenCalled();
+		expect(container.textContent).toContain("Kasiyer token doğrulanamadı. Token'ı kontrol edin.");
+	});
+
+	it("keeps the connect flow intact after successful prod token verification", async () => {
+		await render();
+
+		await click(getButton(container, "Bağlan"));
+
 		expect(globalThis.fetch).toHaveBeenCalledWith("http://sepetarasi.local:3000/health");
+		expect(verifyCashierToken).toHaveBeenCalledWith(
+			"http://sepetarasi.local:3000",
+			"cashier-secret",
+		);
 		expect(setBaseUrl).toHaveBeenCalledWith("http://sepetarasi.local:3000");
 		expect(setTerminalId).toHaveBeenCalledWith("KASA-1");
 		expect(setCashierToken).toHaveBeenCalledWith("cashier-secret");
 		expect(saveConfig).toHaveBeenCalledWith(baseConfig);
 		expect(onConnected).toHaveBeenCalledTimes(1);
+	});
+
+	it("clears the auto dev token when the URL changes from localhost to prod", async () => {
+		await render({
+			...baseConfig,
+			serverUrl: "http://localhost:3000",
+			cashierToken: "local-dev-cashier-token",
+		});
+
+		const serverUrlInput = container.querySelector("#server-url");
+		if (!(serverUrlInput instanceof HTMLInputElement)) {
+			throw new Error("Server URL input not found");
+		}
+
+		await changeInputValue(serverUrlInput, "http://sepetarasi.local:3000");
+
+		expect(container.textContent).toContain("Kasiyer token: gerekli");
+
+		await click(getButton(container, "Token Değiştir"));
+
+		const tokenInput = container.querySelector("#cashier-token");
+		if (!(tokenInput instanceof HTMLInputElement)) {
+			throw new Error("Cashier token input not found");
+		}
+
+		expect(tokenInput.value).toBe("");
 	});
 });

@@ -28,7 +28,7 @@ export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 			if (!STAT_PERIODS.includes(period)) {
 				return reply.status(400).send({
 					ok: false,
-					error: { code: "INVALID_PERIOD", message: "period must be daily, weekly, or monthly" },
+					error: { code: "INVALID_PERIOD", message: "Dönem seçimi geçersiz." },
 				});
 			}
 			const stats = statsService.getByPeriod(period);
@@ -51,7 +51,7 @@ export function registerStatsRoutes(app: FastifyInstance, db: AppDatabase) {
 					ok: false,
 					error: {
 						code: "INVALID_RANGE",
-						message: "from and to must be provided as YYYY-MM-DD",
+						message: "Tarih aralığı seçin.",
 					},
 				});
 			}

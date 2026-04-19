@@ -2,7 +2,7 @@ import { API_ROUTES, PASSWORD_MIN_LENGTH, SETTING_KEYS } from "@sepetarasi/share
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { ADMIN_COOKIE_NAME, AUTH_CONFIG } from "../config/auth.js";
+import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "../config/auth.js";
 import { AUTH_RATE_LIMIT } from "../config/rate-limit.js";
 import type { AppDatabase } from "../db/connection.js";
 import { appSettings } from "../db/schema.js";
@@ -78,7 +78,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				);
 				return reply
 					.code(401)
-					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
+					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Parola hatalı." } });
 			}
 
 			const token = app.jwt.sign({ role: "admin" }, { expiresIn: "7d" });
@@ -105,7 +105,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				maxAge: 60 * 60 * 24 * 7, // 7 days
 			});
 
-			return { ok: true, data: { message: "Logged in successfully" } };
+			return { ok: true, data: { message: "Giriş başarılı." } };
 		},
 	);
 
@@ -142,7 +142,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				);
 				return reply
 					.code(401)
-					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid password" } });
+					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Parola hatalı." } });
 			}
 
 			auditLog(
@@ -157,6 +157,29 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				request.log,
 			);
 			return { ok: true, data: null };
+		},
+	);
+
+	// GET /api/v1/auth/verify-cashier-token
+	app.get(
+		API_ROUTES.V1.AUTH.VERIFY_CASHIER_TOKEN,
+		{
+			config: {
+				rateLimit: AUTH_RATE_LIMIT,
+			},
+		},
+		async (request, reply) => {
+			const tokenHeader = request.headers[CASHIER_TOKEN_HEADER];
+			const token = Array.isArray(tokenHeader) ? tokenHeader[0] : tokenHeader;
+
+			if (token === AUTH_CONFIG.cashierToken) {
+				return { ok: true, data: null };
+			}
+
+			return reply.code(401).send({
+				ok: false,
+				error: { code: "UNAUTHORIZED", message: "Kasiyer token doğrulanamadı." },
+			});
 		},
 	);
 
@@ -185,7 +208,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 		} catch (err) {
 			return reply
 				.code(401)
-				.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Not logged in" } });
+				.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Oturum bulunamadı." } });
 		}
 	});
 
@@ -211,7 +234,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			} catch (err) {
 				return reply
 					.code(401)
-					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Not logged in" } });
+					.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Oturum bulunamadı." } });
 			}
 
 			const { currentPassword, newPassword } = request.body;
@@ -219,7 +242,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 			if (!match) {
 				return reply.code(400).send({
 					ok: false,
-					error: { code: "INVALID_CURRENT_PASSWORD", message: "Current password is wrong" },
+					error: { code: "INVALID_CURRENT_PASSWORD", message: "Mevcut parola hatalı." },
 				});
 			}
 
@@ -228,7 +251,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 					ok: false,
 					error: {
 						code: "PASSWORD_REUSE_NOT_ALLOWED",
-						message: "New password must be different from the current password",
+						message: "Yeni parola mevcut paroladan farklı olmalıdır.",
 					},
 				});
 			}
@@ -257,7 +280,7 @@ export function registerAuthRoutes(app: FastifyInstance, db: AppDatabase) {
 				},
 				request.log,
 			);
-			return { ok: true, data: { message: "Password updated successfully" } };
+			return { ok: true, data: { message: "Parola güncellendi." } };
 		},
 	);
 }

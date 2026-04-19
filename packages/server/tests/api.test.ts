@@ -70,6 +70,7 @@ describe("POST /api/v1/orders", () => {
 
 		expect(res.statusCode).toBe(400);
 		expect(res.json().error.code).toBe("VALIDATION_ERROR");
+		expect(res.json().error.message).toBe("Gönderilen bilgiler eksik veya hatalı.");
 	});
 
 	it("should return 400 when customer_name is blank after trimming", async () => {
@@ -920,7 +921,7 @@ describe("connectivity test pages", () => {
 		expect(res.body).toContain('src="./assets/');
 		expect(res.body).toContain('href="./assets/');
 		expect(res.body).toContain('data-display-probe="armed"');
-		expect(res.body).toContain("DISPLAY.HTML SHELL YUKLENDI");
+		expect(res.body).not.toContain("DISPLAY.HTML SHELL YUKLENDI");
 		expect(res.body).toContain("window.onerror = function");
 		expect(res.body).toContain("window.onunhandledrejection = function");
 	});

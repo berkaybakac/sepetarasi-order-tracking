@@ -2,6 +2,7 @@ import type { Order, OrderType } from "@sepetarasi/shared";
 import { parseNotePresets } from "@sepetarasi/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { getUserErrorMessage } from "../lib/user-error";
 
 interface OrderFormProps {
 	onCreated?: () => void;
@@ -126,7 +127,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 			setLastSelectedPreset(null);
 			onCreated?.();
 		} catch (err) {
-			setError((err as Error).message);
+			setError(getUserErrorMessage(err, "Sipariş oluşturulamadı. Lütfen tekrar deneyin."));
 		} finally {
 			setSubmitting(false);
 		}

@@ -62,33 +62,33 @@ export function validateSettingValue(key: string, value: string): string | null 
 		case SETTING_KEYS.AUDIO_VOLUME: {
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < 0 || num > 100) {
-				return "audio_volume must be an integer between 0 and 100";
+				return "Anons sesi 0 ile 100 arasında olmalıdır.";
 			}
 			return null;
 		}
 		case SETTING_KEYS.ANNOUNCEMENT_ENABLED: {
 			if (value !== "0" && value !== "1") {
-				return "announcement_enabled must be '0' or '1'";
+				return "Anons ayarı geçersiz.";
 			}
 			return null;
 		}
 		case SETTING_KEYS.MUSIC_VOLUME: {
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < 0 || num > 100) {
-				return "music_volume must be an integer between 0 and 100";
+				return "Müzik sesi 0 ile 100 arasında olmalıdır.";
 			}
 			return null;
 		}
 		case SETTING_KEYS.DELIVERY_TARGET_MINUTES: {
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < DELIVERY_TARGET_MIN || num > DELIVERY_TARGET_MAX) {
-				return `delivery_target_minutes must be an integer between ${DELIVERY_TARGET_MIN} and ${DELIVERY_TARGET_MAX}`;
+				return `Teslim hedefi ${DELIVERY_TARGET_MIN} ile ${DELIVERY_TARGET_MAX} dakika arasında olmalıdır.`;
 			}
 			return null;
 		}
 		case SETTING_KEYS.MUSIC_ENABLED: {
 			if (value !== "0" && value !== "1") {
-				return "music_enabled must be '0' or '1'";
+				return "Müzik ayarı geçersiz.";
 			}
 			return null;
 		}
@@ -96,57 +96,57 @@ export function validateSettingValue(key: string, value: string): string | null 
 			try {
 				const parsed = JSON.parse(value);
 				if (!Array.isArray(parsed)) {
-					return "note_presets must be a JSON array";
+					return "Hazır not listesi geçersiz.";
 				}
 				if (parsed.length > 20) {
-					return "note_presets cannot have more than 20 items";
+					return "En fazla 20 hazır not kaydedebilirsiniz.";
 				}
 				for (const item of parsed) {
 					if (typeof item !== "string") {
-						return "note_presets must contain only strings";
+						return "Hazır not listesi geçersiz.";
 					}
 					if (item.length === 0 || item.length > 50) {
-						return "each preset must be 1-50 characters";
+						return "Her hazır not 1 ile 50 karakter arasında olmalıdır.";
 					}
 				}
 				return null;
 			} catch {
-				return "note_presets must be valid JSON";
+				return "Hazır not listesi geçersiz.";
 			}
 		}
 		case "announcement_delay_ms": {
 			const delay = Number(value);
 			if (!Number.isInteger(delay) || delay < 0 || delay > 60000) {
-				return "announcement_delay_ms must be an integer between 0 and 60000";
+				return "Anons gecikmesi 0 ile 60000 arasında olmalıdır.";
 			}
 			return null;
 		}
 		case "business_name":
 		case "receipt_business_name":
 			if (value.trim().length === 0) {
-				return `${key} cannot be empty`;
+				return "İşletme adı boş bırakılamaz.";
 			}
 			if (value.length > 120) {
-				return `${key} must be <= 120 characters`;
+				return "İşletme adı en fazla 120 karakter olabilir.";
 			}
 			return null;
 		case "receipt_address":
 			if (value.length > 240) {
-				return "receipt_address must be <= 240 characters";
+				return "Adres en fazla 240 karakter olabilir.";
 			}
 			return null;
 		case "receipt_phone":
 			if (value.length > 32) {
-				return "receipt_phone must be <= 32 characters";
+				return "Telefon numarası en fazla 32 karakter olabilir.";
 			}
 			return null;
 		case "receipt_tax_id":
 		case "receipt_tax_office":
 			if (value.length > 64) {
-				return `${key} must be <= 64 characters`;
+				return "Vergi bilgisi en fazla 64 karakter olabilir.";
 			}
 			return null;
 		default:
-			return "Unknown setting key";
+			return "Bu ayar güncellenemiyor.";
 	}
 }

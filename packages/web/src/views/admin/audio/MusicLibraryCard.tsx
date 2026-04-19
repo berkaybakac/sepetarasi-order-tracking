@@ -5,6 +5,7 @@ import { ApiError, api } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { useMusicStore } from "../../../stores/musicStore";
 import { useOrderStore } from "../../../stores/orderStore";
+import { getErrorMessage } from "../../../utils/error";
 import { ActionButton, BaseAdminCard, BaseAdminCardSection, InlineAlert } from "../ui/primitives";
 
 interface UploadItem {
@@ -165,7 +166,7 @@ export function MusicLibraryCard() {
 				);
 				anySucceeded = true;
 			} catch (err) {
-				const msg = err instanceof Error ? err.message : UI_LABELS.MUSIC_LIBRARY.UPLOAD_ERROR;
+				const msg = getErrorMessage(err, UI_LABELS.MUSIC_LIBRARY.UPLOAD_ERROR);
 				setUploads((prev) => prev.map((u, idx) => (idx === i ? { ...u, error: msg } : u)));
 			}
 		}

@@ -51,7 +51,7 @@ function validateSettingEntry(key: string, value: string) {
 	if (!isEditableSettingKey(key)) {
 		return {
 			code: "INVALID_SETTING_KEY" as const,
-			message: `Unknown or non-editable setting key: ${key}`,
+			message: "Bu ayar güncellenemiyor.",
 		};
 	}
 
@@ -150,7 +150,7 @@ export function registerSettingsRoutes(
 
 				return reply.code(400).send({
 					ok: false,
-					error: { code: validationError.code, message: `${key}: ${validationError.message}` },
+					error: { code: validationError.code, message: validationError.message },
 				});
 			}
 

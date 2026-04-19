@@ -12,17 +12,16 @@ import { OrderList } from "./components/OrderList";
 import { ServerConfig } from "./components/ServerConfig";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { ApiError, api, setBaseUrl, setCashierToken, setTerminalId } from "./lib/api";
+import { getEffectiveCashierToken, normalizeServerUrl } from "./lib/connection-config";
+import { getUserErrorMessage } from "./lib/user-error";
 import { useOrderStore } from "./stores/orderStore";
 import { useSettingsStore } from "./stores/settingsStore";
 
 function getUnlockErrorMessage(error: unknown): string {
 	if (error instanceof ApiError && error.code === "UNAUTHORIZED") {
-		return "Yönetici şifresi hatalı.";
+		return "Admin parolası hatalı.";
 	}
-	if (error instanceof Error && error.message) {
-		return error.message;
-	}
-	return "Şifre doğrulanamadı. Bağlantıyı kontrol edip tekrar deneyin.";
+	return getUserErrorMessage(error, "Şifre doğrulanamadı. Bağlantıyı kontrol edip tekrar deneyin.");
 }
 
 interface AdminUnlockModalProps {
@@ -71,9 +70,9 @@ function AdminUnlockModal({
 					className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/[0.08] bg-slate-900 shadow-2xl shadow-black/50"
 				>
 					<div className="border-b border-white/[0.06] px-6 py-5">
-						<h2 className="text-xl font-bold text-white tracking-wide">Yönetici Şifresi</h2>
+						<h2 className="text-xl font-bold text-white tracking-wide">Admin Parolası</h2>
 						<p className="mt-1 text-sm text-slate-400">
-							Ayarları değiştirmek için yönetici parolasını girin.
+							Ayarları değiştirmek için admin parolasını girin.
 						</p>
 					</div>
 
@@ -101,7 +100,7 @@ function AdminUnlockModal({
 									value={password}
 									onChange={(event) => onPasswordChange(event.target.value)}
 									className="h-full min-w-0 flex-1 bg-transparent px-4 text-base text-white placeholder:text-slate-500 focus:outline-none"
-									placeholder="Yönetici parolasını girin"
+									placeholder="Admin parolasını girin"
 									autoComplete="current-password"
 									disabled={isSubmitting}
 								/>
@@ -341,15 +340,15 @@ export default function App() {
 
 			if (window.electronAPI) {
 				config = await window.electronAPI.getConfig();
-				serverUrl = config.serverUrl;
+				serverUrl = normalizeServerUrl(config.serverUrl);
 				setBaseUrl(serverUrl);
 				setTerminalId(config.terminalId);
-				setCashierToken(config.cashierToken);
+				setCashierToken(getEffectiveCashierToken(serverUrl, config.cashierToken));
 			}
 
 			const primaryOk = await (async () => {
 				try {
-					const res = await fetch(`${serverUrl.replace(/\/$/, "")}/health`);
+					const res = await fetch(`${normalizeServerUrl(serverUrl)}/health`);
 					const data = (await res.json()) as { ok?: boolean };
 					return data.ok === true;
 				} catch {
@@ -378,8 +377,9 @@ export default function App() {
 			try {
 				const discovered = await window.electronAPI.discoverServer();
 				if (discovered) {
-					setBaseUrl(discovered);
-					await window.electronAPI.saveConfig({ ...config, serverUrl: discovered });
+					const normalizedDiscovered = normalizeServerUrl(discovered);
+					setBaseUrl(normalizedDiscovered);
+					await window.electronAPI.saveConfig({ ...config, serverUrl: normalizedDiscovered });
 					if (!cancelled) {
 						setStartupView("app");
 					}

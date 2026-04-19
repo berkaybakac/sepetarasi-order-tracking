@@ -72,89 +72,8 @@
           };
           sendDiagnostic("inline-script-start");
 
-          function applyBaseOverlayStyles(node) {
-            node.style.position = "fixed";
-            node.style.top = "0";
-            node.style.right = "0";
-            node.style.bottom = "0";
-            node.style.left = "0";
-            node.style.zIndex = "2147483647";
-            node.style.overflow = "auto";
-            node.style.backgroundColor = "#2d0202";
-            node.style.color = "#ffffff";
-            node.style.padding = "24px 20px 32px";
-            node.style.fontFamily = "monospace";
-          }
-
-          function ensureOverlay() {
-            var overlay = document.getElementById("__display-error-overlay");
-            if (overlay) return overlay;
-
-            overlay = document.createElement("div");
-            overlay.id = "__display-error-overlay";
-            applyBaseOverlayStyles(overlay);
-
-            var title = document.createElement("div");
-            title.appendChild(document.createTextNode("DISPLAY HATASI"));
-            title.style.fontSize = "48px";
-            title.style.fontWeight = "900";
-            title.style.lineHeight = "1.05";
-            overlay.appendChild(title);
-
-            var subtitle = document.createElement("div");
-            subtitle.appendChild(document.createTextNode("Path: " + path));
-            subtitle.style.marginTop = "12px";
-            subtitle.style.fontSize = "20px";
-            subtitle.style.fontWeight = "700";
-            subtitle.style.color = "#fecaca";
-            overlay.appendChild(subtitle);
-
-            var log = document.createElement("div");
-            log.id = "__display-error-log";
-            log.style.marginTop = "20px";
-            overlay.appendChild(log);
-
-            (document.body || document.documentElement).appendChild(overlay);
-            return overlay;
-          }
-
-          function appendField(parent, label, value) {
-            if (!value || value === "0:0" || value === "0") return;
-            var line = document.createElement("div");
-            line.appendChild(document.createTextNode(label + ": " + value));
-            line.style.marginTop = "8px";
-            line.style.fontSize = "20px";
-            line.style.lineHeight = "1.4";
-            parent.appendChild(line);
-          }
-
           function report(kind, payload) {
-            var overlay = ensureOverlay();
-            var log = document.getElementById("__display-error-log");
-            if (!log) {
-              log = overlay;
-            }
-
             sendDiagnostic(kind, payload);
-
-            var entry = document.createElement("div");
-            entry.style.border = "3px solid rgba(254, 202, 202, 0.45)";
-            entry.style.backgroundColor = "rgba(17, 24, 39, 0.5)";
-            entry.style.padding = "16px 18px";
-            entry.style.marginTop = "14px";
-
-            var heading = document.createElement("div");
-            heading.appendChild(document.createTextNode(kind));
-            heading.style.fontSize = "28px";
-            heading.style.fontWeight = "900";
-            heading.style.color = "#fecaca";
-            entry.appendChild(heading);
-
-            appendField(entry, "Mesaj", safeToString(payload.message));
-            appendField(entry, "Kaynak", safeToString(payload.source));
-            appendField(entry, "Konum", safeToString(payload.location));
-
-            log.appendChild(entry);
           }
 
           var previousOnError = window.onerror;
@@ -445,9 +364,9 @@
         <div class="boot-card">
           <div class="boot-kicker">Sepetarası</div>
           <img class="boot-logo" src="/brand-loader-logo.svg" alt="" draggable="false" />
-          <div class="boot-caption">Giriş ekranı hazırlanıyor</div>
+          <div class="boot-caption">Ekran hazırlanıyor</div>
           <div class="boot-bar-wrap">
-            <div class="boot-status">Hazırlanıyor</div>
+            <div class="boot-status">Lütfen bekleyin</div>
             <div class="boot-bar"></div>
           </div>
         </div>

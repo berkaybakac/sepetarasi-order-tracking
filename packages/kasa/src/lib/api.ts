@@ -1,13 +1,18 @@
 // ADR: intentionally separate from web/api.ts — see docs/dev-notes.md "Intentional Separations"
 import { API_ROUTES } from "@sepetarasi/shared";
 import type { CreateOrderInput, Order, UpdateStatusInput } from "@sepetarasi/shared";
+import {
+	LOCAL_DEV_CASHIER_TOKEN,
+	LOCAL_DEV_SERVER_URL,
+	normalizeServerUrl,
+} from "./connection-config";
 
-let baseUrl = "http://localhost:3000";
+let baseUrl = LOCAL_DEV_SERVER_URL;
 let terminalId = "";
-let cashierToken = "local-dev-cashier-token";
+let cashierToken = LOCAL_DEV_CASHIER_TOKEN;
 
 export function setBaseUrl(url: string) {
-	baseUrl = url.replace(/\/$/, "");
+	baseUrl = normalizeServerUrl(url);
 }
 
 export function getBaseUrl() {
@@ -26,36 +31,80 @@ export function setCashierToken(token: string) {
 	cashierToken = token;
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-	const res = await fetch(`${baseUrl}${path}`, {
-		method,
-		headers: {
-			...(body ? { "Content-Type": "application/json" } : {}),
-			...(cashierToken ? { "x-cashier-token": cashierToken } : {}),
-		},
-		body: body ? JSON.stringify(body) : undefined,
-	});
+async function requestAtUrl<T>(
+	requestBaseUrl: string,
+	method: string,
+	path: string,
+	body?: unknown,
+	tokenOverride?: string,
+): Promise<T> {
+	let res: Response;
+	try {
+		res = await fetch(`${normalizeServerUrl(requestBaseUrl)}${path}`, {
+			method,
+			headers: {
+				...(body ? { "Content-Type": "application/json" } : {}),
+				...(tokenOverride ? { "x-cashier-token": tokenOverride } : {}),
+			},
+			body: body ? JSON.stringify(body) : undefined,
+		});
+	} catch {
+		throw new ApiError("NETWORK_ERROR", "Bağlantı kurulamadı. Ağ bağlantısını kontrol edin.", 0);
+	}
 
 	const contentType = res.headers.get("content-type") || "";
-	const json = contentType.includes("application/json") ? await res.json() : null;
+	let json: unknown = null;
+	if (contentType.includes("application/json")) {
+		try {
+			json = await res.json();
+		} catch {
+			if (res.ok) {
+				throw new ApiError("INVALID_RESPONSE", "Sunucudan geçerli yanıt alınamadı.", res.status);
+			}
+		}
+	}
 
 	if (!res.ok) {
-		const code = json?.error?.code ?? json?.code ?? `HTTP_${res.status}`;
-		const message = json?.error?.message ?? json?.message ?? `Request failed (${res.status})`;
+		const apiResponse = json as {
+			error?: { code?: string; message?: string };
+			code?: string;
+			message?: string;
+		} | null;
+		const code = apiResponse?.error?.code ?? apiResponse?.code ?? `HTTP_${res.status}`;
+		const message =
+			apiResponse?.error?.message ??
+			apiResponse?.message ??
+			(res.status >= 500
+				? "Sunucuda geçici bir sorun oluştu. Lütfen tekrar deneyin."
+				: "İşlem tamamlanamadı.");
 		throw new ApiError(code, message, res.status);
 	}
 
-	if (json?.ok === false) {
-		const code = json?.error?.code ?? `HTTP_${res.status}`;
-		const message = json?.error?.message ?? "Request failed";
+	const apiResponse = json as {
+		ok?: boolean;
+		data?: T;
+		error?: { code?: string; message?: string };
+	} | null;
+
+	if (apiResponse?.ok === false) {
+		const code = apiResponse.error?.code ?? `HTTP_${res.status}`;
+		const message = apiResponse.error?.message ?? "İşlem tamamlanamadı.";
 		throw new ApiError(code, message, res.status);
 	}
 
-	if (json?.ok === true) {
-		return json.data as T;
+	if (apiResponse?.ok === true) {
+		return apiResponse.data as T;
 	}
 
-	return json as T;
+	if (json !== null) {
+		return json as T;
+	}
+
+	throw new ApiError("INVALID_RESPONSE", "Sunucudan geçerli yanıt alınamadı.", res.status);
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+	return requestAtUrl<T>(baseUrl, method, path, body, cashierToken);
 }
 
 export class ApiError extends Error {
@@ -89,3 +138,13 @@ export const api = {
 	verifyAdminPassword: (password: string) =>
 		request<null>("POST", API_ROUTES.V1.AUTH.VERIFY_PASSWORD, { password }),
 };
+
+export function verifyCashierToken(serverUrl: string, token: string) {
+	return requestAtUrl<null>(
+		serverUrl,
+		"GET",
+		API_ROUTES.V1.AUTH.VERIFY_CASHIER_TOKEN,
+		undefined,
+		token,
+	);
+}

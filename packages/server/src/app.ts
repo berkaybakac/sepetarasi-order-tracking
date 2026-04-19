@@ -351,6 +351,7 @@ function buildTb1CompatDisplayHtml() {
       }
 
       .footer {
+        display: none;
         padding: 10px 14px;
         border-top: 1px solid var(--panel-divider);
         font-size: var(--footer-size);
@@ -386,7 +387,7 @@ function buildTb1CompatDisplayHtml() {
           </div>
         </div>
       </div>
-      <div class="footer" id="footer-status">TB1 uyumlu ekran hazırlanıyor</div>
+      <div class="footer" id="footer-status"></div>
     </div>
     <script>
       (function () {
@@ -437,8 +438,9 @@ function buildTb1CompatDisplayHtml() {
           } catch (_error) {}
         }
 
-        function setStatus(text) {
-          footerStatus.textContent = text;
+        function setStatus() {
+          if (!footerStatus) return;
+          footerStatus.textContent = "";
         }
 
         function requestJson(url, onSuccess, onError) {
@@ -718,11 +720,7 @@ function buildRelativeDisplayShellHtml(indexHtml: string) {
 		.replace(/url\((['"]?)\/([^)"']+)\1\)/g, (_match, quote, path) => {
 			const resolvedQuote = quote ?? "";
 			return `url(${resolvedQuote}./${path}${resolvedQuote})`;
-		})
-		.replace(
-			/<body([^>]*)>/i,
-			'<body$1><div id="display-static-probe"><div class="display-static-probe-title">DISPLAY.HTML SHELL YUKLENDI</div><div class="display-static-probe-subtitle">BURADA KALIYORSA TB1 JAVASCRIPT CALISTIRAMIYOR</div></div>',
-		);
+		});
 }
 
 function replyRetryAfterSeconds(reply: FastifyReply) {
@@ -954,7 +952,7 @@ export async function buildApp(opts: AppOptions) {
 			if (error.validation) {
 				return reply.status(400).send({
 					ok: false,
-					error: { code: "VALIDATION_ERROR", message: error.message },
+					error: { code: "VALIDATION_ERROR", message: "Gönderilen bilgiler eksik veya hatalı." },
 				});
 			}
 
@@ -1267,7 +1265,7 @@ export async function buildApp(opts: AppOptions) {
 				if (request.url.startsWith("/api/") || request.url.startsWith("/ws")) {
 					return reply
 						.status(404)
-						.send({ ok: false, error: { code: "NOT_FOUND", message: "Route not found" } });
+						.send({ ok: false, error: { code: "NOT_FOUND", message: "Sayfa bulunamadı." } });
 				}
 				return reply.sendFile("index.html");
 			});

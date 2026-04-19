@@ -41,6 +41,7 @@ describe("Web orderStore", () => {
 			stats: null,
 			connected: false,
 			loading: false,
+			initialLoadSettled: false,
 			hasConnectedOnce: false,
 			isHydrating: false,
 			lastReconnectedAt: 0,
@@ -54,6 +55,7 @@ describe("Web orderStore", () => {
 		const state = useOrderStore.getState();
 		expect(state.connected).toBe(false);
 		expect(state.hasConnectedOnce).toBe(false);
+		expect(state.initialLoadSettled).toBe(false);
 		expect(state.loading).toBe(false);
 	});
 
@@ -70,6 +72,7 @@ describe("Web orderStore", () => {
 
 		expect(useOrderStore.getState().loading).toBe(false);
 		expect(useOrderStore.getState().isHydrating).toBe(false);
+		expect(useOrderStore.getState().initialLoadSettled).toBe(true);
 		expect(useOrderStore.getState().lastSyncedAt).toBeGreaterThan(0);
 	});
 

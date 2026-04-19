@@ -20,11 +20,15 @@ vi.mock("../src/hooks/useBootScreenReady", () => ({
 	useBootScreenReady: vi.fn(),
 }));
 
-vi.mock("../src/lib/api", () => ({
-	api: {
-		authLogin: vi.fn(),
-	},
-}));
+vi.mock("../src/lib/api", async () => {
+	const actual = await vi.importActual<typeof import("../src/lib/api")>("../src/lib/api");
+	return {
+		...actual,
+		api: {
+			authLogin: vi.fn(),
+		},
+	};
+});
 
 function getPasswordInput(container: HTMLDivElement) {
 	const input = container.querySelector("#admin-password");
@@ -110,7 +114,7 @@ describe("LoginView", () => {
 		});
 
 		expect(container.textContent).toContain("Giriş yapın");
-		expect(container.textContent).toContain("Yönetici Parolası");
+		expect(container.textContent).toContain("Admin Parolası");
 		expect(container.textContent).not.toContain("Premium dark admin");
 		expect(container.textContent).not.toContain("Tutarlı UX");
 		expect(container.textContent).not.toContain("empty state");
@@ -173,7 +177,25 @@ describe("LoginView", () => {
 		expect(navigateMock).not.toHaveBeenCalled();
 	});
 
-	it("updates auth state and navigates to the admin panel after a successful login", async () => {
+	it("masks raw English login errors with a Turkish fallback", async () => {
+		const { api } = await import("../src/lib/api");
+		vi.mocked(api.authLogin).mockRejectedValue(new Error("Invalid password"));
+
+		await act(async () => {
+			root.render(<LoginView />);
+		});
+
+		await setPassword(getPasswordInput(container), "yanlis-parola");
+		await submitLogin(container);
+		await flushEffects();
+
+		expect(container.textContent).toContain("Giriş başarısız. Parolanızı kontrol edin.");
+		expect(container.textContent).not.toContain("Invalid password");
+		expect(useAuthStore.getState().isAdmin).toBe(false);
+		expect(navigateMock).not.toHaveBeenCalled();
+	});
+
+	it("updates auth state and navigates to the admin route after a successful login", async () => {
 		const { api } = await import("../src/lib/api");
 		vi.mocked(api.authLogin).mockResolvedValue(null);
 

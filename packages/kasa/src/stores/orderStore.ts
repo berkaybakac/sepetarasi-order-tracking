@@ -3,6 +3,7 @@ import type { Order, WsMessage } from "@sepetarasi/shared";
 import { create } from "zustand";
 import { ApiError, api } from "../lib/api";
 import { reportRendererError, reportRendererWarning } from "../lib/electron";
+import { getUserErrorMessage } from "../lib/user-error";
 
 interface OrderState {
 	orders: Map<string, Order>;
@@ -50,7 +51,10 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				return;
 			} catch (err) {
 				attempt++;
-				const errorMsg = (err as Error).message;
+				const errorMsg = getUserErrorMessage(
+					err,
+					"Siparişler alınamadı. Lütfen bağlantıyı kontrol edip tekrar deneyin.",
+				);
 
 				// Rate limit: retrying immediately makes things worse — bail out
 				if (err instanceof ApiError && err.statusCode === 429) {

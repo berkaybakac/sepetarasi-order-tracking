@@ -5,9 +5,10 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
 	try {
 		await request.jwtVerify({ onlyCookie: true });
 	} catch (err) {
-		return reply
-			.code(401)
-			.send({ ok: false, error: { code: "UNAUTHORIZED", message: "Admin access required" } });
+		return reply.code(401).send({
+			ok: false,
+			error: { code: "UNAUTHORIZED", message: "Bu işlem için yetki gerekiyor." },
+		});
 	}
 }
 
@@ -29,6 +30,6 @@ export async function requireCashierOrAdmin(request: FastifyRequest, reply: Fast
 
 	return reply.code(401).send({
 		ok: false,
-		error: { code: "UNAUTHORIZED", message: "Cashier token or Admin access required" },
+		error: { code: "UNAUTHORIZED", message: "Bu işlem için yetki gerekiyor." },
 	});
 }

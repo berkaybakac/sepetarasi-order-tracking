@@ -1,11 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	getBaseUrl,
 	setCashierToken as setApiCashierToken,
 	setTerminalId as setApiTerminalId,
 	setBaseUrl,
+	verifyCashierToken,
 } from "../lib/api";
+import {
+	LOCAL_DEV_CASHIER_TOKEN,
+	getEffectiveCashierToken,
+	isLocalDevServerUrl,
+	normalizeServerUrl,
+} from "../lib/connection-config";
 import { type KasaConfig, getElectronAPI, reportRendererError } from "../lib/electron";
+import { getUserErrorMessage } from "../lib/user-error";
 
 interface ServerConfigProps {
 	onConnected: () => void;
@@ -16,6 +24,14 @@ const inputClass =
 
 const labelClass = "block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1";
 
+function isUnauthorizedError(error: unknown) {
+	if (typeof error !== "object" || error === null || !("code" in error)) {
+		return false;
+	}
+
+	return (error as { code?: string }).code === "UNAUTHORIZED";
+}
+
 export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [url, setUrl] = useState(getBaseUrl());
 	const [terminalId, setTerminalId] = useState("KASA-1");
@@ -24,28 +40,46 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	const [printerCodePage, setPrinterCodePage] = useState("61");
 	const [printerEncoding, setPrinterEncoding] = useState("cp857");
 	const [cashierToken, setCashierToken] = useState("");
-	const [showCashierToken, setShowCashierToken] = useState(false);
+	const [tokenEditorOpen, setTokenEditorOpen] = useState(false);
 	const [testing, setTesting] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [discoverHint, setDiscoverHint] = useState<string | null>(null);
 
+	const normalizedUrl = normalizeServerUrl(url);
+	const isLocalDev = isLocalDevServerUrl(normalizedUrl);
+	const previousIsLocalDevRef = useRef(isLocalDev);
+
 	useEffect(() => {
 		async function load() {
 			const electronAPI = getElectronAPI();
-			if (electronAPI) {
-				const config = await electronAPI.getConfig();
-				setUrl(config.serverUrl);
-				setTerminalId(config.terminalId);
-				setTerminalName(config.terminalName);
-				setPrinterIp(config.printerIp);
-				setPrinterCodePage(String(config.printerCodePage));
-				setPrinterEncoding(config.printerEncoding);
-				setCashierToken(config.cashierToken);
-			}
+			if (!electronAPI) return;
+
+			const config = await electronAPI.getConfig();
+			setUrl(normalizeServerUrl(config.serverUrl));
+			setTerminalId(config.terminalId);
+			setTerminalName(config.terminalName);
+			setPrinterIp(config.printerIp);
+			setPrinterCodePage(String(config.printerCodePage));
+			setPrinterEncoding(config.printerEncoding);
+			setCashierToken(config.cashierToken);
 		}
-		load();
+
+		void load();
 	}, []);
+
+	useEffect(() => {
+		const wasLocalDev = previousIsLocalDevRef.current;
+
+		if (wasLocalDev && !isLocalDev && cashierToken === LOCAL_DEV_CASHIER_TOKEN) {
+			setCashierToken("");
+		}
+		if (isLocalDev && tokenEditorOpen) {
+			setTokenEditorOpen(false);
+		}
+
+		previousIsLocalDevRef.current = isLocalDev;
+	}, [cashierToken, isLocalDev, tokenEditorOpen]);
 
 	const handleDiscover = async () => {
 		const electronAPI = getElectronAPI();
@@ -56,14 +90,9 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 		try {
 			const found = await electronAPI.discoverServer();
 			if (found) {
-				setUrl(found);
+				setUrl(normalizeServerUrl(found));
 			} else {
-				const isWindows = navigator.platform.toLowerCase().includes("win");
-				setDiscoverHint(
-					isWindows
-						? "Sunucu bulunamadı. Windows'ta .local adresleri için Apple Bonjour gereklidir — iTunes ile gelir veya Apple'dan ayrıca kurulabilir."
-						: "Sunucu bulunamadı. Cihazın aynı ağda olduğundan emin olun.",
-				);
+				setDiscoverHint("Sunucu otomatik bulunamadı. Adresi elle girebilirsiniz.");
 			}
 		} catch (error) {
 			reportRendererError({
@@ -72,7 +101,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				message: "Kasa server discovery failed",
 				error,
 			});
-			setDiscoverHint("Arama sırasında hata oluştu.");
+			setDiscoverHint("Sunucu aranırken sorun oluştu. Adresi elle girebilirsiniz.");
 		} finally {
 			setDiscovering(false);
 		}
@@ -82,48 +111,72 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 		setTesting(true);
 		setError(null);
 
-		const parsedCodePage = Number.parseInt(printerCodePage, 10);
-		if (Number.isNaN(parsedCodePage) || parsedCodePage < 0 || parsedCodePage > 255) {
-			setError("Yazıcı Code Page değeri 0 ile 255 arasında olmalı");
+		if (!normalizedUrl) {
+			setError("Sunucu adresi gereklidir.");
 			setTesting(false);
 			return;
 		}
 
+		const parsedCodePage = Number.parseInt(printerCodePage, 10);
+		if (Number.isNaN(parsedCodePage) || parsedCodePage < 0 || parsedCodePage > 255) {
+			setError("Kod sayfası 0 ile 255 arasında olmalıdır.");
+			setTesting(false);
+			return;
+		}
+
+		const effectiveCashierToken = getEffectiveCashierToken(normalizedUrl, cashierToken);
+		if (!effectiveCashierToken) {
+			setError("Kasiyer token gereklidir.");
+			setTesting(false);
+			return;
+		}
+
+		let validationStep: "health" | "cashier_token" = "health";
+
 		try {
-			const res = await fetch(`${url.replace(/\/$/, "")}/health`);
-			const data = await res.json();
-			if (data.ok) {
-				setBaseUrl(url);
-				setApiTerminalId(terminalId);
-				setApiCashierToken(cashierToken);
-				const config: KasaConfig = {
-					serverUrl: url,
-					terminalId,
-					terminalName,
-					hotkey: "Ctrl+Shift+O",
-					printerIp,
-					printerCodePage: parsedCodePage,
-					printerEncoding: printerEncoding.trim().toLowerCase() || "cp857",
-					cashierToken,
-				};
-				await getElectronAPI()?.saveConfig(config);
-				onConnected();
-			} else {
-				setError("Sunucu yanıt verdi ama sağlık kontrolü başarısız");
+			const res = await fetch(`${normalizedUrl}/health`);
+			const data = (await res.json()) as { ok?: boolean };
+			if (!data.ok) {
+				setError("Sunucuya erişildi ama bağlantı tamamlanamadı.");
+				return;
 			}
-		} catch (err) {
-			// Dev note: .local hostnames require Bonjour on Windows (comes with iTunes or install separately from Apple)
+
+			validationStep = "cashier_token";
+			await verifyCashierToken(normalizedUrl, effectiveCashierToken);
+
+			setBaseUrl(normalizedUrl);
+			setApiTerminalId(terminalId);
+			setApiCashierToken(effectiveCashierToken);
+
+			const config: KasaConfig = {
+				serverUrl: normalizedUrl,
+				terminalId,
+				terminalName,
+				hotkey: "Ctrl+Shift+O",
+				printerIp,
+				printerCodePage: parsedCodePage,
+				printerEncoding: printerEncoding.trim().toLowerCase() || "cp857",
+				cashierToken: effectiveCashierToken,
+			};
+			await getElectronAPI()?.saveConfig(config);
+			onConnected();
+		} catch (error) {
 			reportRendererError({
 				component: "config",
 				event: "config.connection_test_failed",
 				message: "Kasa server connection test failed",
-				error: err,
+				error,
 				context: {
-					serverUrl: url,
+					serverUrl: normalizedUrl,
 					terminalId,
+					validationStep,
 				},
 			});
-			setError("Sunucuya bağlanılamadı. Adresi ve ağ bağlantısını kontrol edin.");
+			if (validationStep === "cashier_token" && isUnauthorizedError(error)) {
+				setError("Kasiyer token doğrulanamadı. Token'ı kontrol edin.");
+			} else {
+				setError(getUserErrorMessage(error, "Sunucuya bağlanılamadı. Adresi kontrol edin."));
+			}
 		} finally {
 			setTesting(false);
 		}
@@ -135,7 +188,6 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				<h1 className="text-[2rem] font-bold text-white mb-1 tracking-wide">SEPET ARASI KASA</h1>
 				<p className="text-slate-400 mb-5">Kasa ayarlarını yapılandırın</p>
 
-				{/* Sunucu Adresi */}
 				<div className="mb-3">
 					<label htmlFor="server-url" className={labelClass}>
 						Sunucu Adresi
@@ -147,15 +199,14 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 						onChange={(e) => setUrl(e.target.value)}
 						placeholder="http://sepetarasi.local:3000"
 						className={inputClass}
-						onKeyDown={(e) => e.key === "Enter" && handleTest()}
+						onKeyDown={(e) => e.key === "Enter" && void handleTest()}
 					/>
 				</div>
 
-				{/* Terminal ID + Adı */}
 				<div className="grid grid-cols-2 gap-3 mb-3">
 					<div>
 						<label htmlFor="terminal-id" className={labelClass}>
-							Terminal ID
+							Terminal Kodu
 						</label>
 						<input
 							id="terminal-id"
@@ -181,33 +232,6 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					</div>
 				</div>
 
-				{/* Kasiyer Token */}
-				<div className="mb-3">
-					<label htmlFor="cashier-token" className={labelClass}>
-						Kasiyer Token
-					</label>
-					<div className="relative">
-						<input
-							id="cashier-token"
-							type={showCashierToken ? "text" : "password"}
-							value={cashierToken}
-							onChange={(e) => setCashierToken(e.target.value)}
-							placeholder="local-dev-cashier-token"
-							className={`${inputClass} pr-24 font-mono text-sm`}
-							autoComplete="off"
-							spellCheck={false}
-						/>
-						<button
-							type="button"
-							onClick={() => setShowCashierToken((prev) => !prev)}
-							className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-slate-600 px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white hover:border-slate-400 transition-colors"
-						>
-							{showCashierToken ? "Gizle" : "Göster"}
-						</button>
-					</div>
-				</div>
-
-				{/* Yazıcı IP */}
 				<div className="mb-4">
 					<label htmlFor="printer-ip" className={labelClass}>
 						Yazıcı IP Adresi
@@ -226,7 +250,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 				<div className="grid grid-cols-2 gap-3 mb-4">
 					<div>
 						<label htmlFor="printer-code-page" className={labelClass}>
-							Code Page
+							Kod Sayfası
 						</label>
 						<input
 							id="printer-code-page"
@@ -241,7 +265,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					</div>
 					<div>
 						<label htmlFor="printer-encoding" className={labelClass}>
-							Encoding
+							Karakter Kodlaması
 						</label>
 						<input
 							id="printer-encoding"
@@ -254,11 +278,50 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					</div>
 				</div>
 				<p className="text-[11px] leading-5 text-slate-500 -mt-2.5 mb-4">
-					Önerilen: <code>61</code> + <code>cp857</code>. Türkçe bozulursa <code>24</code> +{" "}
-					<code>cp1254</code>.
+					Önerilen ayar: <code>61</code> ve <code>cp857</code>. Türkçe bozulursa <code>24</code> ve{" "}
+					<code>cp1254</code> deneyin.
 				</p>
 
-				{/* Kısayol bilgisi */}
+				{!isLocalDev ? (
+					<div className="mb-4 rounded-xl border border-white/[0.07] bg-slate-800/40 px-4 py-3">
+						<div className="flex items-center justify-between gap-3">
+							<div>
+								<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+									Gelişmiş
+								</p>
+								<p className="mt-1 text-sm text-slate-200">
+									Kasiyer token: {cashierToken.trim() ? "kayıtlı" : "gerekli"}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => setTokenEditorOpen((current) => !current)}
+								className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
+							>
+								{tokenEditorOpen ? "Token Alanını Kapat" : "Token Değiştir"}
+							</button>
+						</div>
+
+						{tokenEditorOpen ? (
+							<div className="mt-4">
+								<label htmlFor="cashier-token" className={labelClass}>
+									Kasiyer Token
+								</label>
+								<input
+									id="cashier-token"
+									type="password"
+									value={cashierToken}
+									onChange={(e) => setCashierToken(e.target.value)}
+									placeholder="Yeni kasiyer token'ı"
+									className={`${inputClass} font-mono text-sm`}
+									autoComplete="off"
+									spellCheck={false}
+								/>
+							</div>
+						) : null}
+					</div>
+				) : null}
+
 				<div className="bg-slate-800/60 border border-white/[0.05] rounded-lg px-3 py-2 mb-4 text-sm text-slate-400">
 					Kısayol:{" "}
 					<kbd className="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">
@@ -267,11 +330,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					- Pencereyi aç/kapat
 				</div>
 
-				{error && (
+				{error ? (
 					<p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">
 						{error}
 					</p>
-				)}
+				) : null}
 
 				<div className="flex gap-3">
 					<button
@@ -299,11 +362,11 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 					</button>
 				</div>
 
-				{discoverHint && (
+				{discoverHint ? (
 					<p className="text-amber-400 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mt-3">
 						{discoverHint}
 					</p>
-				)}
+				) : null}
 			</div>
 		</div>
 	);

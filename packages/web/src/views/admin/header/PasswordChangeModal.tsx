@@ -3,6 +3,7 @@ import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { LockIcon } from "../../../components/icons";
 import { useActionFeedback } from "../../../hooks/useActionFeedback";
 import { ApiError, api } from "../../../lib/api";
+import { getErrorMessage } from "../../../utils/error";
 import { Field, InlineAlert, Modal, PasswordInput } from "../ui/primitives";
 
 interface PasswordChangeModalProps {
@@ -24,11 +25,7 @@ function getPasswordChangeErrorMessage(error: unknown) {
 		}
 	}
 
-	if (error instanceof Error && error.message) {
-		return error.message;
-	}
-
-	return "Parola değiştirilemedi. Lütfen tekrar deneyin.";
+	return getErrorMessage(error, "Parola değiştirilemedi. Lütfen tekrar deneyin.");
 }
 
 export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps) {
@@ -113,7 +110,7 @@ export function PasswordChangeModal({ open, onClose }: PasswordChangeModalProps)
 						<LockIcon className="h-4 w-4" />
 					</span>
 					<div>
-						<p className="text-sm font-semibold text-text-strong">Yönetici erişimi korunur</p>
+						<p className="text-sm font-semibold text-text-strong">Admin erişimi korunur</p>
 						<p className="mt-1 text-sm text-text-subtle">
 							En az {PASSWORD_MIN_LENGTH} karakter kullanın. Yeni parolayı iki kez girerek yazım
 							hatasını önleyin.

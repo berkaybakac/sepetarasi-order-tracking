@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { getErrorMessage } from "../../utils/error";
 import { PeriodStatsDeliveryDistribution } from "./stats/PeriodStatsDeliveryDistribution";
 import { PeriodStatsFilters } from "./stats/PeriodStatsFilters";
 import { PeriodStatsKpis } from "./stats/PeriodStatsKpis";
@@ -36,10 +37,7 @@ interface UiErrorState {
 }
 
 function resolveUiError(error: unknown): UiErrorState {
-	const message =
-		typeof error === "object" && error && "message" in error && typeof error.message === "string"
-			? error.message
-			: "Veri alınamadı.";
+	const message = getErrorMessage(error, "Veri alınamadı.");
 	const code =
 		typeof error === "object" && error && "code" in error && typeof error.code === "string"
 			? error.code
@@ -193,7 +191,7 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 			if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 			saveTimerRef.current = setTimeout(() => setTargetSaveLabel("idle"), 2000);
 		} catch (err) {
-			setTargetError(err instanceof Error ? err.message : "Teslim hedefi kaydedilemedi.");
+			setTargetError(getErrorMessage(err, "Teslim hedefi kaydedilemedi."));
 		} finally {
 			setTargetSaving(false);
 		}
@@ -205,7 +203,7 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 		try {
 			await hydrateSettings();
 		} catch (err) {
-			setTargetError(err instanceof Error ? err.message : "Ayarlar yeniden yüklenemedi.");
+			setTargetError(getErrorMessage(err, "Ayarlar yeniden yüklenemedi."));
 		} finally {
 			setTargetRetrying(false);
 		}

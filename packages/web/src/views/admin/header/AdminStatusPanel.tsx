@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "../../../components/BrandLogo";
 import { LockIcon, LogoutIcon } from "../../../components/icons";
+import { UI_LABELS } from "../../../constants/labels";
 import { cn } from "../../../lib/cn";
 import { ActionButton, TopBar } from "../ui/primitives";
 
@@ -82,7 +83,7 @@ export function AdminStatusPanel({
 										: "text-[1.58rem] font-semibold leading-[1.02] tracking-tight",
 								)}
 							>
-								Yönetim Paneli
+								{UI_LABELS.ADMIN_TITLE}
 							</h1>
 						</div>
 					</div>

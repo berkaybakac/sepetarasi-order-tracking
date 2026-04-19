@@ -10,6 +10,7 @@ interface OrderState {
 	stats: DayStats | null;
 	connected: boolean;
 	loading: boolean;
+	initialLoadSettled: boolean;
 	nowPlaying: AnnouncementPayload | null;
 	hasConnectedOnce: boolean;
 	isHydrating: boolean;
@@ -107,6 +108,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 	stats: null,
 	connected: false,
 	loading: false,
+	initialLoadSettled: false,
 	hasConnectedOnce: false,
 	isHydrating: false,
 	lastReconnectedAt: 0,
@@ -147,6 +149,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 				const statsChanged = includeStats ? !areStatsEqual(state.stats, stats) : false;
 				const nextState: Partial<OrderState> = {
 					loading: false,
+					initialLoadSettled: true,
 					isHydrating: false,
 				};
 
@@ -173,7 +176,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 					await delay(backoff);
 				} else {
 					if (!silent) set({ loading: false });
-					set({ isHydrating: false });
+					set({ initialLoadSettled: true, isHydrating: false });
 					return false;
 				}
 			}

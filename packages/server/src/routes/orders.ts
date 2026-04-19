@@ -66,7 +66,10 @@ export function registerOrderRoutes(
 				if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
 					return reply.status(409).send({
 						ok: false,
-						error: { code: "DUPLICATE_ORDER", message: "Duplicate business_date + display_no" },
+						error: {
+							code: "DUPLICATE_ORDER",
+							message: "Sipariş oluşturulamadı. Lütfen tekrar deneyin.",
+						},
 					});
 				}
 				throw err;
@@ -93,7 +96,7 @@ export function registerOrderRoutes(
 		if (!order) {
 			return reply.status(404).send({
 				ok: false,
-				error: { code: "NOT_FOUND", message: "Order not found" },
+				error: { code: "NOT_FOUND", message: "Sipariş bulunamadı." },
 			});
 		}
 		return { ok: true, data: order };
@@ -188,7 +191,7 @@ export function registerOrderRoutes(
 				const stats = statsService.getToday();
 				broadcaster.broadcast([WS_CHANNELS.ORDERS], WS_EVENTS.STATS_UPDATED, stats);
 
-				return { ok: true, data: { message: "Order deleted successfully" } };
+				return { ok: true, data: { message: "Sipariş silindi." } };
 			} catch (err) {
 				if (err instanceof OrderNotFoundError) {
 					return reply.status(404).send({

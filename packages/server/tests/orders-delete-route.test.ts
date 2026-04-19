@@ -51,7 +51,7 @@ describe("DELETE /api/v1/orders/:id", () => {
 		expect(deleteRes.statusCode).toBe(200);
 		expect(deleteRes.json()).toEqual({
 			ok: true,
-			data: { message: "Order deleted successfully" },
+			data: { message: "Sipariş silindi." },
 		});
 
 		const dbOrder = db.select().from(orders).where(eq(orders.id, orderId)).get();

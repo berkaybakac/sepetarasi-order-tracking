@@ -139,7 +139,8 @@ export function OrderCard({
 	order,
 	status,
 	tick,
-}: { order: Order; status: OrderStatus; tick?: number }) {
+	animateEntry = true,
+}: { order: Order; status: OrderStatus; tick?: number; animateEntry?: boolean }) {
 	const targetMinutes = useSettingsStore((s) => s.deliveryTargetMinutes);
 	const isLive = status !== OrderStatus.DELIVERED && status !== OrderStatus.CANCELLED;
 	const [, setLocalTick] = useState(0);
@@ -178,7 +179,7 @@ export function OrderCard({
 	return (
 		<motion.article
 			layout
-			initial={{ opacity: 0, y: 12, scale: 0.985 }}
+			initial={animateEntry ? { opacity: 0, y: 12, scale: 0.985 } : false}
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			exit={{ opacity: 0, y: -8, scale: 0.985 }}
 			transition={{ duration: 0.22, ease: "easeOut" }}

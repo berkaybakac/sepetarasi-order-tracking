@@ -8,12 +8,12 @@ import { SectionCard } from "./ui/primitives";
 
 export { StatCards } from "./orders/StatCards";
 
-export function OrderColumns() {
+export function OrderColumns({ animateEntries = true }: { animateEntries?: boolean }) {
 	return (
 		<SectionCard title="Sipariş Panosu">
 			<div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
 				{COLUMN_CONFIG.map((col) => (
-					<OrderColumn key={col.status} {...col} />
+					<OrderColumn key={col.status} {...col} animateEntries={animateEntries} />
 				))}
 			</div>
 		</SectionCard>

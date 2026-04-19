@@ -8,13 +8,18 @@ import { api } from "../src/lib/api";
 import { useSettingsStore } from "../src/stores/settingsStore";
 import { PeriodStats } from "../src/views/admin/PeriodStats";
 
-vi.mock("../src/lib/api", () => ({
-	api: {
-		getDeliveryAnalytics: vi.fn(),
-		getPublicSettings: vi.fn().mockResolvedValue({}),
-		updateSetting: vi.fn(),
-	},
-}));
+vi.mock("../src/lib/api", async () => {
+	const actual = await vi.importActual<typeof import("../src/lib/api")>("../src/lib/api");
+	return {
+		...actual,
+		api: {
+			...actual.api,
+			getDeliveryAnalytics: vi.fn(),
+			getPublicSettings: vi.fn().mockResolvedValue({}),
+			updateSetting: vi.fn(),
+		},
+	};
+});
 
 function buildAnalytics(overrides: Partial<DeliveryAnalyticsResult> = {}): DeliveryAnalyticsResult {
 	return {

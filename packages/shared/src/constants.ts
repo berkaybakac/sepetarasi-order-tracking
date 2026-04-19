@@ -127,6 +127,7 @@ export const API_ROUTES = {
 			LOGOUT: "/api/v1/auth/logout",
 			ME: "/api/v1/auth/me",
 			VERIFY_PASSWORD: "/api/v1/auth/verify-password",
+			VERIFY_CASHIER_TOKEN: "/api/v1/auth/verify-cashier-token",
 			CHANGE_PASSWORD: "/api/v1/auth/change-password",
 		},
 		MUSIC: {

@@ -168,13 +168,13 @@ async function parseApiResponse<T>(
 		json = await jsonPromise;
 	} catch {
 		if (status !== 204 && status >= 200 && status < 300) {
-			throw new ApiError("Sunucu yanıtı okunamadı.", {
+			throw new ApiError("Sunucudan geçerli yanıt alınamadı.", {
 				status,
 				code: "INVALID_RESPONSE",
 			});
 		}
 
-		throw new ApiError(`Sunucuya ulaşılamıyor (HTTP ${status}).`, {
+		throw new ApiError("İşlem şu anda tamamlanamıyor.", {
 			status,
 			code: "HTTP_ERROR",
 			recoverable: status >= 500,
@@ -185,7 +185,7 @@ async function parseApiResponse<T>(
 		throw new ApiError(
 			json.error?.message ||
 				(status >= 500
-					? "Sunucu tarafında bir hata oluştu. Lütfen tekrar deneyin."
+					? "Sunucuda geçici bir sorun oluştu. Lütfen tekrar deneyin."
 					: "İstek tamamlanamadı."),
 			{
 				status,

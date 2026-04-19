@@ -218,7 +218,7 @@ ssh "$TARGET" "
 
     DISABLE_AUDIO_VALUE=\$(grep '^DISABLE_AUDIO=' $APP_DIR/.env | tail -n 1 | cut -d= -f2- | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
     if [ \"\$DISABLE_AUDIO_VALUE\" = \"1\" ] || [ \"\$DISABLE_AUDIO_VALUE\" = \"true\" ] || [ \"\$DISABLE_AUDIO_VALUE\" = \"yes\" ] || [ \"\$DISABLE_AUDIO_VALUE\" = \"on\" ]; then
-        echo \"[audio-check] FAIL: DISABLE_AUDIO aktif. Admin panelde ses acik gorunse bile hoparlorden ses cikmaz\"
+        echo \"[audio-check] FAIL: DISABLE_AUDIO aktif. Yonetim Panelinde ses acik gorunse bile hoparlorden ses cikmaz\"
         echo \"[audio-check] cozum: $APP_DIR/.env icinde DISABLE_AUDIO satirini sil veya false yap\"
         exit 1
     fi
@@ -311,9 +311,8 @@ fi
 
 echo ""
 echo "=== Deploy tamamlandi! ==="
-echo "Yonetici paneli: http://$HOST:3000"
-echo "Musteri ekrani:  http://$HOST:3000/display"
-echo "Admin:           http://$HOST:3000/admin"
+echo "Yonetim Paneli: http://$HOST:3000/admin"
+echo "Musteri Ekrani: http://$HOST:3000/display"
 
 if [ "$INIT" = "--init" ]; then
     echo ""

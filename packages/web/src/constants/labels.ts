@@ -6,7 +6,7 @@ import { OrderStatus } from "@sepetarasi/shared";
  */
 export const UI_LABELS = {
 	// Sayfa / Bileşen Başlıkları
-	ADMIN_TITLE: "Yönetici Paneli",
+	ADMIN_TITLE: "Yönetim Paneli",
 	AVG_PREP_TIME: "Ortalama Hazırlanma Süresi",
 	AVG_DELIVERY_TIME: "Ortalama Teslim Süresi",
 	TOTAL_ORDERS: "Toplam Sipariş",
@@ -43,7 +43,7 @@ export const UI_LABELS = {
 		PAGE_SECONDS_LABEL: "Sayfa Süresi (sn)",
 		RESET_DEFAULTS: "Varsayılanlara Dön",
 		OPEN_DISPLAY: "Müşteri Ekranını Aç",
-		OPEN_TB1_DISPLAY: "TB1 Uyumlu Ekranı Aç",
+		OPEN_TB1_DISPLAY: "Alternatif Ekranı Aç",
 		AUTO_OPTION: "Otomatik",
 		LAYOUT_SPLIT: "Yan Yana",
 		LAYOUT_STACK: "Altlı Üstlü",
