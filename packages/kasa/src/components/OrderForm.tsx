@@ -7,6 +7,12 @@ interface OrderFormProps {
 	onCreated?: () => void;
 }
 
+interface PrintErrorState {
+	title: string;
+	orderLine: string;
+	detail: string;
+}
+
 const DEFAULT_ORDER_TYPE: OrderType = "Paket";
 
 function formatDisplayNo(displayNo: number) {
@@ -20,6 +26,18 @@ function ensureSentence(text: string) {
 	return `${trimmed}.`;
 }
 
+function buildPrintErrorState(
+	order: Order,
+	detail: string,
+	title = "Fiş yazdırılamadı",
+): PrintErrorState {
+	return {
+		title,
+		orderLine: `Sipariş #${formatDisplayNo(order.display_no)} oluşturuldu.`,
+		detail: ensureSentence(detail),
+	};
+}
+
 export function OrderForm({ onCreated }: OrderFormProps) {
 	const customerInputId = "customer-name";
 	const notesTextareaId = "order-notes";
@@ -30,7 +48,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 	const [submitting, setSubmitting] = useState(false);
 	const [printing, setPrinting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [printError, setPrintError] = useState<string | null>(null);
+	const [printError, setPrintError] = useState<PrintErrorState | null>(null);
 	const [lastPrintableOrder, setLastPrintableOrder] = useState<Order | null>(null);
 	const [presets, setPresets] = useState<string[]>([]);
 	const [lastSelectedPreset, setLastSelectedPreset] = useState<string | null>(null);
@@ -97,9 +115,7 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 			setLastPrintableOrder(order);
 			const printResult = await printOrder(order);
 			if (!printResult.ok) {
-				setPrintError(
-					`Sipariş #${formatDisplayNo(order.display_no)} oluşturuldu. Fiş yazdırılamadı. ${ensureSentence(printResult.error ?? "Bilinmeyen hata")}`,
-				);
+				setPrintError(buildPrintErrorState(order, printResult.error ?? "Bilinmeyen hata"));
 			} else {
 				setLastPrintableOrder(null);
 			}
@@ -126,7 +142,11 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 				return;
 			}
 			setPrintError(
-				`Sipariş #${formatDisplayNo(lastPrintableOrder.display_no)} için fiş yeniden yazdırılamadı. ${ensureSentence(result.error ?? "Bilinmeyen hata")}`,
+				buildPrintErrorState(
+					lastPrintableOrder,
+					result.error ?? "Bilinmeyen hata",
+					"Fiş yeniden yazdırılamadı",
+				),
 			);
 		} finally {
 			setPrinting(false);
@@ -283,7 +303,11 @@ export function OrderForm({ onCreated }: OrderFormProps) {
 				{/* Fiş hatası */}
 				{printError && lastPrintableOrder && (
 					<div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
-						<p className="font-medium">{printError}</p>
+						<p className="text-base font-semibold text-amber-200">{printError.title}</p>
+						<p className="mt-1 text-xs font-medium tracking-wide text-amber-100/80">
+							{printError.orderLine}
+						</p>
+						<p className="mt-2 text-sm text-amber-300">{printError.detail}</p>
 						<button
 							type="button"
 							onClick={handleRetryPrint}

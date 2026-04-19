@@ -154,6 +154,7 @@ interface BaseAdminCardProps extends HTMLAttributes<HTMLElement> {
 	actions?: ReactNode;
 	accent?: keyof typeof ADMIN_CARD_ACCENTS;
 	bodyClassName?: string;
+	stretchBody?: boolean;
 	children: ReactNode;
 }
 
@@ -164,6 +165,7 @@ export function BaseAdminCard({
 	actions,
 	accent = "neutral",
 	bodyClassName,
+	stretchBody = false,
 	children,
 	className,
 	...props
@@ -180,7 +182,7 @@ export function BaseAdminCard({
 					)}
 				/>
 			) : null}
-			<div className="relative z-10">
+			<div className={cn("relative z-10", stretchBody && "flex h-full flex-col")}>
 				{title || description || actions ? (
 					<div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 						<div className="min-w-0">
@@ -209,7 +211,7 @@ export function BaseAdminCard({
 						) : null}
 					</div>
 				) : null}
-				<div className={bodyClassName}>{children}</div>
+				<div className={cn(stretchBody && "flex flex-1 flex-col", bodyClassName)}>{children}</div>
 			</div>
 		</section>
 	);

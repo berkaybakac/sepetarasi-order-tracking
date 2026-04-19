@@ -12,6 +12,7 @@ const db = createDb(dbPath);
 // Seed app_settings defaults
 const defaultSettings = [
 	{ key: "announcement_delay_ms", value: "2500" },
+	{ key: "announcement_enabled", value: "1" },
 	{ key: "business_name", value: "Sepetarasi" },
 	{ key: "receipt_business_name", value: "Sepetarasi" },
 	{ key: "receipt_address", value: "" },

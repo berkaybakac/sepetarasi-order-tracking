@@ -61,86 +61,114 @@ function AdminUnlockModal({
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4">
-			<div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-slate-900 shadow-2xl shadow-black/50">
-				<div className="border-b border-white/[0.06] px-6 py-5">
-					<h2 className="text-xl font-bold text-white tracking-wide">Yönetici Şifresi</h2>
-					<p className="mt-1 text-sm text-slate-400">
-						Ayarları değiştirmek için yönetici parolasını girin.
-					</p>
-				</div>
+		<div
+			data-testid="admin-unlock-modal"
+			className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 p-4 backdrop-blur-sm"
+		>
+			<div className="flex min-h-full items-center justify-center">
+				<div
+					data-testid="admin-unlock-modal-panel"
+					className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/[0.08] bg-slate-900 shadow-2xl shadow-black/50"
+				>
+					<div className="border-b border-white/[0.06] px-6 py-5">
+						<h2 className="text-xl font-bold text-white tracking-wide">Yönetici Şifresi</h2>
+						<p className="mt-1 text-sm text-slate-400">
+							Ayarları değiştirmek için yönetici parolasını girin.
+						</p>
+					</div>
 
-				<form onSubmit={onSubmit} className="space-y-4 px-6 py-5">
-					<div>
-						<label
-							htmlFor="admin-unlock-password"
-							className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400"
-						>
-							Parola
-						</label>
-						{/* biome-ignore lint/a11y/useKeyWithClickEvents: input is focusable via label htmlFor; wrapper click is an edge-padding convenience only. */}
-						<div
-							className="flex h-[50px] items-center rounded-lg border border-slate-700 bg-slate-800 transition focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500"
-							onClick={(event) => {
-								if (event.target === event.currentTarget) {
-									focusPasswordInput();
-								}
-							}}
-						>
-							<input
-								ref={inputRef}
-								id="admin-unlock-password"
-								type={showPassword ? "text" : "password"}
-								value={password}
-								onChange={(event) => onPasswordChange(event.target.value)}
-								className="h-full min-w-0 flex-1 bg-transparent px-4 text-base text-white placeholder:text-slate-500 focus:outline-none"
-								placeholder="Yönetici parolasını girin"
-								autoComplete="current-password"
-								disabled={isSubmitting}
-							/>
+					<form onSubmit={onSubmit} className="space-y-4 px-6 py-5">
+						<div>
+							<label
+								htmlFor="admin-unlock-password"
+								className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400"
+							>
+								Parola
+							</label>
+							{/* biome-ignore lint/a11y/useKeyWithClickEvents: input is focusable via label htmlFor; wrapper click is an edge-padding convenience only. */}
+							<div
+								className="flex h-[50px] items-center rounded-lg border border-slate-700 bg-slate-800 transition focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500"
+								onClick={(event) => {
+									if (event.target === event.currentTarget) {
+										focusPasswordInput();
+									}
+								}}
+							>
+								<input
+									ref={inputRef}
+									id="admin-unlock-password"
+									type={showPassword ? "text" : "password"}
+									value={password}
+									onChange={(event) => onPasswordChange(event.target.value)}
+									className="h-full min-w-0 flex-1 bg-transparent px-4 text-base text-white placeholder:text-slate-500 focus:outline-none"
+									placeholder="Yönetici parolasını girin"
+									autoComplete="current-password"
+									disabled={isSubmitting}
+								/>
+								<button
+									type="button"
+									onPointerDown={(event) => event.preventDefault()}
+									onClick={() => {
+										setShowPassword((current) => !current);
+										focusPasswordInput();
+									}}
+									aria-label={showPassword ? "Parolayı gizle" : "Parolayı göster"}
+									aria-pressed={showPassword}
+									className="mr-1.5 inline-flex h-8 shrink-0 items-center rounded-md border border-slate-600 px-2.5 text-xs font-semibold text-slate-300 transition-colors hover:border-slate-400 hover:text-white"
+								>
+									{showPassword ? "Gizle" : "Göster"}
+								</button>
+							</div>
+						</div>
+
+						{error ? (
+							<div
+								role="alert"
+								className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+							>
+								{error}
+							</div>
+						) : null}
+
+						<div className="flex gap-3 pt-1">
 							<button
 								type="button"
-								onPointerDown={(event) => event.preventDefault()}
-								onClick={() => {
-									setShowPassword((current) => !current);
-									focusPasswordInput();
-								}}
-								aria-label={showPassword ? "Parolayı gizle" : "Parolayı göster"}
-								aria-pressed={showPassword}
-								className="mr-1.5 inline-flex h-8 shrink-0 items-center rounded-md border border-slate-600 px-2.5 text-xs font-semibold text-slate-300 transition-colors hover:border-slate-400 hover:text-white"
+								onClick={onClose}
+								className="flex-1 rounded-lg border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-slate-500 hover:text-white disabled:opacity-50"
+								disabled={isSubmitting}
 							>
-								{showPassword ? "Gizle" : "Göster"}
+								Vazgeç
+							</button>
+							<button
+								type="submit"
+								className="flex-1 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
+								disabled={isSubmitting || password.trim().length === 0}
+							>
+								{isSubmitting ? "Doğrulanıyor..." : "Ayarları Aç"}
 							</button>
 						</div>
-					</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	);
+}
 
-					{error ? (
-						<div
-							role="alert"
-							className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-						>
-							{error}
-						</div>
-					) : null}
+type StartupView = "checking" | "discovering" | "config" | "app";
 
-					<div className="flex gap-3 pt-1">
-						<button
-							type="button"
-							onClick={onClose}
-							className="flex-1 rounded-lg border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-slate-500 hover:text-white disabled:opacity-50"
-							disabled={isSubmitting}
-						>
-							Vazgeç
-						</button>
-						<button
-							type="submit"
-							className="flex-1 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
-							disabled={isSubmitting || password.trim().length === 0}
-						>
-							{isSubmitting ? "Doğrulanıyor..." : "Ayarları Aç"}
-						</button>
-					</div>
-				</form>
+function StartupStatusScreen({
+	title,
+	description,
+}: {
+	title: string;
+	description: string;
+}) {
+	return (
+		<div className="min-h-screen flex items-center justify-center bg-slate-950">
+			<div className="text-center">
+				<div className="mb-4 inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-500/30 border-t-emerald-500" />
+				<p className="text-lg font-medium text-white">{title}</p>
+				<p className="mt-1 text-sm text-slate-400">{description}</p>
 			</div>
 		</div>
 	);
@@ -293,10 +321,11 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 }
 
 export default function App() {
-	const [configured, setConfigured] = useState(false);
-	const [discovering, setDiscovering] = useState(false);
+	const [startupView, setStartupView] = useState<StartupView>("checking");
 
 	useEffect(() => {
+		let cancelled = false;
+
 		async function init() {
 			let serverUrl = "http://localhost:3000";
 			let config = {
@@ -330,45 +359,69 @@ export default function App() {
 
 			if (primaryOk) {
 				if (!window.electronAPI) setBaseUrl("http://localhost:3000");
-				setConfigured(true);
+				if (!cancelled) {
+					setStartupView("app");
+				}
 				return;
 			}
 
-			if (!window.electronAPI) return;
+			if (!window.electronAPI) {
+				if (!cancelled) {
+					setStartupView("config");
+				}
+				return;
+			}
 
-			setDiscovering(true);
+			if (!cancelled) {
+				setStartupView("discovering");
+			}
 			try {
 				const discovered = await window.electronAPI.discoverServer();
 				if (discovered) {
 					setBaseUrl(discovered);
 					await window.electronAPI.saveConfig({ ...config, serverUrl: discovered });
-					setConfigured(true);
+					if (!cancelled) {
+						setStartupView("app");
+					}
 					return;
 				}
 			} catch {
 				// Discovery failed — fall through to manual config
-			} finally {
-				setDiscovering(false);
+			}
+
+			if (!cancelled) {
+				setStartupView("config");
 			}
 		}
-		init();
+
+		void init();
+
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
-	if (discovering) {
+	if (startupView === "checking") {
 		return (
-			<div className="min-h-screen flex items-center justify-center bg-slate-950">
-				<div className="text-center">
-					<div className="mb-4 inline-block h-10 w-10 animate-spin rounded-full border-4 border-emerald-500/30 border-t-emerald-500" />
-					<p className="text-lg font-medium text-white">Sunucu aranıyor...</p>
-					<p className="mt-1 text-sm text-slate-400">Ağ taranıyor, lütfen bekleyin</p>
-				</div>
-			</div>
+			<StartupStatusScreen
+				title="Bağlantı kontrol ediliyor..."
+				description="Kasa başlangıç ayarları doğrulanıyor."
+			/>
 		);
 	}
 
-	if (!configured) {
-		return <ServerConfig onConnected={() => setConfigured(true)} />;
+	if (startupView === "discovering") {
+		return (
+			<StartupStatusScreen
+				title="Sunucu aranıyor..."
+				description="Ağ taranıyor, lütfen bekleyin."
+			/>
+		);
 	}
 
-	return <KasaApp onReconfigure={() => setConfigured(false)} />;
+	if (startupView === "config") {
+		return <ServerConfig onConnected={() => setStartupView("app")} />;
+	}
+
+	return <KasaApp onReconfigure={() => setStartupView("config")} />;
 }

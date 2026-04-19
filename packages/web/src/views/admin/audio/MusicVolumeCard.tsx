@@ -30,7 +30,6 @@ export function MusicVolumeCard() {
 		<VolumeControlCard
 			title={UI_LABELS.AUDIO.MUSIC_VOLUME}
 			icon={ICON}
-			helperText={UI_LABELS.AUDIO.MUSIC_HELP}
 			defaultVolume={60}
 			colorScheme="purple"
 			onMount={fetchVolumeAndEnabled}
@@ -41,6 +40,7 @@ export function MusicVolumeCard() {
 				onToggle: (next) => api.setMusicEnabled(next),
 			}}
 			reconnectToken={reconnectToken}
+			className="md:h-full"
 		/>
 	);
 }

@@ -264,6 +264,29 @@ describe("AnnouncementWorker", () => {
 		await worker.processOne();
 	});
 
+	it("should skip playback and mark announcement played when announcements are disabled", async () => {
+		seedOrder("o-1", 1);
+		seedAnnouncement("aq-1", "o-1", 1);
+
+		const broadcastSpy = vi.spyOn(broadcaster, "broadcast");
+		const audioPlayer = {
+			play: vi.fn().mockResolvedValue(undefined),
+		} as unknown as AudioPlaybackService;
+		const disabledWorker = new AnnouncementWorker({
+			announcementService,
+			broadcaster,
+			audioPlayer,
+			isAnnouncementEnabled: () => false,
+		});
+
+		await disabledWorker.processOne();
+
+		const item = db.select().from(announcementQueue).where(eq(announcementQueue.id, "aq-1")).get()!;
+		expect(item.status).toBe("played");
+		expect(audioPlayer.play).not.toHaveBeenCalled();
+		expect(broadcastSpy).not.toHaveBeenCalled();
+	});
+
 	it("should call duck() before and unduck() after audio playback", async () => {
 		seedOrder("o-1", 1);
 		seedAnnouncement("aq-1", "o-1", 1);

@@ -49,6 +49,7 @@ export interface AnnouncementWorkerOptions {
 	broadcaster: Broadcaster;
 	audioPlayer: AudioPlaybackService;
 	musicPlayer?: MusicPlayerService;
+	isAnnouncementEnabled?: () => boolean;
 	pollIntervalMs?: number;
 	logger?: WorkerLogger;
 }
@@ -60,6 +61,7 @@ export class AnnouncementWorker {
 	private broadcaster: Broadcaster;
 	private audioPlayer: AudioPlaybackService;
 	private musicPlayer: MusicPlayerService | undefined;
+	private isAnnouncementEnabled: () => boolean;
 	private pollIntervalMs: number;
 	private logger: WorkerLogger;
 
@@ -68,6 +70,7 @@ export class AnnouncementWorker {
 		this.broadcaster = opts.broadcaster;
 		this.audioPlayer = opts.audioPlayer;
 		this.musicPlayer = opts.musicPlayer;
+		this.isAnnouncementEnabled = opts.isAnnouncementEnabled ?? (() => true);
 		this.pollIntervalMs = opts.pollIntervalMs ?? 1000;
 		this.logger = opts.logger ?? createFallbackWorkerLogger();
 	}
@@ -97,6 +100,21 @@ export class AnnouncementWorker {
 			const item = this.service.getNextPending();
 			if (!item) {
 				this.processing = false;
+				return;
+			}
+
+			if (!this.isAnnouncementEnabled()) {
+				this.logger.info(
+					{
+						event: "announcement.worker.skipped",
+						reason: "announcement_disabled",
+						announcementId: item.id,
+						orderId: item.order_id,
+						displayNo: item.display_no,
+					},
+					"Announcement skipped because announcements are disabled",
+				);
+				this.service.markPlayed(item.id);
 				return;
 			}
 

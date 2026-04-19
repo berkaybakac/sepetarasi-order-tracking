@@ -1044,6 +1044,14 @@ export async function buildApp(opts: AppOptions) {
 			broadcaster,
 			audioPlayer,
 			musicPlayer: musicPlayer ?? undefined,
+			isAnnouncementEnabled: () => {
+				const row = opts.db
+					.select()
+					.from(appSettings)
+					.where(eq(appSettings.key, SETTING_KEYS.ANNOUNCEMENT_ENABLED))
+					.get();
+				return row ? row.value !== "0" : true;
+			},
 			pollIntervalMs: opts.workerPollIntervalMs ?? 1000,
 			logger: app.log,
 		});

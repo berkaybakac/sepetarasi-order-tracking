@@ -35,13 +35,13 @@ interface EnabledToggleConfig {
 interface VolumeControlCardProps {
 	title: string;
 	icon: React.ReactNode;
-	helperText?: string;
 	defaultVolume: number;
 	colorScheme: ColorScheme;
 	onMount: () => Promise<{ volume: number; enabled?: boolean }>;
 	onSave: (volume: number) => Promise<unknown>;
 	enabledToggle?: EnabledToggleConfig;
 	reconnectToken?: number;
+	className?: string;
 }
 
 function getVolumeLoadErrorMessage(error: unknown) {
@@ -61,13 +61,13 @@ function getVolumeLoadErrorMessage(error: unknown) {
 export function VolumeControlCard({
 	title,
 	icon,
-	helperText,
 	defaultVolume,
 	colorScheme,
 	onMount,
 	onSave,
 	enabledToggle,
 	reconnectToken,
+	className,
 }: VolumeControlCardProps) {
 	const [volume, setVolume] = useState(defaultVolume);
 	const [savedVolume, setSavedVolume] = useState(defaultVolume);
@@ -148,9 +148,10 @@ export function VolumeControlCard({
 	return (
 		<BaseAdminCard
 			title={title}
-			description={helperText}
 			icon={icon}
 			accent={colors.accent}
+			className={className}
+			stretchBody
 			actions={
 				<span
 					className={`inline-flex shrink-0 rounded-2xl border border-border-subtle bg-surface-1/45 px-3 py-2 text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r ${colors.valueGradient}`}
@@ -158,7 +159,7 @@ export function VolumeControlCard({
 					{loading || loadError ? "—" : `${volume}%`}
 				</span>
 			}
-			bodyClassName="space-y-4"
+			bodyClassName="gap-4"
 		>
 			{enabledToggle ? (
 				<BaseAdminCardSection className="flex items-center justify-between gap-3">
@@ -226,7 +227,7 @@ export function VolumeControlCard({
 						</div>
 					</BaseAdminCardSection>
 
-					<div className="flex flex-wrap items-center justify-end gap-3">
+					<div className="mt-auto flex flex-wrap items-center justify-end gap-3">
 						{saveLabel === "saved" && (
 							<span className="text-sm font-medium text-brand-success animate-in fade-in slide-in-from-right-2 flex items-center gap-1">
 								<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

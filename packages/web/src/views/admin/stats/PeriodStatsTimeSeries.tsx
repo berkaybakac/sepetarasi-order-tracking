@@ -28,17 +28,35 @@ function renderTargetLabel({
 		return null;
 	}
 
+	const labelWidth = 52;
+	const labelHeight = 22;
+	const labelX = viewBox.x + viewBox.width - labelWidth - 10;
+	const labelY = viewBox.y < 28 ? viewBox.y + 8 : viewBox.y - labelHeight - 8;
+
 	return (
-		<text
-			x={viewBox.x + viewBox.width - 8}
-			y={viewBox.y}
-			fill="#facc15"
-			fontSize={11}
-			textAnchor="end"
-			dominantBaseline="middle"
-		>
-			Hedef
-		</text>
+		<g>
+			<rect
+				x={labelX}
+				y={labelY}
+				width={labelWidth}
+				height={labelHeight}
+				rx={11}
+				fill="#08111f"
+				stroke="#facc15"
+				strokeOpacity={0.35}
+			/>
+			<text
+				x={labelX + labelWidth / 2}
+				y={labelY + labelHeight / 2}
+				fill="#facc15"
+				fontSize={11}
+				fontWeight={600}
+				textAnchor="middle"
+				dominantBaseline="central"
+			>
+				Hedef
+			</text>
+		</g>
 	);
 }
 

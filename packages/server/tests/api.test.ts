@@ -467,6 +467,24 @@ describe("PATCH /api/v1/settings/:key", () => {
 		expect(row?.value).toBe("75");
 	});
 
+	it("should accept announcement_enabled as editable setting", async () => {
+		const res = await app.inject({
+			method: "PATCH",
+			url: "/api/v1/settings/announcement_enabled",
+			headers: { cookie: adminCookie },
+			payload: { value: "0" },
+		});
+		expect(res.statusCode).toBe(200);
+		expect(res.json().ok).toBe(true);
+
+		const row = db
+			.select()
+			.from(appSettings)
+			.where(eq(appSettings.key, "announcement_enabled"))
+			.get();
+		expect(row?.value).toBe("0");
+	});
+
 	it("should reject invalid audio_volume", async () => {
 		const res = await app.inject({
 			method: "PATCH",

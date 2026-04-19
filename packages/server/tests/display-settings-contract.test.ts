@@ -82,6 +82,13 @@ describe("server settings contract (display)", () => {
 });
 
 describe("server settings contract (music + receipt)", () => {
+	it("validates announcement_enabled accepts only 0 or 1", () => {
+		expect(validateSettingValue(SETTING_KEYS.ANNOUNCEMENT_ENABLED, "0")).toBeNull();
+		expect(validateSettingValue(SETTING_KEYS.ANNOUNCEMENT_ENABLED, "1")).toBeNull();
+		expect(validateSettingValue(SETTING_KEYS.ANNOUNCEMENT_ENABLED, "true")).not.toBeNull();
+		expect(validateSettingValue(SETTING_KEYS.ANNOUNCEMENT_ENABLED, "2")).not.toBeNull();
+	});
+
 	it("validates music_enabled accepts only 0 or 1", () => {
 		expect(validateSettingValue(SETTING_KEYS.MUSIC_ENABLED, "0")).toBeNull();
 		expect(validateSettingValue(SETTING_KEYS.MUSIC_ENABLED, "1")).toBeNull();

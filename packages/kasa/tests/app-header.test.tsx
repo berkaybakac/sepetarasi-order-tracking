@@ -166,6 +166,30 @@ describe("Kasa App header", () => {
 		expect(document.activeElement).toBe(passwordInput);
 	});
 
+	it("keeps the unlock modal scrollable within the viewport", async () => {
+		setConnectionState(true);
+
+		await act(async () => {
+			root.render(<KasaApp onReconfigure={() => undefined} />);
+		});
+
+		await click(getStatusButton(container));
+
+		const modal = container.querySelector('[data-testid="admin-unlock-modal"]');
+		const panel = container.querySelector('[data-testid="admin-unlock-modal-panel"]');
+
+		if (!(modal instanceof HTMLDivElement)) {
+			throw new Error("Unlock modal overlay not found");
+		}
+		if (!(panel instanceof HTMLDivElement)) {
+			throw new Error("Unlock modal panel not found");
+		}
+
+		expect(modal.className).toContain("overflow-y-auto");
+		expect(panel.className).toContain("max-h-[calc(100dvh-2rem)]");
+		expect(panel.className).toContain("overflow-y-auto");
+	});
+
 	it("keeps the cashier on the current screen when admin password is wrong", async () => {
 		setConnectionState(true);
 		const onReconfigure = vi.fn();

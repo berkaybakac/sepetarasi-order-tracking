@@ -73,6 +73,7 @@ export const WS_CHANNELS = {
 /** Sistem Ayarları Anahtarları (Magic Strings SSoT) */
 export const SETTING_KEYS = {
 	AUDIO_VOLUME: "audio_volume",
+	ANNOUNCEMENT_ENABLED: "announcement_enabled",
 	ADMIN_PASSWORD_HASH: "admin_password_hash",
 	RESTAURANT_NAME: "restaurant_name",
 	DISPLAY_PROFILE: "display_profile",

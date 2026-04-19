@@ -10,6 +10,7 @@ import {
 
 const EDITABLE_SETTING_KEYS = [
 	SETTING_KEYS.AUDIO_VOLUME,
+	SETTING_KEYS.ANNOUNCEMENT_ENABLED,
 	SETTING_KEYS.MUSIC_VOLUME,
 	SETTING_KEYS.MUSIC_ENABLED,
 	SETTING_KEYS.NOTE_PRESETS,
@@ -62,6 +63,12 @@ export function validateSettingValue(key: string, value: string): string | null 
 			const num = Number(value);
 			if (!Number.isInteger(num) || num < 0 || num > 100) {
 				return "audio_volume must be an integer between 0 and 100";
+			}
+			return null;
+		}
+		case SETTING_KEYS.ANNOUNCEMENT_ENABLED: {
+			if (value !== "0" && value !== "1") {
+				return "announcement_enabled must be '0' or '1'";
 			}
 			return null;
 		}

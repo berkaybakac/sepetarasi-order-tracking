@@ -243,7 +243,8 @@ describe("OrderForm", () => {
 		await setInputValue(getCustomerInput(), "Mehmet");
 		await submitForm();
 
-		expect(container.textContent).toContain("Sipariş #0015 oluşturuldu. Fiş yazdırılamadı.");
+		expect(container.textContent).toContain("Fiş yazdırılamadı");
+		expect(container.textContent).toContain("Sipariş #0015 oluşturuldu.");
 		expect(container.textContent).toContain("Printer timeout.");
 		expect(container.textContent).toContain("Tekrar Yazdır");
 		expect(printReceipt).toHaveBeenCalledTimes(1);

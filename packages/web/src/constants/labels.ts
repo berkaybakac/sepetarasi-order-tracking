@@ -81,6 +81,8 @@ export const UI_LABELS = {
 	AUDIO: {
 		ANNOUNCEMENT_VOLUME: "Anons Sesi",
 		ANNOUNCEMENT_HELP: "Mağaza içi anons seviyesini yönetin.",
+		ANNOUNCEMENT_ENABLED: "Anons Çal",
+		ANNOUNCEMENT_DISABLED: "Anons Kapalı",
 		MUSIC_VOLUME: "Müzik Sesi",
 		MUSIC_HELP: "Arka plan müziğinin seviyesini yönetin.",
 		MUSIC_ENABLED: "Müzik Çal",

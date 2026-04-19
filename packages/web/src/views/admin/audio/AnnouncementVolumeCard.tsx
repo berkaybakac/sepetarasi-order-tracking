@@ -16,9 +16,12 @@ const ICON = (
 	</svg>
 );
 
-async function fetchVolume() {
+async function fetchVolumeAndEnabled() {
 	const s = await api.getSettings();
-	return { volume: Number(s[SETTING_KEYS.AUDIO_VOLUME] ?? 100) };
+	return {
+		volume: Number(s[SETTING_KEYS.AUDIO_VOLUME] ?? 100),
+		enabled: s[SETTING_KEYS.ANNOUNCEMENT_ENABLED] !== "0",
+	};
 }
 
 export function AnnouncementVolumeCard() {
@@ -27,12 +30,17 @@ export function AnnouncementVolumeCard() {
 		<VolumeControlCard
 			title={UI_LABELS.AUDIO.ANNOUNCEMENT_VOLUME}
 			icon={ICON}
-			helperText={UI_LABELS.AUDIO.ANNOUNCEMENT_HELP}
 			defaultVolume={100}
 			colorScheme="blue"
-			onMount={fetchVolume}
+			onMount={fetchVolumeAndEnabled}
 			onSave={(volume) => api.updateSetting(SETTING_KEYS.AUDIO_VOLUME, String(volume))}
+			enabledToggle={{
+				enabledLabel: UI_LABELS.AUDIO.ANNOUNCEMENT_ENABLED,
+				disabledLabel: UI_LABELS.AUDIO.ANNOUNCEMENT_DISABLED,
+				onToggle: (next) => api.updateSetting(SETTING_KEYS.ANNOUNCEMENT_ENABLED, next ? "1" : "0"),
+			}}
 			reconnectToken={reconnectToken}
+			className="md:h-full"
 		/>
 	);
 }
