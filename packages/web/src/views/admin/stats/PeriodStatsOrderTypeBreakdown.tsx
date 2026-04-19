@@ -9,9 +9,7 @@ interface Props {
 export function PeriodStatsOrderTypeBreakdown({ byOrderType, empty }: Props) {
 	return (
 		<div className="flex h-full flex-col rounded-[1.45rem] border border-border-subtle bg-surface-1/85 p-4">
-			<h3 className="mb-3 text-sm font-semibold text-text-strong">
-				Sipariş Tiplerine Göre Özet
-			</h3>
+			<h3 className="mb-3 text-sm font-semibold text-text-strong">Sipariş Tiplerine Göre Özet</h3>
 			{empty || !byOrderType || byOrderType.length === 0 ? (
 				<StatsEmptyState label="Tip bilgisi olan teslim yok" compact />
 			) : (

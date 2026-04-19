@@ -4,7 +4,7 @@ import { ApiError, api } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { useMusicStore } from "../../../stores/musicStore";
 import { useOrderStore } from "../../../stores/orderStore";
-import { ActionButton, InlineAlert } from "../ui/primitives";
+import { ActionButton, BaseAdminCard, BaseAdminCardSection, InlineAlert } from "../ui/primitives";
 
 const SOUND_BARS: { key: string; style: CSSProperties }[] = ["a", "b", "c", "d", "e"].map(
 	(key, i) => ({
@@ -134,11 +134,11 @@ export function MusicPlayerCard() {
 	}, [status]);
 
 	const statusBadgeClass = useMemo(() => {
-		if (!status) return "border-white/10 bg-white/5 text-slate-400";
+		if (!status) return "border-border-subtle bg-surface-1/45 text-text-subtle";
 		if (status.isDucked) return "border-amber-400/20 bg-amber-500/10 text-amber-300";
 		if (status.isPlaying) return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
 		if (status.isPaused) return "border-blue-400/20 bg-blue-500/10 text-blue-300";
-		return "border-white/10 bg-white/5 text-slate-400";
+		return "border-border-subtle bg-surface-1/45 text-text-subtle";
 	}, [status]);
 
 	const trackName = status?.currentTrackName ?? UI_LABELS.MUSIC_PLAYER.NO_TRACK;
@@ -147,41 +147,41 @@ export function MusicPlayerCard() {
 	const shuffleEnabled = status?.shuffle ?? false;
 
 	return (
-		<div className="bg-white/5 backdrop-blur-xl rounded-3xl shadow-lg shadow-black/20 border border-white/5 p-6 relative overflow-hidden group hover:border-white/10 transition-colors">
-			<div className="absolute inset-0 bg-gradient-to-tr from-green-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-			<div className="relative z-10 mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-				<h3 className="flex min-w-0 items-center gap-2 text-base font-semibold text-slate-100">
-					<svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<title>oynatıcı ikonu</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-						/>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<span className="leading-tight">{UI_LABELS.MUSIC_PLAYER.TITLE}</span>
-				</h3>
+		<BaseAdminCard
+			title={UI_LABELS.MUSIC_PLAYER.TITLE}
+			icon={
+				<svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<title>oynatıcı ikonu</title>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+					/>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+			}
+			accent="emerald"
+			actions={
 				<span
 					className={`inline-flex shrink-0 items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] ${statusBadgeClass}`}
 				>
 					{statusLabel}
 				</span>
-			</div>
-
+			}
+			bodyClassName="space-y-4"
+		>
 			{loading ? (
-				<div className="relative z-10 flex min-h-[8rem] items-center justify-center">
+				<div className="flex min-h-[8rem] items-center justify-center">
 					<div className="h-8 w-8 animate-spin rounded-full border-4 border-white/20 border-t-white/80" />
 				</div>
 			) : loadError ? (
-				<div className="relative z-10 space-y-4">
+				<div className="space-y-4">
 					<InlineAlert tone="danger">{loadError}</InlineAlert>
 					<div className="flex justify-end">
 						<ActionButton tone="secondary" onClick={() => void loadStatus()}>
@@ -191,12 +191,12 @@ export function MusicPlayerCard() {
 				</div>
 			) : (
 				<>
-					<div className="relative z-10 mb-6 rounded-2xl border border-white/5 bg-black/10 px-4 py-4">
-						<p className="text-xs font-medium text-slate-500">Seçili parça</p>
-						<p className="text-white font-medium truncate text-lg" title={trackName}>
+					<BaseAdminCardSection className="space-y-3">
+						<p className="text-xs font-medium text-text-subtle">Seçili parça</p>
+						<p className="truncate text-lg font-medium text-text-strong" title={trackName}>
 							{trackName}
 						</p>
-						<div className="mt-3 flex flex-wrap gap-2">
+						<div className="flex flex-wrap gap-2">
 							{shuffleEnabled ? (
 								<span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[0.72rem] font-medium text-cyan-200">
 									{UI_LABELS.MUSIC_PLAYER.SHUFFLE_BADGE}
@@ -219,11 +219,11 @@ export function MusicPlayerCard() {
 								))}
 							</div>
 						)}
-					</div>
+					</BaseAdminCardSection>
 
 					{/* Kontrol Satırı: [karıştır] [önceki] [oynat/duraklat] [sonraki] [döngü] */}
-					<div className="relative z-10 rounded-2xl border border-white/5 bg-black/10 p-3">
-						<div className="flex items-center justify-center gap-2 sm:gap-3">
+					<BaseAdminCardSection className="p-3">
+						<div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
 							{/* Karışık Çal (Shuffle) */}
 							<button
 								type="button"
@@ -237,7 +237,7 @@ export function MusicPlayerCard() {
 								className={`p-2 rounded-xl border transition-all disabled:cursor-not-allowed disabled:opacity-45 ${
 									shuffleEnabled
 										? "bg-cyan-500/15 border-cyan-400/30 text-cyan-400 hover:bg-cyan-500/25"
-										: "bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
+										: "border-border-subtle bg-surface-1/45 text-text-subtle hover:bg-white/10 hover:text-text-muted"
 								}`}
 							>
 								{/* YouTube shuffle ikonu: çapraz oklar */}
@@ -257,7 +257,7 @@ export function MusicPlayerCard() {
 								onClick={handlePrevious}
 								disabled={!controlsReady}
 								title={UI_LABELS.MUSIC_PLAYER.PREVIOUS}
-								className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 hover:text-white transition-all disabled:cursor-not-allowed disabled:opacity-45"
+								className="rounded-xl border border-border-subtle bg-surface-1/45 p-2.5 text-text-muted transition-all hover:bg-white/10 hover:text-text-strong disabled:cursor-not-allowed disabled:opacity-45"
 							>
 								<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
 									<title>{UI_LABELS.MUSIC_PLAYER.PREVIOUS}</title>
@@ -292,7 +292,7 @@ export function MusicPlayerCard() {
 								onClick={handleSkip}
 								disabled={!controlsReady}
 								title={UI_LABELS.MUSIC_PLAYER.SKIP}
-								className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 hover:text-white transition-all disabled:cursor-not-allowed disabled:opacity-45"
+								className="rounded-xl border border-border-subtle bg-surface-1/45 p-2.5 text-text-muted transition-all hover:bg-white/10 hover:text-text-strong disabled:cursor-not-allowed disabled:opacity-45"
 							>
 								<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
 									<title>{UI_LABELS.MUSIC_PLAYER.SKIP}</title>
@@ -311,7 +311,7 @@ export function MusicPlayerCard() {
 								className={`p-2 rounded-xl border transition-all disabled:cursor-not-allowed disabled:opacity-45 ${
 									loopEnabled
 										? "bg-emerald-500/15 border-emerald-400/30 text-emerald-400 hover:bg-emerald-500/25"
-										: "bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10"
+										: "border-border-subtle bg-surface-1/45 text-text-subtle hover:bg-white/10 hover:text-text-muted"
 								}`}
 							>
 								{/* YouTube loop ikonu: dikdörtgen oluşturan iki ok */}
@@ -323,9 +323,9 @@ export function MusicPlayerCard() {
 								</svg>
 							</button>
 						</div>
-					</div>
+					</BaseAdminCardSection>
 				</>
 			)}
-		</div>
+		</BaseAdminCard>
 	);
 }

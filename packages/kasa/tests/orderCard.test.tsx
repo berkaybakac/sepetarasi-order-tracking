@@ -59,7 +59,7 @@ describe("Kasa OrderCard note behavior", () => {
 			root.render(<OrderCard order={buildOrder({ notes: longNote })} />);
 		});
 
-		const noteText = container.querySelector(".bg-amber-500\\/10 p");
+		const noteText = container.querySelector('[data-testid="order-card-note"]');
 		if (!(noteText instanceof HTMLParagraphElement)) throw new Error("Note paragraph not found");
 		expect(noteText.className).toContain("-webkit-line-clamp:3");
 
@@ -75,6 +75,27 @@ describe("Kasa OrderCard note behavior", () => {
 		expect(expandButton.textContent).toContain("Notu daralt");
 		expect(noteText.className).toContain("max-h-24");
 		expect(noteText.className).toContain("overflow-y-auto");
+	});
+
+	it("stretches the card and keeps action buttons anchored at the bottom", async () => {
+		await act(async () => {
+			root.render(<OrderCard order={buildOrder({ notes: "Kisa not" })} />);
+		});
+
+		const cardRoot = container.querySelector('[data-testid="order-card-root"]');
+		const cardContent = container.querySelector('[data-testid="order-card-content"]');
+		const actions = container.querySelector('[data-testid="order-card-actions"]');
+
+		if (!(cardRoot instanceof HTMLDivElement)) throw new Error("Card root not found");
+		if (!(cardContent instanceof HTMLDivElement)) throw new Error("Card content not found");
+		if (!(actions instanceof HTMLDivElement)) throw new Error("Card actions not found");
+
+		expect(cardRoot.className).toContain("h-full");
+		expect(cardContent.className).toContain("flex");
+		expect(cardContent.className).toContain("flex-col");
+		expect(cardContent.className).toContain("h-full");
+		expect(actions.className).toContain("mt-auto");
+		expect(actions.className).toContain("pt-3");
 	});
 
 	it("does not render expandable note control for short notes", async () => {

@@ -273,7 +273,7 @@ export function KasaApp({ onReconfigure }: { onReconfigure: () => void }) {
 						)}
 					</main>
 
-					<aside className="w-80 flex-shrink-0 overflow-y-auto border-l border-white/[0.06] bg-slate-900/80">
+					<aside className="flex h-full min-h-0 w-80 flex-shrink-0 flex-col overflow-hidden border-l border-white/[0.06] bg-slate-900/80">
 						<OrderForm />
 					</aside>
 				</div>

@@ -155,6 +155,8 @@ describe("OrderForm", () => {
 			chip.click();
 		});
 		expect(getNotesTextarea().value).toBe("Ketçap bol");
+		expect(getSelectedPresetPreview().textContent).toContain("Seçilen hazır not");
+		expect(getSelectedPresetPreview().textContent).toContain("Ketçap bol");
 
 		const chip2 = Array.from(container.querySelectorAll("button")).find((b) =>
 			b.textContent?.includes("Acılı"),
@@ -163,6 +165,71 @@ describe("OrderForm", () => {
 			chip2.click();
 		});
 		expect(getNotesTextarea().value).toBe("Ketçap bol, Acılı");
+		expect(getSelectedPresetPreview().textContent).toContain("Acılı");
+	});
+
+	it("keeps the scroll area and footer separated for the sticky layout", () => {
+		const form = getForm();
+		const scrollArea = getScrollArea();
+		const footer = getFooter();
+
+		expect(form.className).toContain("h-full");
+		expect(form.className).toContain("min-h-0");
+		expect(form.className).toContain("flex-col");
+		expect(scrollArea.className).toContain("overflow-y-auto");
+		expect(scrollArea.className).toContain("min-h-0");
+		expect(footer.className).toContain("mt-auto");
+		expect(footer.className).toContain("shrink-0");
+	});
+
+	it("disables spellcheck for touch-friendly inputs", () => {
+		expect(getCustomerInput().getAttribute("spellcheck")).toBe("false");
+		expect(getNotesTextarea().getAttribute("spellcheck")).toBe("false");
+	});
+
+	it("renders long preset chips with truncation classes and no title", async () => {
+		const longPreset = "Mayonez bol olsun mayonez bol olsun mayonez bol olsun";
+
+		await remountWithPresets([longPreset]);
+
+		const chip = getPresetButton(longPreset);
+
+		expect(chip.getAttribute("title")).toBeNull();
+		expect(chip.className).toContain("overflow-hidden");
+		expect(chip.className).toContain("text-ellipsis");
+		expect(chip.className).toContain("whitespace-nowrap");
+		expect(getPresetsContainer().className).toContain("max-h-[clamp(10rem,32vh,18rem)]");
+		expect(getPresetsContainer().className).toContain("overflow-y-auto");
+	});
+
+	it("clears the preset preview after a successful submit", async () => {
+		await remountWithPresets(["Ketçap bol"]);
+		vi.mocked(api.createOrder).mockResolvedValueOnce(buildOrder({ notes: "Ketçap bol" }));
+
+		await act(async () => {
+			getPresetButton("Ketçap bol").click();
+		});
+		await setInputValue(getCustomerInput(), "Ayşe");
+		await submitForm();
+
+		expect(container.querySelector('[data-testid="selected-preset-preview"]')).toBeNull();
+	});
+
+	it("shows a fade when the presets overflow and hides it at the end of the scroll", async () => {
+		await remountWithPresets(["a", "b", "c"]);
+
+		const presetsContainer = getPresetsContainer();
+		setScrollMetrics(presetsContainer, { clientHeight: 120, scrollHeight: 260, scrollTop: 0 });
+		await act(async () => {
+			presetsContainer.dispatchEvent(new Event("scroll", { bubbles: true }));
+		});
+		expect(getPresetsFade()).not.toBeNull();
+
+		setScrollMetrics(presetsContainer, { clientHeight: 120, scrollHeight: 260, scrollTop: 140 });
+		await act(async () => {
+			presetsContainer.dispatchEvent(new Event("scroll", { bubbles: true }));
+		});
+		expect(getPresetsFade()).toBeNull();
 	});
 
 	it("shows retry action when printing fails and retries the last receipt", async () => {
@@ -176,7 +243,8 @@ describe("OrderForm", () => {
 		await setInputValue(getCustomerInput(), "Mehmet");
 		await submitForm();
 
-		expect(container.textContent).toContain("Sipariş #0015 oluşturuldu fakat fiş yazdırılamadı");
+		expect(container.textContent).toContain("Sipariş #0015 oluşturuldu. Fiş yazdırılamadı.");
+		expect(container.textContent).toContain("Printer timeout.");
 		expect(container.textContent).toContain("Tekrar Yazdır");
 		expect(printReceipt).toHaveBeenCalledTimes(1);
 
@@ -224,6 +292,99 @@ describe("OrderForm", () => {
 		return button;
 	}
 
+	function getForm() {
+		const form = container.querySelector("form");
+		if (!(form instanceof HTMLFormElement)) {
+			throw new Error("Form not found");
+		}
+		return form;
+	}
+
+	function getScrollArea() {
+		const scrollArea = container.querySelector('[data-testid="order-form-scroll"]');
+		if (!(scrollArea instanceof HTMLDivElement)) {
+			throw new Error("Scroll area not found");
+		}
+		return scrollArea;
+	}
+
+	function getFooter() {
+		const footer = container.querySelector('[data-testid="order-form-footer"]');
+		if (!(footer instanceof HTMLDivElement)) {
+			throw new Error("Footer not found");
+		}
+		return footer;
+	}
+
+	function getPresetsContainer() {
+		const presetsContainer = container.querySelector('[data-testid="order-form-presets"]');
+		if (!(presetsContainer instanceof HTMLDivElement)) {
+			throw new Error("Presets container not found");
+		}
+		return presetsContainer;
+	}
+
+	function getPresetsFade() {
+		const fade = container.querySelector('[data-testid="order-form-presets-fade"]');
+		if (fade !== null && !(fade instanceof HTMLDivElement)) {
+			throw new Error("Presets fade is not a div");
+		}
+		return fade;
+	}
+
+	function getSelectedPresetPreview() {
+		const preview = container.querySelector('[data-testid="selected-preset-preview"]');
+		if (!(preview instanceof HTMLDivElement)) {
+			throw new Error("Selected preset preview not found");
+		}
+		return preview;
+	}
+
+	function getPresetButton(text: string) {
+		const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+			candidate.textContent?.includes(text),
+		);
+		if (!(button instanceof HTMLButtonElement)) {
+			throw new Error(`Preset button not found: ${text}`);
+		}
+		return button;
+	}
+
+	async function remountWithPresets(presets: string[]) {
+		await act(async () => {
+			root.unmount();
+		});
+		vi.mocked(api.getPublicSettings).mockResolvedValueOnce({
+			note_presets: JSON.stringify(presets),
+		});
+		container = document.createElement("div");
+		document.body.appendChild(container);
+		root = createRoot(container);
+		await act(async () => {
+			root.render(<OrderForm />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+	}
+
+	function setScrollMetrics(
+		element: HTMLDivElement,
+		{
+			clientHeight,
+			scrollHeight,
+			scrollTop,
+		}: {
+			clientHeight: number;
+			scrollHeight: number;
+			scrollTop: number;
+		},
+	) {
+		Object.defineProperty(element, "clientHeight", { configurable: true, value: clientHeight });
+		Object.defineProperty(element, "scrollHeight", { configurable: true, value: scrollHeight });
+		Object.defineProperty(element, "scrollTop", { configurable: true, value: scrollTop });
+	}
+
 	async function setInputValue(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
 		await act(async () => {
 			const prototype =
@@ -238,10 +399,7 @@ describe("OrderForm", () => {
 	}
 
 	async function submitForm() {
-		const form = container.querySelector("form");
-		if (!(form instanceof HTMLFormElement)) {
-			throw new Error("Form not found");
-		}
+		const form = getForm();
 		await act(async () => {
 			form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 		});

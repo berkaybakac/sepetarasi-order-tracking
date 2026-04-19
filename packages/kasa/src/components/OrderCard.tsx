@@ -93,14 +93,15 @@ export function OrderCard({ order }: OrderCardProps) {
 
 	return (
 		<motion.div
+			data-testid="order-card-root"
 			layout
 			initial={{ opacity: 0, scale: 0.95, y: 16 }}
 			animate={{ opacity: isTerminal ? 0.4 : 1, scale: 1, y: 0 }}
 			exit={{ opacity: 0, scale: 0.9, x: -20 }}
 			transition={{ type: "spring", stiffness: 350, damping: 30 }}
-			className={`bg-gradient-to-br ${cardFrom} to-slate-900 rounded-2xl border border-white/[0.07] border-l-4 ${borderColor} overflow-hidden min-w-0 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/40 transition-all duration-200 ${urgencyClass}`}
+			className={`h-full min-w-0 overflow-hidden rounded-2xl border border-white/[0.07] border-l-4 bg-gradient-to-br ${cardFrom} to-slate-900 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/40 ${borderColor} ${urgencyClass}`}
 		>
-			<div className="p-4 min-w-0">
+			<div data-testid="order-card-content" className="flex h-full min-h-0 flex-col p-4">
 				{/* Top: order number + status badge + elapsed */}
 				<div className="flex items-start justify-between gap-3 mb-3 min-w-0">
 					<span className="text-4xl font-black tabular-nums leading-none bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent shrink-0">
@@ -130,6 +131,7 @@ export function OrderCard({ order }: OrderCardProps) {
 				{order.notes && (
 					<div className="mb-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg px-3 py-2 text-sm min-w-0">
 						<p
+							data-testid="order-card-note"
 							className={`break-words [overflow-wrap:anywhere] [word-break:break-word] ${
 								isNoteExpanded
 									? "max-h-24 overflow-y-auto pr-1"
@@ -152,7 +154,7 @@ export function OrderCard({ order }: OrderCardProps) {
 
 				{/* Actions */}
 				{!isTerminal && (
-					<div className="space-y-2">
+					<div data-testid="order-card-actions" className="mt-auto space-y-2 pt-3">
 						<StatusButton order={order} targetStatus={OrderStatus.READY} size="lg" />
 						<StatusButton order={order} targetStatus={OrderStatus.DELIVERED} size="lg" />
 						<div className="flex gap-2">

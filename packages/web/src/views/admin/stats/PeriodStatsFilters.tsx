@@ -216,13 +216,13 @@ export function PeriodStatsFilters({ preset, range, onPresetChange, onCustomChan
 				</button>
 
 				{open ? (
-					<dialog
-						id={dialogId}
-						open
-						aria-label="Özel tarih aralığı seçici"
-						aria-modal="false"
-						className="absolute left-0 top-[calc(100%+0.75rem)] z-30 w-[calc(100vw-2rem)] max-w-[54rem] overflow-auto rounded-[1.4rem] border border-border-subtle bg-surface-2/98 p-4 shadow-[0_28px_80px_rgba(3,9,20,0.55)] backdrop-blur-xl sm:left-auto sm:right-0"
-					>
+						<dialog
+							id={dialogId}
+							open
+							aria-label="Özel tarih aralığı seçici"
+							aria-modal="false"
+							className="absolute left-0 top-[calc(100%+0.75rem)] z-30 max-h-[calc(100dvh-6rem)] w-[calc(100vw-2rem)] max-w-[54rem] overflow-auto overscroll-contain rounded-[1.4rem] border border-border-subtle bg-surface-2/98 p-4 shadow-[0_28px_80px_rgba(3,9,20,0.55)] backdrop-blur-xl sm:left-auto sm:right-0"
+						>
 						<div className="grid gap-4 xl:grid-cols-[12rem_minmax(0,1fr)]">
 							<div className="rounded-[1.15rem] border border-border-subtle bg-surface-3/75 p-3">
 								<p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-text-subtle">

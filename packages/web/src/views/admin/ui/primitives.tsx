@@ -37,6 +37,33 @@ const METRIC_TONES = {
 	danger: "bg-brand-danger/10 text-rose-100",
 } as const;
 
+const ADMIN_CARD_CLASS =
+	"group relative overflow-hidden rounded-panel border border-border-subtle bg-surface-2/95 p-5 shadow-elevation-1 backdrop-blur-xl";
+
+const ADMIN_CARD_ACCENTS = {
+	neutral: "",
+	primary:
+		"bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_40%)]",
+	emerald:
+		"bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.14),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(34,197,94,0.08),transparent_40%)]",
+	violet:
+		"bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.14),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.08),transparent_40%)]",
+} as const;
+
+const ADMIN_CARD_SECTION_VARIANTS = {
+	inset:
+		"border border-border-subtle bg-surface-1/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+	elevated:
+		"border border-border-subtle bg-surface-3/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+} as const;
+
+const ADMIN_CARD_SECTION_PADDING = {
+	none: "p-0",
+	sm: "p-3",
+	md: "p-4",
+	lg: "p-5",
+} as const;
+
 export function AppShell({ header, children }: { header: ReactNode; children: ReactNode }) {
 	return (
 		<div className="admin-shell-noise min-h-screen text-text-strong">
@@ -120,6 +147,100 @@ export function SectionCard({
 	);
 }
 
+interface BaseAdminCardProps extends HTMLAttributes<HTMLElement> {
+	title?: string;
+	description?: string;
+	icon?: ReactNode;
+	actions?: ReactNode;
+	accent?: keyof typeof ADMIN_CARD_ACCENTS;
+	bodyClassName?: string;
+	children: ReactNode;
+}
+
+export function BaseAdminCard({
+	title,
+	description,
+	icon,
+	actions,
+	accent = "neutral",
+	bodyClassName,
+	children,
+	className,
+	...props
+}: BaseAdminCardProps) {
+	const accentClass = ADMIN_CARD_ACCENTS[accent];
+
+	return (
+		<section className={cn(ADMIN_CARD_CLASS, className)} {...props}>
+			{accentClass ? (
+				<div
+					className={cn(
+						"pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100",
+						accentClass,
+					)}
+				/>
+			) : null}
+			<div className="relative z-10">
+				{title || description || actions ? (
+					<div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+						<div className="min-w-0">
+							{title ? (
+								<div className="flex items-start gap-3">
+									{icon ? (
+										<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border-subtle bg-surface-1/45 text-brand-primary">
+											{icon}
+										</span>
+									) : null}
+									<div className="min-w-0">
+										<h2 className="text-lg font-semibold tracking-tight text-text-strong">
+											{title}
+										</h2>
+										{description ? (
+											<p className="mt-1 text-sm leading-6 text-text-subtle">{description}</p>
+										) : null}
+									</div>
+								</div>
+							) : description ? (
+								<p className="text-sm leading-6 text-text-subtle">{description}</p>
+							) : null}
+						</div>
+						{actions ? (
+							<div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+						) : null}
+					</div>
+				) : null}
+				<div className={bodyClassName}>{children}</div>
+			</div>
+		</section>
+	);
+}
+
+export function BaseAdminCardSection({
+	variant = "inset",
+	padding = "md",
+	className,
+	children,
+	...props
+}: HTMLAttributes<HTMLDivElement> & {
+	children: ReactNode;
+	variant?: keyof typeof ADMIN_CARD_SECTION_VARIANTS;
+	padding?: keyof typeof ADMIN_CARD_SECTION_PADDING;
+}) {
+	return (
+		<div
+			className={cn(
+				"rounded-[1.25rem]",
+				ADMIN_CARD_SECTION_VARIANTS[variant],
+				ADMIN_CARD_SECTION_PADDING[padding],
+				className,
+			)}
+			{...props}
+		>
+			{children}
+		</div>
+	);
+}
+
 interface MetricTileProps {
 	label: string;
 	value: string | number;
@@ -130,7 +251,7 @@ interface MetricTileProps {
 
 export function MetricTile({ label, value, detail, icon, tone = "neutral" }: MetricTileProps) {
 	return (
-		<div className="rounded-[1.25rem] border border-border-subtle bg-surface-3/90 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+		<BaseAdminCardSection variant="elevated" padding="lg" className="h-full">
 			<div className="mb-4 flex items-start justify-between gap-4">
 				<p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-subtle">
 					{label}
@@ -148,7 +269,7 @@ export function MetricTile({ label, value, detail, icon, tone = "neutral" }: Met
 			</div>
 			<p className="text-4xl font-semibold tracking-tight text-text-strong">{value}</p>
 			<p className="mt-2 min-h-5 text-sm text-text-subtle">{detail ?? "\u00A0"}</p>
-		</div>
+		</BaseAdminCardSection>
 	);
 }
 

@@ -1,5 +1,5 @@
 import { DELIVERY_TARGET_MAX, DELIVERY_TARGET_MIN } from "@sepetarasi/shared";
-import { ActionButton, InlineAlert, NumberStepper } from "../ui/primitives";
+import { ActionButton, BaseAdminCardSection, InlineAlert, NumberStepper } from "../ui/primitives";
 
 export function StatsKpiCard({
 	label,
@@ -20,7 +20,10 @@ export function StatsKpiCard({
 				: "text-slate-200 bg-white/6 border-border-subtle";
 
 	return (
-		<div className="flex min-h-[114px] flex-col justify-between rounded-[1.25rem] border border-border-subtle bg-surface-3/90 p-4">
+		<BaseAdminCardSection
+			variant="elevated"
+			className="flex min-h-[114px] flex-col justify-between"
+		>
 			<p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-subtle">{label}</p>
 			<p className="text-[1.8rem] font-semibold tabular-nums text-text-strong md:text-3xl">
 				{value}
@@ -34,7 +37,7 @@ export function StatsKpiCard({
 			) : (
 				<span className="h-5" />
 			)}
-		</div>
+		</BaseAdminCardSection>
 	);
 }
 
@@ -64,7 +67,7 @@ export function TargetMinutesEditor({
 	retrying?: boolean;
 }) {
 	return (
-		<div className="w-full rounded-[1.25rem] border border-border-subtle bg-surface-3/90 p-4 xl:min-w-[19rem] xl:max-w-[21rem]">
+		<BaseAdminCardSection variant="elevated" className="w-full xl:min-w-[19rem] xl:max-w-[21rem]">
 			<div className="flex flex-col gap-3">
 				<div>
 					<p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-subtle">
@@ -116,7 +119,7 @@ export function TargetMinutesEditor({
 					{error}
 				</InlineAlert>
 			) : null}
-		</div>
+		</BaseAdminCardSection>
 	);
 }
 

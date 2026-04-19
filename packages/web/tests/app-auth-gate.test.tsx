@@ -31,12 +31,23 @@ vi.mock("../src/views/display/CustomerDisplay", () => ({
 describe("App auth gate", () => {
 	let container: HTMLDivElement;
 	let root: Root;
+	let originalScrollRestorationDescriptor: PropertyDescriptor | undefined;
 
 	beforeEach(() => {
 		(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		container = document.createElement("div");
 		document.body.appendChild(container);
 		root = createRoot(container);
+		originalScrollRestorationDescriptor = Object.getOwnPropertyDescriptor(
+			window.history,
+			"scrollRestoration",
+		);
+		Object.defineProperty(window.history, "scrollRestoration", {
+			configurable: true,
+			writable: true,
+			value: "auto",
+		});
+		vi.spyOn(window, "scrollTo").mockImplementation(() => {});
 		window.history.pushState({}, "", "/admin/orders");
 		localStorage.clear();
 		useAuthStore.setState({
@@ -52,6 +63,15 @@ describe("App auth gate", () => {
 			root.unmount();
 		});
 		container.remove();
+		if (originalScrollRestorationDescriptor) {
+			Object.defineProperty(
+				window.history,
+				"scrollRestoration",
+				originalScrollRestorationDescriptor,
+			);
+		} else {
+			delete (window.history as History & { scrollRestoration?: string }).scrollRestoration;
+		}
 		vi.clearAllMocks();
 		localStorage.clear();
 	});
@@ -68,6 +88,18 @@ describe("App auth gate", () => {
 		expect(container.textContent).not.toContain("login-view");
 	});
 
+	it("resets the viewport state when entering an admin route", async () => {
+		const { api } = await import("../src/lib/api");
+		vi.mocked(api.authCheck).mockImplementation(() => new Promise(() => undefined));
+
+		await act(async () => {
+			root.render(<App />);
+		});
+
+		expect(window.history.scrollRestoration).toBe("manual");
+		expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+	});
+
 	it("routes /display.html to the customer display without running the admin auth gate", async () => {
 		const { api } = await import("../src/lib/api");
 		window.history.pushState({}, "", "/display.html?layout=split&max=4");
@@ -80,5 +112,7 @@ describe("App auth gate", () => {
 		expect(container.textContent).not.toContain("admin-view");
 		expect(container.textContent).not.toContain("login-view");
 		expect(api.authCheck).not.toHaveBeenCalled();
+		expect(window.history.scrollRestoration).toBe("auto");
+		expect(window.scrollTo).not.toHaveBeenCalled();
 	});
 });

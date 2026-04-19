@@ -25,13 +25,13 @@ export function AudioTab() {
 				}
 				className="gap-4"
 			/>
-			<div className="grid gap-6 xl:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
-				<section className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+			<div className="grid items-start gap-6 xl:grid-cols-[minmax(19rem,21rem)_minmax(0,1fr)]">
+				<section className="grid gap-6 md:grid-cols-2 xl:grid-cols-1">
 					<AnnouncementVolumeCard />
 					<MusicVolumeCard />
 				</section>
 
-				<section className="grid gap-6 2xl:grid-cols-[minmax(0,0.95fr)_minmax(23rem,0.92fr)] 2xl:items-start">
+				<section className="space-y-6">
 					<MusicPlayerCard />
 					<MusicLibraryCard />
 				</section>

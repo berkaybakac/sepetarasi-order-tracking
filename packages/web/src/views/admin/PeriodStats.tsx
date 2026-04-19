@@ -16,7 +16,7 @@ import { PeriodStatsOrderTypeBreakdown } from "./stats/PeriodStatsOrderTypeBreak
 import { PeriodStatsTimeSeries } from "./stats/PeriodStatsTimeSeries";
 import { TargetMinutesEditor } from "./stats/StatsPanels";
 import { type DateRange, type PresetKey, rangeForPreset } from "./stats/range-utils";
-import { InlineAlert } from "./ui/primitives";
+import { BaseAdminCard, InlineAlert } from "./ui/primitives";
 
 const SILENT_REFRESH_MIN_INTERVAL_MS = 15_000;
 
@@ -223,7 +223,7 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 		: null;
 
 	return (
-		<div className="rounded-[2rem] border border-border-subtle bg-surface-2/95 p-5 shadow-elevation-1 backdrop-blur-xl md:p-6">
+		<BaseAdminCard accent="primary" className="md:p-6" bodyClassName="space-y-5">
 			<div className="space-y-5">
 				<div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
 					<div className="space-y-2">
@@ -305,6 +305,6 @@ export function PeriodStats({ active = true, wsTrigger, reconnectedAt }: Props) 
 					</>
 				)}
 			</div>
-		</div>
+		</BaseAdminCard>
 	);
 }

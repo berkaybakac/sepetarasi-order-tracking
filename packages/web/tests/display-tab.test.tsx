@@ -42,7 +42,8 @@ describe("DisplayTab", () => {
 		});
 
 		const tabShell = Array.from(container.querySelectorAll("div")).find(
-			(node) => node.classList.contains("space-y-6") && node.textContent?.includes("Müşteri Ekranı"),
+			(node) =>
+				node.classList.contains("space-y-6") && node.textContent?.includes("Müşteri Ekranı"),
 		);
 
 		expect(tabShell).toBeTruthy();

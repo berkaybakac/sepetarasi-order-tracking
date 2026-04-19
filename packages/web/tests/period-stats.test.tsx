@@ -155,6 +155,30 @@ describe("PeriodStats — delivery analytics dashboard", () => {
 		expect(container.textContent).toContain("Bu aralıkta teslim edilen sipariş yok");
 	});
 
+	it("keeps the custom date picker scrollable within the viewport", async () => {
+		vi.mocked(api.getDeliveryAnalytics).mockResolvedValue(buildAnalytics());
+
+		await act(async () => {
+			root.render(<PeriodStats />);
+		});
+		await act(async () => {
+			await Promise.resolve();
+		});
+
+		const trigger = getRangePickerButton(container);
+
+		await act(async () => {
+			trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+		});
+
+		const dialog = container.querySelector<HTMLDialogElement>(
+			'dialog[aria-label="Özel tarih aralığı seçici"]',
+		);
+		expect(dialog).not.toBeNull();
+		expect(dialog?.className).toContain("max-h-[calc(100dvh-6rem)]");
+		expect(dialog?.className).toContain("overscroll-contain");
+	});
+
 	it("saves the delivery target and refetches analytics", async () => {
 		vi.mocked(api.getDeliveryAnalytics)
 			.mockResolvedValueOnce(buildAnalytics())

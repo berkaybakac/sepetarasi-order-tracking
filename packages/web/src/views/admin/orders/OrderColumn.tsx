@@ -5,7 +5,7 @@ import { OrdersIcon } from "../../../components/icons";
 import { UI_LABELS } from "../../../constants/labels";
 import { useInterval } from "../../../hooks/useInterval";
 import { useOrdersByStatus } from "../../../stores/orderStore";
-import { EmptyState } from "../ui/primitives";
+import { BaseAdminCardSection, EmptyState } from "../ui/primitives";
 import { OrderCard } from "./OrderCard";
 
 export const DELIVERED_SCROLL_TRIGGER_COUNT = 6;
@@ -55,7 +55,7 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 		: undefined;
 
 	return (
-		<div className="min-w-0 rounded-[1.4rem] border border-border-subtle bg-surface-3/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+		<BaseAdminCardSection variant="elevated" className="min-w-0">
 			<div className="mb-4 flex items-center justify-between gap-2 px-1">
 				<div className="flex min-w-0 items-center gap-2">
 					<span className={`w-2 h-2 rounded-full ${dotClass}`} />
@@ -89,6 +89,6 @@ export function OrderColumn({ status, title, dotClass, countClass }: ColumnProps
 					/>
 				)}
 			</div>
-		</div>
+		</BaseAdminCardSection>
 	);
 }

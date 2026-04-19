@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ApiError, api } from "./lib/api";
 import { useAuthStore } from "./stores/auth.store";
@@ -12,6 +12,40 @@ const AUTH_CHECK_RETRY_DELAYS_MS = [350, 900, 1800] as const;
 
 function isRecoverableAuthCheckError(error: unknown) {
 	return error instanceof ApiError && error.recoverable && error.status !== 401;
+}
+
+function isAdminPath(pathname: string) {
+	return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+function AdminViewportReset() {
+	const location = useLocation();
+
+	useLayoutEffect(() => {
+		if (typeof window === "undefined" || !isAdminPath(location.pathname)) return;
+
+		const historyState = window.history as History & {
+			scrollRestoration?: "auto" | "manual";
+		};
+		const previousScrollRestoration = historyState.scrollRestoration;
+
+		if ("scrollRestoration" in historyState) {
+			historyState.scrollRestoration = "manual";
+		}
+
+		// Safari can preserve a stale zoomed viewport slice across reloads unless we hard reset it.
+		window.scrollTo(0, 0);
+		document.documentElement.scrollTop = 0;
+		document.body.scrollTop = 0;
+
+		return () => {
+			if ("scrollRestoration" in historyState && previousScrollRestoration !== undefined) {
+				historyState.scrollRestoration = previousScrollRestoration;
+			}
+		};
+	}, [location.pathname]);
+
+	return null;
 }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -82,6 +116,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export default function App() {
 	return (
 		<BrowserRouter>
+			<AdminViewportReset />
 			<Routes>
 				<Route path="/admin/login" element={<LoginView />} />
 				<Route

@@ -114,9 +114,7 @@ export function AdminStatusPanel({
 							isCondensed ? "pt-1.5" : "pt-2.5",
 						)}
 					>
-						<div className={cn(isCondensed ? "lg:pl-5" : "lg:pl-6")}>
-							{children}
-						</div>
+						<div className={cn(isCondensed ? "lg:pl-5" : "lg:pl-6")}>{children}</div>
 					</div>
 				) : null}
 			</div>

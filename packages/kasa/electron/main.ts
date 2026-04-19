@@ -228,18 +228,18 @@ function logPrintWarning(orderId: string, printerIp: string, warning: PrinterEnc
 function friendlyPrintError(err: unknown): string {
 	const msg = err instanceof Error ? err.message : String(err);
 	if (msg.includes("ECONNREFUSED"))
-		return "Yazıcıya bağlanılamadı — yazıcının açık olduğunu kontrol edin";
+		return "Yazıcıya bağlanılamadı. Yazıcının açık olduğunu kontrol edin.";
 	if (msg.includes("timeout") || msg.includes("ETIMEDOUT"))
-		return "Yazıcı yanıt vermedi — tekrar deneyin";
+		return "Yazıcı yanıt vermedi.";
 	if (msg.includes("ENOTFOUND") || msg.includes("EADDRNOTAVAIL"))
-		return "Yazıcı adresi bulunamadı — ayarları kontrol edin";
+		return "Yazıcı adresi bulunamadı. Ayarları kontrol edin.";
 	if (msg.includes("ENETUNREACH") || msg.includes("EHOSTUNREACH"))
-		return "Yazıcıya erişilemiyor — ağ bağlantısını kontrol edin";
+		return "Yazıcıya erişilemiyor. Ağ bağlantısını kontrol edin.";
 	if (msg.includes("EPIPE") || msg.includes("ECONNRESET"))
-		return "Yazıcı bağlantısı kesildi — tekrar deneyin";
+		return "Yazıcı bağlantısı kesildi.";
 	if (msg.includes("Unsupported printer encoding"))
-		return "Yazıcı karakter seti ayarı geçersiz — Ayarlar'dan kontrol edin";
-	return "Yazıcı hatası — tekrar deneyin";
+		return "Yazıcı karakter seti ayarı geçersiz. Ayarlar'dan kontrol edin.";
+	return "Yazıcı hatası oluştu.";
 }
 
 let mainWindow: BrowserWindow | null = null;
