@@ -209,27 +209,21 @@ function saveConfig(config: KasaConfig) {
 	const normalizedCashierTokensByServerUrl = normalizeCashierTokensByServerUrl(
 		config.cashierTokensByServerUrl,
 	);
+	const resolvedCashierToken = getEffectiveCashierToken(
+		normalizedServerUrl,
+		getSavedCashierTokenForServerUrl(
+			normalizedServerUrl,
+			normalizedCashierTokensByServerUrl,
+			config.cashierToken,
+		),
+	);
 	const normalizedConfig: KasaConfig = {
 		...config,
 		serverUrl: normalizedServerUrl,
-		cashierToken: getEffectiveCashierToken(
-			normalizedServerUrl,
-			getSavedCashierTokenForServerUrl(
-				normalizedServerUrl,
-				normalizedCashierTokensByServerUrl,
-				config.cashierToken,
-			),
-		),
+		cashierToken: resolvedCashierToken,
 		cashierTokensByServerUrl: {
 			...normalizedCashierTokensByServerUrl,
-			[normalizedServerUrl]: getEffectiveCashierToken(
-				normalizedServerUrl,
-				getSavedCashierTokenForServerUrl(
-					normalizedServerUrl,
-					normalizedCashierTokensByServerUrl,
-					config.cashierToken,
-				),
-			),
+			[normalizedServerUrl]: resolvedCashierToken,
 		},
 	};
 	writeFileSync(getConfigPath(), JSON.stringify(normalizedConfig, null, 2));

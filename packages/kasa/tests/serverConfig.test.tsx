@@ -311,4 +311,26 @@ describe("ServerConfig", () => {
 		});
 		expect(onConnected).toHaveBeenCalledTimes(1);
 	});
+
+	it("clears a draft token when switching between prod URLs", async () => {
+		await render();
+
+		await click(getButton(container, "Token Değiştir"));
+
+		const tokenInput = container.querySelector("#cashier-token");
+		const serverUrlInput = container.querySelector("#server-url");
+		if (!(tokenInput instanceof HTMLInputElement)) {
+			throw new Error("Cashier token input not found");
+		}
+		if (!(serverUrlInput instanceof HTMLInputElement)) {
+			throw new Error("Server URL input not found");
+		}
+
+		await changeInputValue(tokenInput, "partial-token");
+		await changeInputValue(serverUrlInput, "http://10.0.0.5:3000");
+
+		expect(tokenInput.value).toBe("");
+		expect(container.textContent).toContain("Kasiyer token: gerekli");
+		expect(tokenInput.placeholder).toBe("Yeni kasiyer token'ı");
+	});
 });

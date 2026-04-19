@@ -140,6 +140,20 @@ export function MusicLibraryCard() {
 		}
 	}, [lastReconnectedAt, loadError, loadTracks, refreshDisk]);
 
+	const hasPendingUploads = uploads.some((u) => !u.done && !u.error);
+
+	useEffect(() => {
+		if (!hasPendingUploads) return;
+
+		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+			event.preventDefault();
+			event.returnValue = "";
+		};
+
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+	}, [hasPendingUploads]);
+
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = Array.from(e.target.files ?? []);
 		if (files.length === 0) return;
@@ -269,10 +283,10 @@ export function MusicLibraryCard() {
 						<button
 							type="button"
 							onClick={() => fileInputRef.current?.click()}
-							disabled={uploads.some((u) => !u.done && !u.error)}
+							disabled={hasPendingUploads}
 							className="rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:from-indigo-400 hover:to-violet-400 disabled:opacity-40"
 						>
-							{uploads.some((u) => !u.done && !u.error)
+							{hasPendingUploads
 								? UI_LABELS.MUSIC_LIBRARY.UPLOADING
 								: UI_LABELS.MUSIC_LIBRARY.UPLOAD}
 						</button>
@@ -402,6 +416,11 @@ export function MusicLibraryCard() {
 
 					{uploads.length > 0 ? (
 						<div className="space-y-2">
+							{hasPendingUploads ? (
+								<InlineAlert tone="warning">
+									{UI_LABELS.MUSIC_LIBRARY.UPLOAD_LEAVE_WARNING}
+								</InlineAlert>
+							) : null}
 							{uploads
 								.filter((u) => !u.done)
 								.map((u) => (

@@ -79,6 +79,16 @@ function getButton(container: HTMLDivElement, label: string) {
 	return button;
 }
 
+function createDeferred<T>() {
+	let resolve!: (value: T) => void;
+	let reject!: (reason?: unknown) => void;
+	const promise = new Promise<T>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+	return { promise, resolve, reject };
+}
+
 describe("MusicLibraryCard", () => {
 	let container: HTMLDivElement;
 	let root: Root;
@@ -133,5 +143,54 @@ describe("MusicLibraryCard", () => {
 
 		expect(api.getMusicTracks).toHaveBeenCalledTimes(2);
 		expect(container.textContent).toContain("Kasap Havasi");
+	});
+
+	it("warns before unload while an upload is active and removes the warning after completion", async () => {
+		vi.mocked(api.getMusicTracks).mockResolvedValue([]);
+		const uploadDeferred = createDeferred<MusicTrack>();
+		vi.mocked(api.uploadMusicTrack).mockImplementation(() => uploadDeferred.promise);
+
+		await act(async () => {
+			root.render(<MusicLibraryCard />);
+		});
+		await flushEffects();
+
+		const fileInput = container.querySelector('input[type="file"]');
+		if (!(fileInput instanceof HTMLInputElement)) {
+			throw new Error("File input not found");
+		}
+
+		Object.defineProperty(fileInput, "files", {
+			configurable: true,
+			value: [new File(["mp3"], "yukleme.mp3", { type: "audio/mpeg" })],
+		});
+
+		await act(async () => {
+			fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+			await Promise.resolve();
+		});
+		await flushEffects();
+
+		expect(container.textContent).toContain(
+			"Yükleme sürerken sayfayı yenilemeyin, sekmeyi kapatmayın veya uygulamadan çıkmayın.",
+		);
+
+		const activeBeforeUnloadEvent = new Event("beforeunload", { cancelable: true });
+		expect(window.dispatchEvent(activeBeforeUnloadEvent)).toBe(false);
+		expect(activeBeforeUnloadEvent.defaultPrevented).toBe(true);
+
+		await act(async () => {
+			uploadDeferred.resolve(buildTrack({ id: "track-2", filename: "yukleme.mp3" }));
+			await uploadDeferred.promise;
+		});
+		await flushEffects();
+
+		expect(container.textContent).not.toContain(
+			"Yükleme sürerken sayfayı yenilemeyin, sekmeyi kapatmayın veya uygulamadan çıkmayın.",
+		);
+
+		const completedBeforeUnloadEvent = new Event("beforeunload", { cancelable: true });
+		expect(window.dispatchEvent(completedBeforeUnloadEvent)).toBe(true);
+		expect(completedBeforeUnloadEvent.defaultPrevented).toBe(false);
 	});
 });

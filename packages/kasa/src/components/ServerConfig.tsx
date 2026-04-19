@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	ApiError,
 	getBaseUrl,
@@ -50,6 +50,7 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 
 	const normalizedUrl = normalizeServerUrl(url);
 	const isLocalDev = isLocalDevServerUrl(normalizedUrl);
+	const previousNormalizedUrlRef = useRef(normalizedUrl);
 	const savedCashierToken = getSavedCashierTokenForServerUrl(
 		normalizedUrl,
 		cashierTokensByServerUrl,
@@ -83,11 +84,17 @@ export function ServerConfig({ onConnected }: ServerConfigProps) {
 	}, []);
 
 	useEffect(() => {
+		const previousNormalizedUrl = previousNormalizedUrlRef.current;
+
+		if (previousNormalizedUrl !== normalizedUrl && tokenEditorOpen) {
+			setCashierTokenDraft("");
+		}
 		if (isLocalDev && tokenEditorOpen) {
 			setTokenEditorOpen(false);
 			setCashierTokenDraft("");
 		}
-	}, [isLocalDev, tokenEditorOpen]);
+		previousNormalizedUrlRef.current = normalizedUrl;
+	}, [isLocalDev, normalizedUrl, tokenEditorOpen]);
 
 	const effectiveCashierToken = getEffectiveCashierToken(
 		normalizedUrl,

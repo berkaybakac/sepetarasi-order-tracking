@@ -145,6 +145,8 @@ export const UI_LABELS = {
 		TITLE: "Müzik Kütüphanesi",
 		UPLOAD: "MP3 Yükle",
 		UPLOADING: "Yükleniyor...",
+		UPLOAD_LEAVE_WARNING:
+			"Yükleme sürerken sayfayı yenilemeyin, sekmeyi kapatmayın veya uygulamadan çıkmayın.",
 		TRACK_COUNT: "Toplam parça",
 		LIBRARY_SIZE: "Arşiv boyutu",
 		FREE_SPACE: "Boş alan",
