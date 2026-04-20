@@ -12,6 +12,19 @@ import {
 } from "../src/index.js";
 
 describe("display-settings (happy path)", () => {
+	it("uses the safe LED defaults for reset and seed flows", () => {
+		expect(DEFAULT_DISPLAY_CONFIG).toEqual({
+			profile: "led_256x512",
+			layoutPreference: "stack",
+			maxVisiblePerColumn: 4,
+			pageSeconds: 6,
+			restaurantName: "SEPET ARASI",
+			readyDisplayMinutes: 5,
+			textScale: "s",
+			theme: "dark",
+		});
+	});
+
 	it("parses valid values from settings map", () => {
 		const config = parseDisplaySettings({
 			[SETTING_KEYS.RESTAURANT_NAME]: "Sepetarasi Mutfak",

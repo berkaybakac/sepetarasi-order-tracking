@@ -42,7 +42,7 @@ import {
 
 interface DisplayControlCardProps {
 	label: string;
-	hint: string;
+	hint?: string;
 	children: ReactNode;
 	className?: string;
 }
@@ -57,7 +57,7 @@ function DisplayControlCard({ label, hint, children, className }: DisplayControl
 		>
 			<div className="mb-3 space-y-1">
 				<p className="text-sm font-semibold text-text-strong">{label}</p>
-				<p className="text-xs leading-5 text-text-subtle">{hint}</p>
+				{hint ? <p className="text-xs leading-5 text-text-subtle">{hint}</p> : null}
 			</div>
 			{children}
 		</div>
@@ -221,7 +221,6 @@ export function DisplaySettingsCard() {
 						<Field
 							htmlFor="restaurant-name"
 							label={UI_LABELS.DISPLAY_SETTINGS.RESTAURANT_NAME_LABEL}
-							hint="Marka adı ekranın üst bölümünde başlık olarak görünür."
 						>
 							<TextInput
 								id="restaurant-name"
@@ -236,74 +235,8 @@ export function DisplaySettingsCard() {
 						</Field>
 					</div>
 
-					<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.PROFILE_LABEL}
-							hint="İçerik yoğunluğunu ekran tipine göre dengeler."
-						>
-							<SelectInput
-								value={config.profile}
-								onChange={(event) =>
-									setConfig((prev) => ({
-										...prev,
-										profile: event.target.value as DisplayProfile,
-									}))
-								}
-							>
-								{DISPLAY_PROFILES.map((profile) => (
-									<option key={profile} value={profile}>
-										{PROFILE_LABELS[profile]}
-									</option>
-								))}
-							</SelectInput>
-						</DisplayControlCard>
-
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.LAYOUT_LABEL}
-							hint="Kolonların yan yana mı alt alta mı akacağını belirler."
-						>
-							<SelectInput
-								value={config.layoutPreference}
-								onChange={(event) =>
-									setConfig((prev) => ({
-										...prev,
-										layoutPreference: event.target.value as DisplayLayoutPreference,
-									}))
-								}
-							>
-								{DISPLAY_LAYOUT_PREFERENCES.map((layoutPreference) => (
-									<option key={layoutPreference} value={layoutPreference}>
-										{LAYOUT_LABELS[layoutPreference]}
-									</option>
-								))}
-							</SelectInput>
-						</DisplayControlCard>
-
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_LABEL}
-							hint="Uzak mesafeden okunabilirliği doğrudan etkiler."
-						>
-							<SelectInput
-								value={config.textScale}
-								onChange={(event) =>
-									setConfig((prev) => ({
-										...prev,
-										textScale: event.target.value as DisplayTextScale,
-									}))
-								}
-							>
-								{DISPLAY_TEXT_SCALES.map((textScale) => (
-									<option key={textScale} value={textScale}>
-										{TEXT_SCALE_LABELS[textScale]}
-									</option>
-								))}
-							</SelectInput>
-						</DisplayControlCard>
-
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.THEME_LABEL}
-							hint="Müşteri ekranının genel renk atmosferini değiştirir."
-						>
+					<div className="grid gap-4 md:grid-cols-2">
+						<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.THEME_LABEL}>
 							<SelectInput
 								value={config.theme}
 								onChange={(event) =>
@@ -317,43 +250,8 @@ export function DisplaySettingsCard() {
 								))}
 							</SelectInput>
 						</DisplayControlCard>
-					</div>
 
-					<div className="grid gap-4 md:grid-cols-3">
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL}
-							hint="Her kolonda aynı anda kaç sipariş gösterileceğini belirler."
-						>
-							<NumberStepper
-								value={config.maxVisiblePerColumn}
-								min={1}
-								max={99}
-								onChange={(value) => setConfig((prev) => ({ ...prev, maxVisiblePerColumn: value }))}
-								decreaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.DECREASE}`}
-								increaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.INCREASE}`}
-								inputLabel={UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL}
-							/>
-						</DisplayControlCard>
-
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL}
-							hint="Uzun listelerde sayfalar arası geçiş hızını kontrol eder."
-						>
-							<NumberStepper
-								value={config.pageSeconds}
-								min={1}
-								max={120}
-								onChange={(value) => setConfig((prev) => ({ ...prev, pageSeconds: value }))}
-								decreaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.DECREASE}`}
-								increaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.INCREASE}`}
-								inputLabel={UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL}
-							/>
-						</DisplayControlCard>
-
-						<DisplayControlCard
-							label={UI_LABELS.DISPLAY_SETTINGS.READY_DISPLAY_MINUTES_LABEL}
-							hint="Hazır siparişlerin ekranda kalma süresini sınırlar."
-						>
+						<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.READY_DISPLAY_MINUTES_LABEL}>
 							<NumberStepper
 								value={config.readyDisplayMinutes}
 								min={1}
@@ -370,9 +268,8 @@ export function DisplaySettingsCard() {
 						<InlineAlert tone="danger">{feedback.message}</InlineAlert>
 					) : null}
 
-					<div className="flex flex-col gap-3 rounded-[1.35rem] border border-border-subtle bg-surface-1/45 p-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="rounded-[1.35rem] border border-border-subtle bg-surface-1/45 p-4">
 						<div className="flex flex-wrap gap-3">
-							<PreviewLink href="/display" label={UI_LABELS.DISPLAY_SETTINGS.OPEN_DISPLAY} />
 							<PreviewLink
 								href={tb1DisplayLinks.led256x512}
 								label={UI_LABELS.DISPLAY_SETTINGS.OPEN_TB1_256_DISPLAY}
@@ -389,6 +286,106 @@ export function DisplaySettingsCard() {
 								tone="accent"
 							/>
 						</div>
+					</div>
+
+					<details className="rounded-[1.35rem] border border-border-subtle bg-surface-1/45 p-4">
+						<summary className="cursor-pointer list-none text-sm font-semibold text-text-strong">
+							{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_TITLE}
+						</summary>
+						<p className="mt-2 text-xs leading-5 text-text-subtle">
+							{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_HINT}
+						</p>
+
+						<div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+							<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.PROFILE_LABEL}>
+								<SelectInput
+									value={config.profile}
+									onChange={(event) =>
+										setConfig((prev) => ({
+											...prev,
+											profile: event.target.value as DisplayProfile,
+										}))
+									}
+								>
+									{DISPLAY_PROFILES.map((profile) => (
+										<option key={profile} value={profile}>
+											{PROFILE_LABELS[profile]}
+										</option>
+									))}
+								</SelectInput>
+							</DisplayControlCard>
+
+							<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.LAYOUT_LABEL}>
+								<SelectInput
+									value={config.layoutPreference}
+									onChange={(event) =>
+										setConfig((prev) => ({
+											...prev,
+											layoutPreference: event.target.value as DisplayLayoutPreference,
+										}))
+									}
+								>
+									{DISPLAY_LAYOUT_PREFERENCES.map((layoutPreference) => (
+										<option key={layoutPreference} value={layoutPreference}>
+											{LAYOUT_LABELS[layoutPreference]}
+										</option>
+									))}
+								</SelectInput>
+							</DisplayControlCard>
+
+							<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.TEXT_SCALE_LABEL}>
+								<SelectInput
+									value={config.textScale}
+									onChange={(event) =>
+										setConfig((prev) => ({
+											...prev,
+											textScale: event.target.value as DisplayTextScale,
+										}))
+									}
+								>
+									{DISPLAY_TEXT_SCALES.map((textScale) => (
+										<option key={textScale} value={textScale}>
+											{TEXT_SCALE_LABELS[textScale]}
+										</option>
+									))}
+								</SelectInput>
+							</DisplayControlCard>
+
+							<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL}>
+								<NumberStepper
+									value={config.maxVisiblePerColumn}
+									min={1}
+									max={99}
+									onChange={(value) =>
+										setConfig((prev) => ({ ...prev, maxVisiblePerColumn: value }))
+									}
+									decreaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.DECREASE}`}
+									increaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.INCREASE}`}
+									inputLabel={UI_LABELS.DISPLAY_SETTINGS.MAX_PER_COLUMN_LABEL}
+								/>
+							</DisplayControlCard>
+						</div>
+
+						<div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
+							<DisplayControlCard label={UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL}>
+								<NumberStepper
+									value={config.pageSeconds}
+									min={1}
+									max={120}
+									onChange={(value) => setConfig((prev) => ({ ...prev, pageSeconds: value }))}
+									decreaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.DECREASE}`}
+									increaseLabel={`${UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL} ${UI_LABELS.DISPLAY_SETTINGS.INCREASE}`}
+									inputLabel={UI_LABELS.DISPLAY_SETTINGS.PAGE_SECONDS_LABEL}
+								/>
+							</DisplayControlCard>
+
+							<div className="flex items-end">
+								<PreviewLink href="/display" label={UI_LABELS.DISPLAY_SETTINGS.OPEN_DISPLAY} />
+							</div>
+						</div>
+					</details>
+
+					<div className="flex justify-end">
 						<div className="flex shrink-0 gap-3">
 							<ActionButton
 								tone="secondary"

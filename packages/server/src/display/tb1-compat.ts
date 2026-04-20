@@ -89,6 +89,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(74, 222, 128, 0.1);
         --ready-item-border: rgba(74, 222, 128, 0.28);
         --ready-item-text: #dcfce7;
+        --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         --title-size: 24px;
         --clock-size: 22px;
         --panel-title-size: 20px;
@@ -141,6 +142,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(16, 185, 129, 0.12);
         --ready-item-border: rgba(16, 185, 129, 0.3);
         --ready-item-text: #065f46;
+        --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.92);
       }
 
       .shell.theme-vivid {
@@ -168,6 +170,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(20, 184, 166, 0.14);
         --ready-item-border: rgba(94, 234, 212, 0.34);
         --ready-item-text: #ccfbf1;
+        --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
       }
 
       .shell.theme-retro {
@@ -195,6 +198,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(34, 197, 94, 0.14);
         --ready-item-border: rgba(74, 222, 128, 0.34);
         --ready-item-text: #bbf7d0;
+        --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.02);
       }
 
       .shell.profile-led_256x512 {
@@ -326,6 +330,8 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         align-items: center;
         justify-content: space-between;
         gap: 8px;
+        padding-bottom: 2px;
+        border-bottom: 1px solid var(--panel-divider);
         margin-bottom: var(--panel-head-gap);
       }
 
@@ -347,9 +353,11 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         min-width: var(--count-min-width);
         padding: var(--count-padding-y) var(--count-padding-x);
         border-radius: 999px;
+        box-sizing: border-box;
         text-align: center;
         font-size: var(--count-size);
         font-weight: 900;
+        box-shadow: var(--surface-highlight);
       }
 
       .panel.preparing .panel-count {
@@ -368,6 +376,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         display: grid;
         grid-template-columns: repeat(var(--list-columns), minmax(0, 1fr));
         gap: var(--list-gap);
+        align-content: start;
       }
 
       .item {
@@ -375,11 +384,16 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         align-items: center;
         justify-content: center;
         min-height: var(--item-min-height);
+        box-sizing: border-box;
+        padding: 0 6px;
         border-radius: var(--item-radius);
         border: 2px solid var(--item-border);
         font-size: var(--item-size);
         font-weight: 900;
         letter-spacing: 0.02em;
+        text-align: center;
+        overflow: hidden;
+        box-shadow: var(--surface-highlight);
       }
 
       .panel.preparing .item {
@@ -395,11 +409,13 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
       }
 
       .item.empty {
+        grid-column: 1 / -1;
         justify-content: center;
         padding: var(--empty-padding-y) var(--empty-padding-x);
         font-size: var(--empty-size);
         font-weight: 700;
         letter-spacing: 0;
+        line-height: 1.25;
         opacity: 0.86;
       }
 

@@ -57,11 +57,11 @@ export const PROFILE_DEFAULTS: Record<
 };
 
 export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
-	profile: "auto",
-	...PROFILE_DEFAULTS.auto,
+	profile: "led_256x512",
+	...PROFILE_DEFAULTS.led_256x512,
 	restaurantName: "SEPET ARASI",
 	readyDisplayMinutes: 5,
-	textScale: "m",
+	textScale: "s",
 	theme: "dark",
 };
 
