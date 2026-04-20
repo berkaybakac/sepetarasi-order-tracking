@@ -51,10 +51,12 @@ describe("TB1 compatibility presets", () => {
 		expect(html).toContain('var FORCED_PROFILE = "led_344_square"');
 		expect(html).toContain("var READY_HIGHLIGHT_MS = 4000;");
 		expect(html).toContain("var READY_HIGHLIGHT_QUEUE_LIMIT = 5;");
+		expect(html).toContain("var PAGER_DOT_LIMIT = 5;");
 		expect(html).toContain("var PROFILE_PRESETS = ");
 		expect(html).toContain("var LEGACY_PROFILE_ALIASES = ");
 		expect(html).toContain(".panel.ready .item.highlighted");
-		expect(html).toContain(".panel-pager-slot");
+		expect(html).toContain(".panel-meta");
+		expect(html).toContain(".pager-text");
 		expect(html).toContain('id="prep-pager"');
 		expect(html).toContain('id="ready-pager"');
 		expect(html).toContain("function renderPagers(preparingPageCount, readyPageCount)");

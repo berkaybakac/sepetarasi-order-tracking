@@ -47,6 +47,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
 	const serializedAliases = JSON.stringify(LEGACY_PROFILE_ALIASES);
 	const readyHighlightMs = 4000;
 	const readyHighlightQueueLimit = 5;
+	const pagerDotLimit = 5;
 
 	return `<!DOCTYPE html>
 <html lang="tr">
@@ -355,7 +356,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         display: flex;
         align-items: center;
         justify-content: space-between;
-        position: relative;
         gap: 8px;
         padding-bottom: 2px;
         border-bottom: 1px solid var(--panel-divider);
@@ -369,15 +369,13 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         letter-spacing: 0.03em;
       }
 
-      .panel-pager-slot {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
+      .panel-meta {
         display: flex;
         align-items: center;
-        justify-content: center;
-        pointer-events: none;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-left: auto;
+        flex-shrink: 0;
       }
 
       .panel.preparing .panel-title {
@@ -494,6 +492,23 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         opacity: 0.92;
         box-shadow: 0 0 0 1px var(--pager-active-ring);
       }
+
+      .pager-text {
+        font-size: 0.82em;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        opacity: 0.9;
+        white-space: nowrap;
+      }
+
+      .pager.preparing .pager-text {
+        color: var(--preparing-title);
+      }
+
+      .pager.ready .pager-text {
+        color: var(--ready-title);
+      }
     </style>
   </head>
   <body data-tb1-forced-profile="${forcedProfile ?? ""}">
@@ -506,10 +521,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         <div class="panel preparing">
           <div class="panel-head">
             <div class="panel-title">Hazırlananlar</div>
-            <div class="panel-pager-slot">
+            <div class="panel-meta">
               <div class="pager preparing hidden" id="prep-pager"></div>
+              <div class="panel-count" id="prep-count">0</div>
             </div>
-            <div class="panel-count" id="prep-count">0</div>
           </div>
           <div class="list" id="prep-list">
             <div class="item empty">Yükleniyor...</div>
@@ -518,10 +533,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         <div class="panel ready">
           <div class="panel-head">
             <div class="panel-title">Hazır</div>
-            <div class="panel-pager-slot">
+            <div class="panel-meta">
               <div class="pager ready hidden" id="ready-pager"></div>
+              <div class="panel-count" id="ready-count">0</div>
             </div>
-            <div class="panel-count" id="ready-count">0</div>
           </div>
           <div class="list" id="ready-list">
             <div class="item empty">Yükleniyor...</div>
@@ -539,6 +554,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         var FORCED_PROFILE = ${serializedForcedProfile};
         var READY_HIGHLIGHT_MS = ${readyHighlightMs};
         var READY_HIGHLIGHT_QUEUE_LIMIT = ${readyHighlightQueueLimit};
+        var PAGER_DOT_LIMIT = ${pagerDotLimit};
         var state = {
           orders: [],
           config: {
@@ -1014,6 +1030,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         function renderPager(container, pageCount, activePage) {
           var fragment;
           var dot;
+          var text;
           var index;
 
           if (!container) return;
@@ -1027,6 +1044,15 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           container.className = container.className.replace(/ hidden/g, "");
           container.innerHTML = "";
           fragment = document.createDocumentFragment();
+
+          if (pageCount > PAGER_DOT_LIMIT) {
+            text = document.createElement("span");
+            text.className = "pager-text";
+            text.appendChild(document.createTextNode(String(activePage + 1) + "/" + String(pageCount)));
+            fragment.appendChild(text);
+            container.appendChild(fragment);
+            return;
+          }
 
           for (index = 0; index < pageCount; index += 1) {
             dot = document.createElement("span");
