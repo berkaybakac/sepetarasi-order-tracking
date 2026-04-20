@@ -168,7 +168,8 @@ if [ "$INIT" = "--init" ]; then
         sudo tee /etc/systemd/system/sepetarasi.service > /dev/null << SVCEOF
 [Unit]
 Description=Sepetarasi Order Tracking Server
-After=network.target
+After=network.target sound.target alsa-restore.service
+Wants=sound.target
 
 [Service]
 Type=simple
@@ -207,6 +208,14 @@ remote_tty "
     sudo tee /etc/systemd/system/sepetarasi.service.d/10-envfile.conf > /dev/null << 'SVCDROP'
 [Service]
 EnvironmentFile=-$APP_DIR/.env
+SVCDROP
+    sudo tee /etc/systemd/system/sepetarasi.service.d/20-audio-init.conf > /dev/null << SVCDROP
+[Unit]
+After=alsa-restore.service sound.target
+Wants=sound.target
+
+[Service]
+ExecStartPre=/bin/bash $APP_DIR/scripts/pi4-ensure-audio.sh
 SVCDROP
     sudo systemctl daemon-reload
 

@@ -339,6 +339,8 @@ Ses cihazı: `AUDIO_ALSA_DEVICE=hw:2,0` → 3.5mm jack. Cihaz indexi için: `apl
 
 Ses çıkışını 3.5mm jack'e zorlamak: `sudo raspi-config nonint do_audio 1`
 
+Deploy, `sepetarasi.service` her başladığında seçili ALSA kartının mixer seviyesini tekrar `100%` yapar. Ani elektrik kesintisi sonrası boot'ta eski düşük ALSA state'i geri yüklense bile servis açılışında seviye yeniden normalize edilir.
+
 ---
 
 ## Teslim Öncesi Kontrol Listesi (`--init` sonrası)
