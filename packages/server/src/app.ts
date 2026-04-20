@@ -11,6 +11,7 @@ import fastifyWebsocket from "@fastify/websocket";
 import {
 	API_ROUTES,
 	SETTING_KEYS,
+	TB1_DISPLAY_PROFILE_ROUTES,
 	WS_CHANNELS,
 	formatRateLimitMessage,
 	parseRetryAfterSeconds,
@@ -21,6 +22,7 @@ import type { WebSocket } from "ws";
 import { ADMIN_COOKIE_NAME, AUTH_CONFIG, CASHIER_TOKEN_HEADER } from "./config/auth.js";
 import type { AppDatabase } from "./db/connection.js";
 import { appSettings } from "./db/schema.js";
+import { buildTb1CompatDisplayHtml as buildTb1CompatHtmlShell } from "./display/tb1-compat.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMusicRoutes } from "./routes/music.js";
 import { registerOrderRoutes } from "./routes/orders.js";
@@ -1179,7 +1181,19 @@ export async function buildApp(opts: AppOptions) {
 	app.get("/ping", sendConnectivityTestHtml);
 	app.get("/display/index.html", async (_request, reply) => {
 		setNoStoreHeaders(reply);
-		return reply.type("text/html; charset=utf-8").send(buildTb1CompatDisplayHtml());
+		return reply.type("text/html; charset=utf-8").send(buildTb1CompatHtmlShell(null));
+	});
+	app.get(TB1_DISPLAY_PROFILE_ROUTES.led_256x512, async (_request, reply) => {
+		setNoStoreHeaders(reply);
+		return reply.type("text/html; charset=utf-8").send(buildTb1CompatHtmlShell("led_256x512"));
+	});
+	app.get(TB1_DISPLAY_PROFILE_ROUTES.led_344_square, async (_request, reply) => {
+		setNoStoreHeaders(reply);
+		return reply.type("text/html; charset=utf-8").send(buildTb1CompatHtmlShell("led_344_square"));
+	});
+	app.get(TB1_DISPLAY_PROFILE_ROUTES.led_512_square, async (_request, reply) => {
+		setNoStoreHeaders(reply);
+		return reply.type("text/html; charset=utf-8").send(buildTb1CompatHtmlShell("led_512_square"));
 	});
 	app.get(
 		"/display-beacon.gif",

@@ -1,11 +1,7 @@
 import type { Order } from "@sepetarasi/shared";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import {
-	type DisplayConfig,
-	READY_HIGHLIGHT_ANIMATION_SECONDS,
-	resolveLayoutMode,
-} from "./display-config";
+import { READY_HIGHLIGHT_ANIMATION_SECONDS } from "./display-config";
 
 export function useVisibleReadyOrders(readyOrders: Order[], readyDisplayMinutes: number): Order[] {
 	return useMemo(() => {
@@ -18,10 +14,7 @@ export function useVisibleReadyOrders(readyOrders: Order[], readyDisplayMinutes:
 	}, [readyOrders, readyDisplayMinutes]);
 }
 
-export function useDisplayLayoutMode(
-	profile: DisplayConfig["profile"],
-	layoutPreference: DisplayConfig["layoutPreference"],
-) {
+export function useDisplayViewport() {
 	const [viewport, setViewport] = useState(() => ({
 		width: window.innerWidth,
 		height: window.innerHeight,
@@ -33,10 +26,7 @@ export function useDisplayLayoutMode(
 		return () => window.removeEventListener("resize", onResize);
 	}, []);
 
-	return useMemo(
-		() => resolveLayoutMode(viewport.width, viewport.height, { profile, layoutPreference }),
-		[layoutPreference, profile, viewport.height, viewport.width],
-	);
+	return viewport;
 }
 
 export function ClockText({ className }: { className: string }) {
@@ -55,6 +45,7 @@ export function ClockText({ className }: { className: string }) {
 export function ColumnKpiHeader({
 	title,
 	count,
+	containerClass,
 	railClass,
 	titleSizeClass,
 	titleClass,
@@ -64,6 +55,7 @@ export function ColumnKpiHeader({
 }: {
 	title: string;
 	count: number;
+	containerClass: string;
 	railClass: string;
 	titleSizeClass: string;
 	titleClass: string;
@@ -72,9 +64,7 @@ export function ColumnKpiHeader({
 	kpiNumberClass: string;
 }) {
 	return (
-		<div
-			className={`mb-[clamp(0.5rem,2.2vmin,1.6rem)] h-[clamp(5.5rem,11vmin,6.5rem)] rounded-[clamp(0.45rem,1.15vmin,0.7rem)] px-[clamp(0.7rem,2.2vmin,1.5rem)] py-[clamp(0.45rem,1.2vmin,0.85rem)] flex items-center justify-between gap-[clamp(0.75rem,2.5vmin,1.75rem)] ${railClass}`}
-		>
+		<div className={`flex items-center justify-between ${containerClass} ${railClass}`}>
 			<h2
 				className={`${titleSizeClass} font-bold ${titleClass} tracking-[0.02em] leading-[1] -translate-y-[0.03em] min-w-0`}
 			>
@@ -168,6 +158,9 @@ interface OrdersColumnProps {
 	highlightOrderId?: string;
 	emptyText: string;
 	emptyTextClass: string;
+	headerContainerClass: string;
+	ordersGridClass: string;
+	emptyTextLayoutClass: string;
 }
 
 export function OrdersColumn({
@@ -187,12 +180,16 @@ export function OrdersColumn({
 	highlightOrderId,
 	emptyText,
 	emptyTextClass,
+	headerContainerClass,
+	ordersGridClass,
+	emptyTextLayoutClass,
 }: OrdersColumnProps) {
 	return (
 		<div className={containerClass}>
 			<ColumnKpiHeader
 				title={title}
 				count={count}
+				containerClass={headerContainerClass}
 				railClass={railClass}
 				titleSizeClass={titleSizeClass}
 				titleClass={titleClass}
@@ -200,7 +197,7 @@ export function OrdersColumn({
 				kpiCardClass={kpiCardClass}
 				kpiNumberClass={kpiNumberClass}
 			/>
-			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden">
+			<div className={ordersGridClass}>
 				<AnimatePresence mode="popLayout">
 					{orders.map((order) => (
 						<OrderNumber
@@ -215,11 +212,7 @@ export function OrdersColumn({
 				</AnimatePresence>
 			</div>
 			{orders.length === 0 && (
-				<p
-					className={`text-center text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)] ${emptyTextClass}`}
-				>
-					{emptyText}
-				</p>
+				<p className={`text-center ${emptyTextLayoutClass} ${emptyTextClass}`}>{emptyText}</p>
 			)}
 		</div>
 	);

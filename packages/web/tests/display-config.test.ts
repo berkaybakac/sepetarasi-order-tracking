@@ -4,6 +4,7 @@ import {
 	getPageCount,
 	getPageSlice,
 	parseDisplaySettings,
+	resolveDisplayChromeDensity,
 	resolveLayoutMode,
 	resolveMaxVisiblePerColumn,
 } from "../src/views/display/display-config";
@@ -14,12 +15,15 @@ import {
 } from "../src/views/display/display-url-overrides";
 
 describe("parseUrlDisplayOverrides", () => {
-	it("parses valid layout, max and scale", () => {
-		expect(parseUrlDisplayOverrides("?layout=stack&max=4&scale=s")).toEqual({
-			layoutPreference: "stack",
-			maxVisiblePerColumn: 4,
-			textScale: "s",
-		});
+	it("parses valid profile, layout, max and scale", () => {
+		expect(parseUrlDisplayOverrides("?profile=tiny_landscape&layout=stack&max=4&scale=xs")).toEqual(
+			{
+				profile: "tiny_landscape",
+				layoutPreference: "stack",
+				maxVisiblePerColumn: 4,
+				textScale: "xs",
+			},
+		);
 	});
 
 	it("returns empty object when no params present", () => {
@@ -38,6 +42,10 @@ describe("parseUrlDisplayOverrides", () => {
 		expect(parseUrlDisplayOverrides("?scale=")).toEqual({});
 	});
 
+	it("ignores invalid profile values", () => {
+		expect(parseUrlDisplayOverrides("?profile=unknown")).toEqual({});
+	});
+
 	it("ignores invalid layout values", () => {
 		expect(parseUrlDisplayOverrides("?layout=auto")).toEqual({});
 		expect(parseUrlDisplayOverrides("?layout=grid")).toEqual({});
@@ -45,6 +53,9 @@ describe("parseUrlDisplayOverrides", () => {
 	});
 
 	it("applies only the overrides that are present", () => {
+		expect(parseUrlDisplayOverrides("?profile=portrait_compact")).toEqual({
+			profile: "portrait_compact",
+		});
 		expect(parseUrlDisplayOverrides("?max=10")).toEqual({ maxVisiblePerColumn: 10 });
 		expect(parseUrlDisplayOverrides("?scale=l")).toEqual({ textScale: "l" });
 		expect(parseUrlDisplayOverrides("?layout=split")).toEqual({ layoutPreference: "split" });
@@ -72,6 +83,12 @@ describe("parseUrlDisplayOverrides — console.warn on invalid params", () => {
 		expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("max"));
 	});
 
+	it("warns for unrecognised profile value", () => {
+		parseUrlDisplayOverrides("?profile=matrix");
+		expect(console.warn).toHaveBeenCalledOnce();
+		expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("profile"));
+	});
+
 	it("warns for unrecognised scale value", () => {
 		parseUrlDisplayOverrides("?scale=xl");
 		expect(console.warn).toHaveBeenCalledOnce();
@@ -90,12 +107,36 @@ describe("parseUrlDisplayOverrides — console.warn on invalid params", () => {
 	});
 
 	it("does not warn for valid params", () => {
-		parseUrlDisplayOverrides("?layout=stack&max=5&scale=l");
+		parseUrlDisplayOverrides("?profile=tiny_landscape&layout=stack&max=5&scale=xs");
 		expect(console.warn).not.toHaveBeenCalled();
 	});
 });
 
 describe("resolveDisplayConfigWithUrlOverrides", () => {
+	it("applies profile preset defaults before explicit URL overrides", () => {
+		const base = {
+			...DEFAULT_DISPLAY_CONFIG,
+			profile: "led_256x512" as const,
+			layoutPreference: "auto" as const,
+			maxVisiblePerColumn: 9,
+			pageSeconds: 12,
+			textScale: "l" as const,
+			theme: "retro" as const,
+		};
+
+		const resolved = resolveDisplayConfigWithUrlOverrides(
+			base,
+			"?profile=tiny_landscape&layout=stack&scale=s",
+		);
+
+		expect(resolved.profile).toBe("tiny_landscape");
+		expect(resolved.layoutPreference).toBe("stack");
+		expect(resolved.maxVisiblePerColumn).toBe(2);
+		expect(resolved.pageSeconds).toBe(5);
+		expect(resolved.textScale).toBe("s");
+		expect(resolved.theme).toBe("retro");
+	});
+
 	it("applies URL overrides on top of base config", () => {
 		const base = {
 			...DEFAULT_DISPLAY_CONFIG,
@@ -129,15 +170,20 @@ describe("resolveDisplayConfigWithUrlOverrides", () => {
 
 describe("buildDisplayUrl", () => {
 	it("builds URL with valid overrides", () => {
-		expect(buildDisplayUrl({ layout: "stack", max: "12", scale: "l" })).toBe(
-			"/display?layout=stack&max=12&scale=l",
-		);
+		expect(
+			buildDisplayUrl({ profile: "tiny_landscape", layout: "stack", max: "12", scale: "xs" }),
+		).toBe("/display?profile=tiny_landscape&layout=stack&max=12&scale=xs");
 	});
 
 	it("omits global/invalid values", () => {
-		expect(buildDisplayUrl({ layout: "", max: "", scale: "" })).toBe("/display");
-		expect(buildDisplayUrl({ layout: "auto", max: "0", scale: "m" })).toBe("/display?scale=m");
-		expect(buildDisplayUrl({ layout: "split", max: "1.5", scale: "" })).toBe(
+		expect(buildDisplayUrl({ profile: "", layout: "", max: "", scale: "" })).toBe("/display");
+		expect(buildDisplayUrl({ profile: "auto", layout: "auto", max: "0", scale: "m" })).toBe(
+			"/display?scale=m",
+		);
+		expect(
+			buildDisplayUrl({ profile: "portrait_compact", layout: "split", max: "1.5", scale: "" }),
+		).toBe("/display?profile=portrait_compact&layout=split");
+		expect(buildDisplayUrl({ profile: "", layout: "split", max: "1.5", scale: "" })).toBe(
 			"/display?layout=split",
 		);
 	});
@@ -163,12 +209,17 @@ describe("display-config (happy path)", () => {
 			profile: "auto",
 			layoutPreference: "auto",
 		});
+		const modeTinyLandscape = resolveLayoutMode(320, 240, {
+			profile: "auto",
+			layoutPreference: "auto",
+		});
 		const modePortrait = resolveLayoutMode(512, 1024, {
 			profile: "auto",
 			layoutPreference: "auto",
 		});
 
 		expect(modeLandscape).toBe("split");
+		expect(modeTinyLandscape).toBe("split");
 		expect(modePortrait).toBe("stack");
 	});
 });
@@ -217,5 +268,13 @@ describe("display-config (critical behavior)", () => {
 	it("handles empty list without crashing", () => {
 		expect(getPageCount(0, 10)).toBe(1);
 		expect(getPageSlice<number>([], 10, 0)).toEqual([]);
+	});
+
+	it("uses compact density for tiny landscape profiles and viewports", () => {
+		expect(resolveDisplayChromeDensity(1024, 768, { ...DEFAULT_DISPLAY_CONFIG }.profile)).toBe(
+			"standard",
+		);
+		expect(resolveDisplayChromeDensity(320, 240, "auto")).toBe("compact");
+		expect(resolveDisplayChromeDensity(1280, 720, "tiny_landscape")).toBe("compact");
 	});
 });

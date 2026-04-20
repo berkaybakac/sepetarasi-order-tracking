@@ -5,6 +5,10 @@ import { defineConfig } from "vite";
 
 const apiUrl = process.env.API_URL ?? "http://localhost:3000";
 const wsUrl = apiUrl.replace(/^http/, "ws");
+const tb1CompatProxyTarget = {
+	target: apiUrl,
+	changeOrigin: true,
+};
 
 export default defineConfig({
 	plugins: [
@@ -18,6 +22,8 @@ export default defineConfig({
 	],
 	server: {
 		proxy: {
+			"^/display/index(?:-[^/]+)?\\.html$": tb1CompatProxyTarget,
+			"^/(?:display-beacon\\.gif|test\\.html|ping)$": tb1CompatProxyTarget,
 			"/api": apiUrl,
 			"/ws": {
 				target: wsUrl,

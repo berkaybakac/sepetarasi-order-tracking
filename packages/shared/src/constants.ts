@@ -29,13 +29,28 @@ export function isOrderType(value: string): value is OrderType {
 	return ORDER_TYPES.includes(value as OrderType);
 }
 
-export const DISPLAY_PROFILES = ["auto", "led_256x512", "tv_1080p"] as const;
+export const TB1_DISPLAY_PROFILES = ["led_256x512", "led_344_square", "led_512_square"] as const;
+export type Tb1DisplayProfile = (typeof TB1_DISPLAY_PROFILES)[number];
+
+export const TB1_DISPLAY_PROFILE_ROUTES: Record<Tb1DisplayProfile, string> = {
+	led_256x512: "/display/index-256x512.html",
+	led_344_square: "/display/index-344x344.html",
+	led_512_square: "/display/index-512x512.html",
+};
+
+export const DISPLAY_PROFILES = [
+	"auto",
+	...TB1_DISPLAY_PROFILES,
+	"tiny_landscape",
+	"portrait_compact",
+	"tv_1080p",
+] as const;
 export type DisplayProfile = (typeof DISPLAY_PROFILES)[number];
 
 export const DISPLAY_LAYOUT_PREFERENCES = ["auto", "split", "stack"] as const;
 export type DisplayLayoutPreference = (typeof DISPLAY_LAYOUT_PREFERENCES)[number];
 
-export const DISPLAY_TEXT_SCALES = ["s", "m", "l"] as const;
+export const DISPLAY_TEXT_SCALES = ["xs", "s", "m", "l"] as const;
 export type DisplayTextScale = (typeof DISPLAY_TEXT_SCALES)[number];
 
 export const DISPLAY_THEMES = ["dark", "light", "vivid", "retro"] as const;

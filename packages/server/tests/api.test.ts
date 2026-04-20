@@ -2,7 +2,13 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { API_ROUTES, SETTING_KEYS, WS_CHANNELS, WS_EVENTS } from "@sepetarasi/shared";
+import {
+	API_ROUTES,
+	SETTING_KEYS,
+	TB1_DISPLAY_PROFILE_ROUTES,
+	WS_CHANNELS,
+	WS_EVENTS,
+} from "@sepetarasi/shared";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -991,6 +997,30 @@ describe("connectivity test pages", () => {
 		expect(res.body).toContain('id="ready-list"');
 		expect(res.body).toContain(API_ROUTES.V1.ORDERS);
 		expect(res.body).toContain(API_ROUTES.V1.SETTINGS_PUBLIC);
+		expect(res.body).toContain('data-tb1-forced-profile=""');
+		expect(res.body).not.toContain('type="module"');
+		expect(res.body).not.toContain('<div id="root"></div>');
+	});
+
+	it.each([
+		["led_256x512", TB1_DISPLAY_PROFILE_ROUTES.led_256x512],
+		["led_344_square", TB1_DISPLAY_PROFILE_ROUTES.led_344_square],
+		["led_512_square", TB1_DISPLAY_PROFILE_ROUTES.led_512_square],
+	] as const)("serves %s TB1 route with forced profile marker", async (forcedProfile, route) => {
+		const res = await getStaticApp().inject({ method: "GET", url: route });
+
+		expect(res.statusCode).toBe(200);
+		expect(res.headers["content-type"]).toContain("text/html");
+		expect(res.headers["cache-control"]).toBe(
+			"no-store, no-cache, must-revalidate, proxy-revalidate",
+		);
+		expect(res.headers.pragma).toBe("no-cache");
+		expect(res.headers.expires).toBe("0");
+		expect(res.headers["surrogate-control"]).toBe("no-store");
+		expect(res.body).toContain('id="prep-list"');
+		expect(res.body).toContain('id="ready-list"');
+		expect(res.body).toContain(`data-tb1-forced-profile="${forcedProfile}"`);
+		expect(res.body).toContain(`var FORCED_PROFILE = "${forcedProfile}"`);
 		expect(res.body).not.toContain('type="module"');
 		expect(res.body).not.toContain('<div id="root"></div>');
 	});

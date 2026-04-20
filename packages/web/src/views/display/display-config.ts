@@ -1,11 +1,19 @@
-import type { DisplayConfig, DisplayTextScale, DisplayTheme } from "@sepetarasi/shared";
+import type {
+	DisplayConfig,
+	DisplayLayoutPreference,
+	DisplayProfile,
+	DisplayTextScale,
+	DisplayTheme,
+} from "@sepetarasi/shared";
 export { DEFAULT_DISPLAY_CONFIG, parseDisplaySettings } from "@sepetarasi/shared";
 export type { DisplayConfig } from "@sepetarasi/shared";
 
 export type DisplayLayoutMode = "split" | "stack";
+export type DisplayChromeDensity = "standard" | "compact";
 
 /** "Şimdi Servis" sırasında hazır numara vurgu animasyonu süresi (saniye) */
 export const READY_HIGHLIGHT_ANIMATION_SECONDS = 1;
+const COMPACT_LANDSCAPE_MAX_HEIGHT = 260;
 
 // ---------------------------------------------------------------------------
 // Tema tanımları
@@ -145,6 +153,15 @@ export interface TextScaleClasses {
 // M → Standart TV/monitor. Varsayılan.
 // L → Büyük salon TV'leri, uzaktan bakış mesafesi fazla olan mekanlar.
 export const TEXT_SCALES: Record<DisplayTextScale, TextScaleClasses> = {
+	xs: {
+		orderNumberStack: "text-[clamp(0.9rem,7vmin,2.15rem)]",
+		orderNumberSplit: "text-[clamp(0.9rem,5.4vmin,1.6rem)]",
+		railTitleStack: "text-[clamp(0.95rem,3.8vmin,1.3rem)]",
+		railTitleSplit: "text-[clamp(0.72rem,2.9vmin,0.95rem)]",
+		railKpiCard:
+			"min-w-[clamp(2.2rem,9vmin,3rem)] h-[clamp(1.35rem,6.2vmin,1.8rem)] px-[clamp(0.35rem,1.4vmin,0.55rem)]",
+		railKpiNumber: "text-[clamp(0.78rem,2.8vmin,1rem)]",
+	},
 	s: {
 		orderNumberStack: "text-[clamp(1rem,9vmin,3.5rem)]",
 		orderNumberSplit: "text-[clamp(0.75rem,6vmin,2.5rem)]",
@@ -174,6 +191,101 @@ export const TEXT_SCALES: Record<DisplayTextScale, TextScaleClasses> = {
 	},
 };
 
+interface DisplayProfilePreset {
+	layoutPreference: DisplayLayoutPreference;
+	maxVisiblePerColumn: number;
+	pageSeconds: number;
+	textScale: DisplayTextScale;
+}
+
+const DISPLAY_PROFILE_PRESETS: Record<Exclude<DisplayProfile, "auto">, DisplayProfilePreset> = {
+	led_256x512: {
+		layoutPreference: "stack",
+		maxVisiblePerColumn: 4,
+		pageSeconds: 6,
+		textScale: "s",
+	},
+	led_344_square: {
+		layoutPreference: "stack",
+		maxVisiblePerColumn: 4,
+		pageSeconds: 5,
+		textScale: "s",
+	},
+	led_512_square: {
+		layoutPreference: "stack",
+		maxVisiblePerColumn: 6,
+		pageSeconds: 6,
+		textScale: "m",
+	},
+	tiny_landscape: {
+		layoutPreference: "split",
+		maxVisiblePerColumn: 2,
+		pageSeconds: 5,
+		textScale: "xs",
+	},
+	portrait_compact: {
+		layoutPreference: "stack",
+		maxVisiblePerColumn: 5,
+		pageSeconds: 6,
+		textScale: "s",
+	},
+	tv_1080p: {
+		layoutPreference: "split",
+		maxVisiblePerColumn: 24,
+		pageSeconds: 8,
+		textScale: "m",
+	},
+};
+
+export function isCompactLandscapeViewport(width: number, height: number): boolean {
+	return width > height && height <= COMPACT_LANDSCAPE_MAX_HEIGHT;
+}
+
+export function getDisplayProfileConfigPreset(
+	profile: DisplayProfile,
+): Partial<
+	Pick<
+		DisplayConfig,
+		"profile" | "layoutPreference" | "maxVisiblePerColumn" | "pageSeconds" | "textScale"
+	>
+> {
+	if (profile === "auto") return { profile };
+
+	const preset = DISPLAY_PROFILE_PRESETS[profile];
+	return {
+		profile,
+		layoutPreference: preset.layoutPreference,
+		maxVisiblePerColumn: preset.maxVisiblePerColumn,
+		pageSeconds: preset.pageSeconds,
+		textScale: preset.textScale,
+	};
+}
+
+export function resolveDisplayChromeDensity(
+	width: number,
+	height: number,
+	profile: DisplayConfig["profile"],
+): DisplayChromeDensity {
+	if (profile === "tiny_landscape") return "compact";
+	return isCompactLandscapeViewport(width, height) ? "compact" : "standard";
+}
+
+export function shouldUseCompactNowServing(
+	width: number,
+	height: number,
+	profile: DisplayConfig["profile"],
+): boolean {
+	return resolveDisplayChromeDensity(width, height, profile) === "compact";
+}
+
+export function shouldShowDisplayPageIndicator(
+	width: number,
+	height: number,
+	profile: DisplayConfig["profile"],
+): boolean {
+	return resolveDisplayChromeDensity(width, height, profile) !== "compact";
+}
+
 export function resolveLayoutMode(
 	width: number,
 	height: number,
@@ -182,8 +294,17 @@ export function resolveLayoutMode(
 	if (config.layoutPreference === "split" || config.layoutPreference === "stack") {
 		return config.layoutPreference;
 	}
-	if (config.profile === "led_256x512") return "stack";
-	return width < 840 || height > width ? "stack" : "split";
+	if (
+		config.profile === "led_256x512" ||
+		config.profile === "led_344_square" ||
+		config.profile === "led_512_square" ||
+		config.profile === "portrait_compact"
+	) {
+		return "stack";
+	}
+	if (config.profile === "tiny_landscape" || config.profile === "tv_1080p") return "split";
+	if (isCompactLandscapeViewport(width, height)) return "split";
+	return height > width ? "stack" : "split";
 }
 
 export function resolveMaxVisiblePerColumn(config: DisplayConfig): number {

@@ -7,6 +7,7 @@ import {
 	type DisplayProfile,
 	type DisplayTextScale,
 	type DisplayTheme,
+	TB1_DISPLAY_PROFILE_ROUTES,
 	areDisplayConfigsEqual,
 	serializeDisplayConfig,
 } from "@sepetarasi/shared";
@@ -67,6 +68,33 @@ interface PreviewLinkProps {
 	href: string;
 	label: string;
 	tone?: "default" | "accent";
+}
+
+function resolveTb1DisplayOrigin() {
+	if (typeof window === "undefined") return "";
+
+	const explicitOrigin =
+		import.meta.env.VITE_DISPLAY_SERVER_ORIGIN?.trim() || import.meta.env.VITE_API_URL?.trim();
+	if (explicitOrigin) {
+		try {
+			return new URL(explicitOrigin, window.location.origin).origin;
+		} catch {
+			return window.location.origin;
+		}
+	}
+
+	if (!import.meta.env.DEV) {
+		return window.location.origin;
+	}
+
+	const devOrigin = new URL(window.location.origin);
+	if (devOrigin.port === "3000") return devOrigin.origin;
+	devOrigin.port = "3000";
+	return devOrigin.origin;
+}
+
+function buildTb1DisplayHref(path: string) {
+	return `${resolveTb1DisplayOrigin()}${path}`;
 }
 
 function PreviewLink({ href, label, tone = "default" }: PreviewLinkProps) {
@@ -149,6 +177,12 @@ export function DisplaySettingsCard() {
 	const handleResetDefaults = () => {
 		setConfig(DEFAULT_DISPLAY_CONFIG);
 		feedback.reset();
+	};
+
+	const tb1DisplayLinks = {
+		led256x512: buildTb1DisplayHref(TB1_DISPLAY_PROFILE_ROUTES.led_256x512),
+		led344x344: buildTb1DisplayHref(TB1_DISPLAY_PROFILE_ROUTES.led_344_square),
+		led512x512: buildTb1DisplayHref(TB1_DISPLAY_PROFILE_ROUTES.led_512_square),
 	};
 
 	return (
@@ -340,8 +374,18 @@ export function DisplaySettingsCard() {
 						<div className="flex flex-wrap gap-3">
 							<PreviewLink href="/display" label={UI_LABELS.DISPLAY_SETTINGS.OPEN_DISPLAY} />
 							<PreviewLink
-								href="/display/index.html"
-								label={UI_LABELS.DISPLAY_SETTINGS.OPEN_TB1_DISPLAY}
+								href={tb1DisplayLinks.led256x512}
+								label={UI_LABELS.DISPLAY_SETTINGS.OPEN_TB1_256_DISPLAY}
+								tone="accent"
+							/>
+							<PreviewLink
+								href={tb1DisplayLinks.led344x344}
+								label={UI_LABELS.DISPLAY_SETTINGS.OPEN_TB1_344_DISPLAY}
+								tone="accent"
+							/>
+							<PreviewLink
+								href={tb1DisplayLinks.led512x512}
+								label={UI_LABELS.DISPLAY_SETTINGS.OPEN_TB1_512_DISPLAY}
 								tone="accent"
 							/>
 						</div>

@@ -1,10 +1,20 @@
-import type { DisplayConfig, DisplayLayoutPreference, DisplayTextScale } from "@sepetarasi/shared";
+import {
+	DISPLAY_PROFILES,
+	type DisplayConfig,
+	type DisplayLayoutPreference,
+	type DisplayProfile,
+	type DisplayTextScale,
+} from "@sepetarasi/shared";
+import { getDisplayProfileConfigPreset } from "./display-config";
 
 export interface DisplayUrlOverridesInput {
+	profile: DisplayProfile | "";
 	layout: DisplayLayoutPreference | "";
 	max: string;
 	scale: DisplayTextScale | "";
 }
+
+const DISPLAY_PROFILE_SET = new Set<DisplayProfile>(DISPLAY_PROFILES);
 
 function decodeQueryValue(value: string) {
 	try {
@@ -40,6 +50,9 @@ function getQueryParam(search: string, key: string) {
 // later without rebuilding the parsing/apply path from scratch.
 export function buildDisplayUrl(overrides: DisplayUrlOverridesInput): string {
 	const params: string[] = [];
+	if (overrides.profile && overrides.profile !== "auto") {
+		params.push(`profile=${encodeQueryValue(overrides.profile)}`);
+	}
 	if (overrides.layout && overrides.layout !== "auto") {
 		params.push(`layout=${encodeQueryValue(overrides.layout)}`);
 	}
@@ -57,16 +70,28 @@ export function buildDisplayUrl(overrides: DisplayUrlOverridesInput): string {
  * Geçersiz değerler sessizce yok sayılır.
  *
  * Desteklenen parametreler:
+ *   ?profile=name  → profile preset
  *   ?layout=stack|split → layoutPreference
  *   ?max=N       → maxVisiblePerColumn (tam sayı >= 1)
- *   ?scale=s|m|l → textScale
+ *   ?scale=xs|s|m|l → textScale
  */
 export function parseUrlDisplayOverrides(
 	search: string,
-): Partial<Pick<DisplayConfig, "layoutPreference" | "maxVisiblePerColumn" | "textScale">> {
+): Partial<
+	Pick<DisplayConfig, "profile" | "layoutPreference" | "maxVisiblePerColumn" | "textScale">
+> {
 	const overrides: Partial<
-		Pick<DisplayConfig, "layoutPreference" | "maxVisiblePerColumn" | "textScale">
+		Pick<DisplayConfig, "profile" | "layoutPreference" | "maxVisiblePerColumn" | "textScale">
 	> = {};
+
+	const profile = getQueryParam(search, "profile");
+	if (profile && DISPLAY_PROFILE_SET.has(profile as DisplayProfile)) {
+		overrides.profile = profile as DisplayProfile;
+	} else if (profile !== null && profile !== "") {
+		console.warn(
+			`[display] Geçersiz URL param: profile="${profile}" (beklenen: ${DISPLAY_PROFILES.join("|")})`,
+		);
+	}
 
 	const layout = getQueryParam(search, "layout");
 	if (layout === "stack" || layout === "split") {
@@ -84,10 +109,10 @@ export function parseUrlDisplayOverrides(
 	}
 
 	const scale = getQueryParam(search, "scale");
-	if (scale === "s" || scale === "m" || scale === "l") {
+	if (scale === "xs" || scale === "s" || scale === "m" || scale === "l") {
 		overrides.textScale = scale;
 	} else if (scale !== null && scale !== "") {
-		console.warn(`[display] Geçersiz URL param: scale="${scale}" (beklenen: s|m|l)`);
+		console.warn(`[display] Geçersiz URL param: scale="${scale}" (beklenen: xs|s|m|l)`);
 	}
 
 	return overrides;
@@ -97,5 +122,14 @@ export function resolveDisplayConfigWithUrlOverrides(
 	baseConfig: DisplayConfig,
 	search: string,
 ): DisplayConfig {
-	return { ...baseConfig, ...parseUrlDisplayOverrides(search) };
+	const overrides = parseUrlDisplayOverrides(search);
+	const profilePreset = overrides.profile
+		? getDisplayProfileConfigPreset(overrides.profile)
+		: undefined;
+
+	return {
+		...baseConfig,
+		...profilePreset,
+		...overrides,
+	};
 }

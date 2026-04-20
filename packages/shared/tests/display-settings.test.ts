@@ -81,6 +81,41 @@ describe("display-settings (sad path)", () => {
 		expect(config.readyDisplayMinutes).toBe(60);
 	});
 
+	it("applies defaults for the new compact profiles", () => {
+		const square344 = parseDisplaySettings({
+			[SETTING_KEYS.DISPLAY_PROFILE]: "led_344_square",
+		});
+		const square512 = parseDisplaySettings({
+			[SETTING_KEYS.DISPLAY_PROFILE]: "led_512_square",
+		});
+		const tinyLandscape = parseDisplaySettings({
+			[SETTING_KEYS.DISPLAY_PROFILE]: "tiny_landscape",
+		});
+		const portraitCompact = parseDisplaySettings({
+			[SETTING_KEYS.DISPLAY_PROFILE]: "portrait_compact",
+		});
+
+		expect(square344.profile).toBe("led_344_square");
+		expect(square344.layoutPreference).toBe("stack");
+		expect(square344.maxVisiblePerColumn).toBe(4);
+		expect(square344.pageSeconds).toBe(5);
+
+		expect(square512.profile).toBe("led_512_square");
+		expect(square512.layoutPreference).toBe("stack");
+		expect(square512.maxVisiblePerColumn).toBe(6);
+		expect(square512.pageSeconds).toBe(6);
+
+		expect(tinyLandscape.profile).toBe("tiny_landscape");
+		expect(tinyLandscape.layoutPreference).toBe("split");
+		expect(tinyLandscape.maxVisiblePerColumn).toBe(2);
+		expect(tinyLandscape.pageSeconds).toBe(5);
+
+		expect(portraitCompact.profile).toBe("portrait_compact");
+		expect(portraitCompact.layoutPreference).toBe("stack");
+		expect(portraitCompact.maxVisiblePerColumn).toBe(5);
+		expect(portraitCompact.pageSeconds).toBe(6);
+	});
+
 	it("clamps max_visible and page_seconds to their upper bounds", () => {
 		const config = parseDisplaySettings({
 			[SETTING_KEYS.DISPLAY_MAX_VISIBLE]: "999",
@@ -113,6 +148,16 @@ describe("display-settings (sad path)", () => {
 		for (const key of DISPLAY_SETTING_KEYS) {
 			expect(validateDisplaySettingValue(key, invalidValues[key])).not.toBeNull();
 		}
+	});
+
+	it("accepts the new compact profile and xs scale", () => {
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_PROFILE, "tiny_landscape")).toBeNull();
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_PROFILE, "led_344_square")).toBeNull();
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_PROFILE, "led_512_square")).toBeNull();
+		expect(
+			validateDisplaySettingValue(SETTING_KEYS.DISPLAY_PROFILE, "portrait_compact"),
+		).toBeNull();
+		expect(validateDisplaySettingValue(SETTING_KEYS.DISPLAY_TEXT_SCALE, "xs")).toBeNull();
 	});
 });
 

@@ -12,7 +12,7 @@ import { useOrderStore, useOrdersByStatus } from "../../stores/orderStore";
 import {
 	ClockText,
 	OrdersColumn,
-	useDisplayLayoutMode,
+	useDisplayViewport,
 	useVisibleReadyOrders,
 } from "./customer-display-parts";
 import {
@@ -23,7 +23,11 @@ import {
 	getPageCount,
 	getPageSlice,
 	parseDisplaySettings,
+	resolveDisplayChromeDensity,
+	resolveLayoutMode,
 	resolveMaxVisiblePerColumn,
+	shouldShowDisplayPageIndicator,
+	shouldUseCompactNowServing,
 } from "./display-config";
 import { resolveDisplayConfigWithUrlOverrides } from "./display-url-overrides";
 import { advancePage, findNewestNewReadyOrderPage, findOrderPageById } from "./pagination-logic";
@@ -60,14 +64,32 @@ export function CustomerDisplay() {
 		() => resolveDisplayConfigWithUrlOverrides(displayConfig, location.search),
 		[displayConfig, location.search],
 	);
+	const viewport = useDisplayViewport();
 	const preparingOrders = useOrdersByStatus(OrderStatus.PREPARING);
 	const allReadyOrders = useOrdersByStatus(OrderStatus.READY);
 	const readyOrders = useVisibleReadyOrders(allReadyOrders, effectiveConfig.readyDisplayMinutes);
-	const layoutMode = useDisplayLayoutMode(
-		effectiveConfig.profile,
-		effectiveConfig.layoutPreference,
+	const layoutMode = useMemo(
+		() =>
+			resolveLayoutMode(viewport.width, viewport.height, {
+				profile: effectiveConfig.profile,
+				layoutPreference: effectiveConfig.layoutPreference,
+			}),
+		[effectiveConfig.layoutPreference, effectiveConfig.profile, viewport.height, viewport.width],
 	);
 	const isStackLayout = layoutMode === "stack";
+	const density = useMemo(
+		() => resolveDisplayChromeDensity(viewport.width, viewport.height, effectiveConfig.profile),
+		[effectiveConfig.profile, viewport.height, viewport.width],
+	);
+	const isCompactDensity = density === "compact";
+	const compactNowServing = useMemo(
+		() => shouldUseCompactNowServing(viewport.width, viewport.height, effectiveConfig.profile),
+		[effectiveConfig.profile, viewport.height, viewport.width],
+	);
+	const showPageIndicator = useMemo(
+		() => shouldShowDisplayPageIndicator(viewport.width, viewport.height, effectiveConfig.profile),
+		[effectiveConfig.profile, viewport.height, viewport.width],
+	);
 
 	const theme = THEMES[effectiveConfig.theme];
 	const scale = TEXT_SCALES[effectiveConfig.textScale];
@@ -75,6 +97,36 @@ export function CustomerDisplay() {
 	const railTitleClass = isStackLayout ? scale.railTitleStack : scale.railTitleSplit;
 	const railKpiCardSizeClass = scale.railKpiCard;
 	const railKpiNumberClass = scale.railKpiNumber;
+	const headerClass = isCompactDensity
+		? "px-[clamp(0.35rem,1.4vmin,0.6rem)] py-[clamp(0.25rem,1vmin,0.45rem)]"
+		: "px-[clamp(1rem,3vmin,3rem)] py-[clamp(0.5rem,1.5vmin,1.25rem)]";
+	const restaurantTextClass = isCompactDensity
+		? "text-[clamp(0.8rem,3.5vmin,1rem)]"
+		: "text-[clamp(1.15rem,4vmin,2.35rem)]";
+	const clockTextClass = isCompactDensity
+		? "text-[clamp(0.82rem,3.8vmin,1.05rem)]"
+		: "text-[clamp(1.4rem,4.75vmin,2.9rem)]";
+	const columnPaddingClass = isCompactDensity
+		? "p-[clamp(0.2rem,1vmin,0.45rem)]"
+		: "p-[clamp(0.25rem,2vmin,2rem)]";
+	const railHeaderContainerClass = isCompactDensity
+		? "mb-[clamp(0.2rem,1vmin,0.35rem)] h-[clamp(2.25rem,14vmin,2.8rem)] rounded-[clamp(0.4rem,1.1vmin,0.55rem)] px-[clamp(0.35rem,1.4vmin,0.6rem)] py-[clamp(0.18rem,0.8vmin,0.35rem)] gap-[clamp(0.25rem,1vmin,0.5rem)]"
+		: "mb-[clamp(0.5rem,2.2vmin,1.6rem)] h-[clamp(5.5rem,11vmin,6.5rem)] rounded-[clamp(0.45rem,1.15vmin,0.7rem)] px-[clamp(0.7rem,2.2vmin,1.5rem)] py-[clamp(0.45rem,1.2vmin,0.85rem)] gap-[clamp(0.75rem,2.5vmin,1.75rem)]";
+	const ordersGridClass = isCompactDensity
+		? "grid grid-cols-1 gap-[clamp(0.12rem,0.5vmin,0.2rem)] overflow-hidden"
+		: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(0.125rem,1vmin,1rem)] overflow-hidden";
+	const emptyTextLayoutClass = isCompactDensity
+		? "text-[clamp(0.72rem,2.6vmin,0.95rem)] mt-[clamp(0.25rem,1.25vmin,0.75rem)]"
+		: "text-[clamp(1rem,3vmin,1.5rem)] mt-[clamp(0.5rem,4vmin,3rem)]";
+	const nowServingContainerClass = compactNowServing
+		? "bg-green-600 text-white flex items-center justify-center gap-2 px-[clamp(0.35rem,1.2vmin,0.55rem)] py-[clamp(0.25rem,0.9vmin,0.45rem)] shrink-0"
+		: "bg-green-600 text-white text-center py-[clamp(0.5rem,3vmin,2rem)] animate-pulse shrink-0";
+	const nowServingLabelClass = compactNowServing
+		? "text-[clamp(0.72rem,2.7vmin,0.95rem)] font-medium uppercase tracking-[0.08em]"
+		: "text-[clamp(1.125rem,5vmin,2.5rem)] font-medium";
+	const nowServingNumberClass = compactNowServing
+		? "text-[clamp(1rem,4.8vmin,1.35rem)] font-bold tabular-nums"
+		: "text-[clamp(2rem,18vmin,10rem)] font-bold mt-[clamp(0.125rem,1vmin,0.5rem)]";
 
 	const maxVisiblePerColumn = useMemo(
 		() => resolveMaxVisiblePerColumn(effectiveConfig),
@@ -253,39 +305,43 @@ export function CustomerDisplay() {
 	}, [nowPlayingId, readyOrders, maxVisiblePerColumn]);
 
 	return (
-		<div className={`min-h-screen flex flex-col ${theme.root}`}>
+		<div
+			className={`min-h-screen flex flex-col ${theme.root}`}
+			data-display-profile={effectiveConfig.profile}
+			data-display-layout={layoutMode}
+			data-display-density={density}
+		>
 			{/* Header: restoran adı + dijital saat */}
 			<header
-				className={`flex items-center justify-between px-[clamp(1rem,3vmin,3rem)] py-[clamp(0.5rem,1.5vmin,1.25rem)] border-b-2 ${theme.headerBorder} shrink-0`}
+				className={`flex items-center justify-between border-b-2 ${theme.headerBorder} shrink-0 ${headerClass}`}
+				data-display-header={density}
 			>
-				<span
-					className={`text-[clamp(1.15rem,4vmin,2.35rem)] font-bold tracking-wide ${theme.restaurantText}`}
-				>
+				<span className={`${restaurantTextClass} font-bold tracking-wide ${theme.restaurantText}`}>
 					{effectiveConfig.restaurantName || null}
 				</span>
 				<ClockText
-					className={`font-mono tabular-nums text-[clamp(1.4rem,4.75vmin,2.9rem)] font-semibold ${theme.clockText}`}
+					className={`font-mono tabular-nums font-semibold ${clockTextClass} ${theme.clockText}`}
 				/>
 			</header>
 
 			{/* Now Serving Banner */}
 			{nowPlaying && (
-				<div className="bg-green-600 text-white text-center py-[clamp(0.5rem,3vmin,2rem)] animate-pulse shrink-0">
-					<p className="text-[clamp(1.125rem,5vmin,2.5rem)] font-medium">
-						{UI_LABELS.DISPLAY.NOW_SERVING}
-					</p>
-					<p className="text-[clamp(2rem,18vmin,10rem)] font-bold mt-[clamp(0.125rem,1vmin,0.5rem)]">
-						#{nowPlaying.display_no}
-					</p>
+				<div
+					className={nowServingContainerClass}
+					data-display-now-serving-mode={compactNowServing ? "compact" : "standard"}
+				>
+					<p className={nowServingLabelClass}>{UI_LABELS.DISPLAY.NOW_SERVING}</p>
+					<p className={nowServingNumberClass}>#{nowPlaying.display_no}</p>
 				</div>
 			)}
 
 			{/* Main Grid */}
 			<div
 				className={`flex-1 grid gap-0 ${isStackLayout ? "grid-cols-1 grid-rows-2" : "grid-cols-2"}`}
+				data-display-main-grid={layoutMode}
 			>
 				<OrdersColumn
-					containerClass={`p-[clamp(0.25rem,2vmin,2rem)] overflow-hidden min-h-0 ${theme.preparingCol} ${isStackLayout ? "border-b-2" : "border-r-2"} ${theme.preparingDivider}`}
+					containerClass={`${columnPaddingClass} overflow-hidden min-h-0 ${theme.preparingCol} ${isStackLayout ? "border-b-2" : "border-r-2"} ${theme.preparingDivider}`}
 					title={UI_LABELS.DISPLAY.PREPARING_TITLE}
 					count={preparingOrders.length}
 					railClass={theme.preparingRail}
@@ -294,15 +350,18 @@ export function CustomerDisplay() {
 					kpiCardSizeClass={railKpiCardSizeClass}
 					kpiCardClass={theme.preparingKpiCard}
 					kpiNumberClass={railKpiNumberClass}
+					headerContainerClass={railHeaderContainerClass}
+					ordersGridClass={ordersGridClass}
 					orders={visiblePreparingOrders}
 					orderTextClass={orderTextClass}
 					badgeClass={theme.preparingOrderBadge}
 					highlightClass={theme.orderHighlight}
 					emptyText={UI_LABELS.DISPLAY.NO_PREPARING_ORDERS}
 					emptyTextClass={theme.preparingEmpty}
+					emptyTextLayoutClass={emptyTextLayoutClass}
 				/>
 				<OrdersColumn
-					containerClass={`p-[clamp(0.25rem,2vmin,2rem)] overflow-hidden min-h-0 ${theme.readyCol}`}
+					containerClass={`${columnPaddingClass} overflow-hidden min-h-0 ${theme.readyCol}`}
 					title={UI_LABELS.DISPLAY.READY_TITLE}
 					count={readyOrders.length}
 					railClass={theme.readyRail}
@@ -311,6 +370,8 @@ export function CustomerDisplay() {
 					kpiCardSizeClass={railKpiCardSizeClass}
 					kpiCardClass={theme.readyKpiCard}
 					kpiNumberClass={railKpiNumberClass}
+					headerContainerClass={railHeaderContainerClass}
+					ordersGridClass={ordersGridClass}
 					orders={visibleReadyOrders}
 					orderTextClass={orderTextClass}
 					badgeClass={theme.readyOrderBadge}
@@ -318,12 +379,14 @@ export function CustomerDisplay() {
 					highlightOrderId={nowPlayingId}
 					emptyText={UI_LABELS.DISPLAY.NO_READY_ORDERS}
 					emptyTextClass={theme.readyEmpty}
+					emptyTextLayoutClass={emptyTextLayoutClass}
 				/>
 			</div>
 
-			{(preparingPageCount > 1 || readyPageCount > 1) && (
+			{showPageIndicator && (preparingPageCount > 1 || readyPageCount > 1) && (
 				<div
 					className={`text-center text-[clamp(0.75rem,2vmin,1rem)] py-2 shrink-0 tabular-nums ${theme.pageIndicator}`}
+					data-display-page-indicator="visible"
 				>
 					{UI_LABELS.DISPLAY.PREPARING_TITLE} {preparingPage + 1} / {preparingPageCount} •{" "}
 					{UI_LABELS.DISPLAY.READY_TITLE} {readyPage + 1} / {readyPageCount}
