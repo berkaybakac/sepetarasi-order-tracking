@@ -40,6 +40,14 @@ HOST="${TARGET#*@}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+remote() {
+  ssh "$TARGET" "$@"
+}
+
+remote_tty() {
+  ssh -tt "$TARGET" "$@"
+}
+
 echo "=== Sepetarasi Deploy ==="
 echo "Hedef: $TARGET:$APP_DIR"
 
@@ -47,7 +55,7 @@ echo "Hedef: $TARGET:$APP_DIR"
 if [ "$INIT" = "--init" ]; then
     echo ""
     echo "[init] Node.js 20 yukleniyor..."
-    ssh "$TARGET" "
+    remote_tty "
         if ! command -v node &>/dev/null; then
             curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
             sudo apt-get install -y nodejs
@@ -56,10 +64,10 @@ if [ "$INIT" = "--init" ]; then
     "
 
     echo "[init] Sistem bagimliliklari..."
-    ssh "$TARGET" "sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils mpg123 avahi-daemon sqlite3 2>&1 | tail -1"
+    remote_tty "sudo apt-get install -y --no-install-recommends build-essential python3 alsa-utils mpg123 avahi-daemon sqlite3 2>&1 | tail -1"
 
     echo "[init] Hostname 'sepetarasi' olarak ayarlaniyor (sepetarasi.local erisilebilir olacak)..."
-    ssh "$TARGET" "
+    remote_tty "
         sudo hostnamectl set-hostname sepetarasi
         sudo sed -i 's/127\.0\.1\.1.*/127.0.1.1\tsepetarasi/' /etc/hosts
         sudo systemctl enable avahi-daemon
@@ -67,16 +75,16 @@ if [ "$INIT" = "--init" ]; then
     "
 
     echo "[init] Ses cikisi 3.5mm jack olarak ayarlaniyor..."
-    ssh "$TARGET" "
+    remote_tty "
         sudo raspi-config nonint do_audio 1
         sudo usermod -a -G audio \$(id -un)
     "
 
     echo "[init] Uygulama dizini olusturuluyor..."
-    ssh "$TARGET" "sudo mkdir -p $APP_DIR && sudo chown \$USER:\$USER $APP_DIR"
+    remote_tty "sudo mkdir -p $APP_DIR && sudo chown \$USER:\$USER $APP_DIR"
 
     echo "[init] Audit log dizini hazirlaniyor..."
-    ssh "$TARGET" "
+    remote_tty "
         sudo mkdir -p $AUDIT_LOG_DIR
         sudo chown \$(id -un):\$(id -gn) $AUDIT_LOG_DIR
         sudo chmod 0755 $AUDIT_LOG_DIR
@@ -88,7 +96,7 @@ if [ "$INIT" = "--init" ]; then
     CASHIER_TOKEN="$(openssl rand -hex 16)"
     JWT_SECRET="$(openssl rand -hex 32)"
     COOKIE_SECRET="$(openssl rand -hex 32)"
-    ssh "$TARGET" "cat > $APP_DIR/.env << ENVEOF
+    remote "cat > $APP_DIR/.env << ENVEOF
 NODE_ENV=production
 PORT=3000
 DB_PATH=$APP_DIR/data/sepetarasi.db
@@ -103,7 +111,7 @@ WS_AUTH_KEY=dev-ws-auth-key
 LOG_PATH=$AUDIT_LOG_PATH
 ENVEOF"
 
-    ssh "$TARGET" "mkdir -p $ANNOUNCEMENTS_DIR $MUSIC_DIR"
+    remote "mkdir -p $ANNOUNCEMENTS_DIR $MUSIC_DIR"
 fi
 
 # --- 1. Mac'te build ---
@@ -132,7 +140,7 @@ rsync -az --delete \
 # --- 3. Pi4'de kurulum ---
 echo ""
 echo "[3/4] Pi4'de kurulum..."
-ssh "$TARGET" "
+remote "
     cd $APP_DIR
 
     # Kasa stub (workspace hata vermemesi icin)
@@ -150,29 +158,13 @@ ssh "$TARGET" "
     DB_PATH=$APP_DIR/data/sepetarasi.db node packages/server/dist/db/migrate.js
 "
 
-ssh "$TARGET" "
-    sudo mkdir -p $AUDIT_LOG_DIR
-    sudo chown \$(id -un):\$(id -gn) $AUDIT_LOG_DIR
-    sudo chmod 0755 $AUDIT_LOG_DIR
-    touch $AUDIT_LOG_PATH
-    chmod 0644 $AUDIT_LOG_PATH
-
-    if [ -f $APP_DIR/.env ] && ! grep -q '^LOG_PATH=' $APP_DIR/.env; then
-        printf '\nLOG_PATH=$AUDIT_LOG_PATH\n' >> $APP_DIR/.env
-    fi
-    if [ -f $APP_DIR/.env ] && ! grep -q '^MUSIC_PATH=' $APP_DIR/.env; then
-        printf '\nMUSIC_PATH=$MUSIC_DIR\n' >> $APP_DIR/.env
-    fi
-    mkdir -p $ANNOUNCEMENTS_DIR $MUSIC_DIR
-"
-
 # Seed sadece ilk kurulumda
 if [ "$INIT" = "--init" ]; then
     echo "[init] Seed verisi yukleniyor..."
-    ssh "$TARGET" "cd $APP_DIR && DB_PATH=$APP_DIR/data/sepetarasi.db node packages/server/dist/db/seed.js"
+    remote "cd $APP_DIR && DB_PATH=$APP_DIR/data/sepetarasi.db node packages/server/dist/db/seed.js"
 
     echo "[init] systemd servisi kuruluyor..."
-    ssh "$TARGET" "
+    remote_tty "
         sudo tee /etc/systemd/system/sepetarasi.service > /dev/null << SVCEOF
 [Unit]
 Description=Sepetarasi Order Tracking Server
@@ -195,21 +187,33 @@ SVCEOF
     "
 fi
 
-# Ensure .env is always honored (new + old installs) via systemd drop-in.
-ssh "$TARGET" "
+remote_tty "
+    sudo mkdir -p $AUDIT_LOG_DIR
+    sudo chown \$(id -un):\$(id -gn) $AUDIT_LOG_DIR
+    sudo chmod 0755 $AUDIT_LOG_DIR
+    touch $AUDIT_LOG_PATH
+    chmod 0644 $AUDIT_LOG_PATH
+
+    if [ -f $APP_DIR/.env ] && ! grep -q '^LOG_PATH=' $APP_DIR/.env; then
+        printf '\nLOG_PATH=$AUDIT_LOG_PATH\n' >> $APP_DIR/.env
+    fi
+    if [ -f $APP_DIR/.env ] && ! grep -q '^MUSIC_PATH=' $APP_DIR/.env; then
+        printf '\nMUSIC_PATH=$MUSIC_DIR\n' >> $APP_DIR/.env
+    fi
+    mkdir -p $ANNOUNCEMENTS_DIR $MUSIC_DIR
+
+    # Ensure .env is always honored (new + old installs) via systemd drop-in.
     sudo mkdir -p /etc/systemd/system/sepetarasi.service.d
     sudo tee /etc/systemd/system/sepetarasi.service.d/10-envfile.conf > /dev/null << 'SVCDROP'
 [Service]
 EnvironmentFile=-$APP_DIR/.env
 SVCDROP
     sudo systemctl daemon-reload
-"
 
-# Restart (single restart after unit/drop-in is in final state)
-ssh "$TARGET" "sudo systemctl restart sepetarasi"
+    # Restart (single restart after unit/drop-in is in final state)
+    sudo systemctl restart sepetarasi
 
-# Verify runtime env wiring for audio device (fail-fast on misconfigured units).
-ssh "$TARGET" "
+    # Verify runtime env wiring for audio device (fail-fast on misconfigured units).
     if [ ! -f $APP_DIR/.env ]; then
         echo \"[audio-check] FAIL: $APP_DIR/.env bulunamadi\"
         echo \"[audio-check] ornek: AUDIO_ALSA_DEVICE=plughw:CARD=Headphones,DEV=0\"
@@ -303,7 +307,7 @@ if [ "$INIT" = "--init" ]; then
     echo ""
     echo "[init] Pi4 observability kuruluyor..."
     bash "$SCRIPT_DIR/pi4-enable-observability.sh" "$TARGET"
-elif ! ssh "$TARGET" "systemctl is-enabled sepetarasi-metrics.timer >/dev/null 2>&1"; then
+elif ! remote "systemctl is-enabled sepetarasi-metrics.timer >/dev/null 2>&1"; then
     echo ""
     echo "[uyari] Pi4 observability kurulu gorunmuyor."
     echo "[uyari] Calistir: bash scripts/pi4-enable-observability.sh $TARGET"

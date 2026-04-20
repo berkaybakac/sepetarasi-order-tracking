@@ -2,6 +2,13 @@
 
 Bu not operasyon içindir. Sırayla uygula.
 
+`<PI_ADRESI>` yerine sahadaki Raspberry Pi adresini yaz.
+
+Örnek:
+
+- SSH: `admin@192.168.1.30`
+- Browser / TB1: `http://192.168.1.30:3000/...`
+
 ## 1. Deploy
 
 ```bash
@@ -11,7 +18,7 @@ bash scripts/deploy.sh
 ## 2. Yönetim Panelini Aç
 
 ```text
-http://sepetarasi.local:3000/admin
+http://<PI_ADRESI>:3000/admin
 ```
 
 `Ekran` sekmesinde sadece şunları kontrol et:
@@ -28,19 +35,19 @@ Her panel için doğru URL'yi kullan:
 1. `256x512`
 
 ```text
-http://sepetarasi.local:3000/display/index-256x512.html
+http://<PI_ADRESI>:3000/display/index-256x512.html
 ```
 
 2. `344x344`
 
 ```text
-http://sepetarasi.local:3000/display/index-344x344.html
+http://<PI_ADRESI>:3000/display/index-344x344.html
 ```
 
 3. `512x512`
 
 ```text
-http://sepetarasi.local:3000/display/index-512x512.html
+http://<PI_ADRESI>:3000/display/index-512x512.html
 ```
 
 ## 4. Kullanma
@@ -48,9 +55,9 @@ http://sepetarasi.local:3000/display/index-512x512.html
 Aşağıdaki linkleri TB1 için kullanma:
 
 ```text
-http://sepetarasi.local:3000/display
-http://sepetarasi.local:3000/display.html
-http://sepetarasi.local:3000/display/index.html
+http://<PI_ADRESI>:3000/display
+http://<PI_ADRESI>:3000/display.html
+http://<PI_ADRESI>:3000/display/index.html
 ```
 
 ## 5. Hızlı Kontrol
@@ -58,7 +65,7 @@ http://sepetarasi.local:3000/display/index.html
 Önce bağlantıyı kontrol et:
 
 ```text
-http://sepetarasi.local:3000/ping
+http://<PI_ADRESI>:3000/ping
 ```
 
 Sonra:

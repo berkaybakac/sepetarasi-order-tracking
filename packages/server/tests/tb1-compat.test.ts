@@ -37,7 +37,7 @@ describe("TB1 compatibility presets", () => {
 		});
 		expect(TB1_COMPAT_PROFILE_PRESETS.led_512_square).toEqual({
 			layoutPreference: "stack",
-			maxVisiblePerColumn: 6,
+			maxVisiblePerColumn: 4,
 			pageSeconds: 6,
 			textScale: "m",
 			listColumns: 2,
@@ -54,10 +54,10 @@ describe("TB1 compatibility presets", () => {
 		expect(html).toContain("var PROFILE_PRESETS = ");
 		expect(html).toContain("var LEGACY_PROFILE_ALIASES = ");
 		expect(html).toContain(".panel.ready .item.highlighted");
-		expect(html).toContain(".footer.visible");
+		expect(html).toContain(".panel-pager-slot");
 		expect(html).toContain('id="prep-pager"');
 		expect(html).toContain('id="ready-pager"');
-		expect(html).toContain("function renderFooter(preparingPageCount, readyPageCount)");
+		expect(html).toContain("function renderPagers(preparingPageCount, readyPageCount)");
 		expect(html).toContain("function enqueueReadyHighlights(candidates, readyOrders)");
 		expect(html).toContain("function startNextReadyHighlight(readyOrders)");
 		expect(html).toContain("captureReadyHighlight(getReadyOrders());");

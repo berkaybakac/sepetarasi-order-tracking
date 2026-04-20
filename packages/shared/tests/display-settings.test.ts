@@ -115,7 +115,7 @@ describe("display-settings (sad path)", () => {
 
 		expect(square512.profile).toBe("led_512_square");
 		expect(square512.layoutPreference).toBe("stack");
-		expect(square512.maxVisiblePerColumn).toBe(6);
+		expect(square512.maxVisiblePerColumn).toBe(4);
 		expect(square512.pageSeconds).toBe(6);
 
 		expect(tinyLandscape.profile).toBe("tiny_landscape");

@@ -101,7 +101,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --count-size: 18px;
         --item-size: 36px;
         --empty-size: 22px;
-        --footer-size: 14px;
         --pager-height: 12px;
         --pager-gap: 5px;
         --pager-dot-width: 12px;
@@ -273,7 +272,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --count-size: 14px;
         --item-size: 24px;
         --empty-size: 16px;
-        --footer-size: 12px;
         --item-min-height: 48px;
       }
 
@@ -284,7 +282,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --count-size: 16px;
         --item-size: 30px;
         --empty-size: 18px;
-        --footer-size: 13px;
         --item-min-height: 64px;
       }
 
@@ -295,7 +292,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --count-size: 22px;
         --item-size: 44px;
         --empty-size: 28px;
-        --footer-size: 18px;
         --item-min-height: 90px;
       }
 
@@ -359,6 +355,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         display: flex;
         align-items: center;
         justify-content: space-between;
+        position: relative;
         gap: 8px;
         padding-bottom: 2px;
         border-bottom: 1px solid var(--panel-divider);
@@ -366,9 +363,21 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
       }
 
       .panel-title {
+        min-width: 0;
         font-size: var(--panel-title-size);
         font-weight: 900;
         letter-spacing: 0.03em;
+      }
+
+      .panel-pager-slot {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
       }
 
       .panel.preparing .panel-title {
@@ -455,31 +464,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         opacity: 0.86;
       }
 
-      .footer {
-        display: none;
-        min-height: var(--pager-height);
-        padding: 1px 10px 3px;
-        border-top: 1px solid var(--panel-divider);
-        font-size: var(--footer-size);
-        font-weight: 700;
-        color: var(--muted);
-        background: var(--surface);
-        box-sizing: border-box;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .footer.visible {
-        display: flex;
-      }
-
-      .footer-inner {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-      }
-
       .pager {
         display: flex;
         align-items: center;
@@ -522,6 +506,9 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         <div class="panel preparing">
           <div class="panel-head">
             <div class="panel-title">Hazırlananlar</div>
+            <div class="panel-pager-slot">
+              <div class="pager preparing hidden" id="prep-pager"></div>
+            </div>
             <div class="panel-count" id="prep-count">0</div>
           </div>
           <div class="list" id="prep-list">
@@ -531,17 +518,14 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         <div class="panel ready">
           <div class="panel-head">
             <div class="panel-title">Hazır</div>
+            <div class="panel-pager-slot">
+              <div class="pager ready hidden" id="ready-pager"></div>
+            </div>
             <div class="panel-count" id="ready-count">0</div>
           </div>
           <div class="list" id="ready-list">
             <div class="item empty">Yükleniyor...</div>
           </div>
-        </div>
-      </div>
-      <div class="footer" id="footer-status">
-        <div class="footer-inner">
-          <div class="pager preparing hidden" id="prep-pager"></div>
-          <div class="pager ready hidden" id="ready-pager"></div>
         </div>
       </div>
     </div>
@@ -583,7 +567,6 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         var readyList = document.getElementById("ready-list");
         var prepCount = document.getElementById("prep-count");
         var readyCount = document.getElementById("ready-count");
-        var footerStatus = document.getElementById("footer-status");
         var prepPager = document.getElementById("prep-pager");
         var readyPager = document.getElementById("ready-pager");
         var restaurantName = document.getElementById("restaurant-name");
@@ -1054,16 +1037,9 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           container.appendChild(fragment);
         }
 
-        function renderFooter(preparingPageCount, readyPageCount) {
-          var hasPreparingPages = preparingPageCount > 1;
-          var hasReadyPages = readyPageCount > 1;
-
-          if (!footerStatus) return;
-
+        function renderPagers(preparingPageCount, readyPageCount) {
           renderPager(prepPager, preparingPageCount, state.preparingPage);
           renderPager(readyPager, readyPageCount, state.readyPage);
-          footerStatus.className =
-            hasPreparingPages || hasReadyPages ? "footer visible" : "footer";
         }
 
         function renderClock() {
@@ -1112,7 +1088,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
             "Hazır sipariş yok",
             activeReadyHighlightId,
           );
-          renderFooter(preparingPageCount, readyPageCount);
+          renderPagers(preparingPageCount, readyPageCount);
         }
 
         function maybeAdvancePages() {

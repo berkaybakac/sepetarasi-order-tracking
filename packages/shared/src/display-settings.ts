@@ -50,7 +50,7 @@ export const PROFILE_DEFAULTS: Record<
 	auto: { layoutPreference: "auto", maxVisiblePerColumn: 20, pageSeconds: 8 },
 	led_256x512: { layoutPreference: "stack", maxVisiblePerColumn: 4, pageSeconds: 6 },
 	led_344_square: { layoutPreference: "stack", maxVisiblePerColumn: 4, pageSeconds: 5 },
-	led_512_square: { layoutPreference: "stack", maxVisiblePerColumn: 6, pageSeconds: 6 },
+	led_512_square: { layoutPreference: "stack", maxVisiblePerColumn: 4, pageSeconds: 6 },
 	tiny_landscape: { layoutPreference: "split", maxVisiblePerColumn: 2, pageSeconds: 5 },
 	portrait_compact: { layoutPreference: "stack", maxVisiblePerColumn: 5, pageSeconds: 6 },
 	tv_1080p: { layoutPreference: "split", maxVisiblePerColumn: 24, pageSeconds: 8 },
