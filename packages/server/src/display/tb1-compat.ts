@@ -1,13 +1,15 @@
 import {
 	API_ROUTES,
+	type DisplayLayoutPreference,
 	type DisplayProfile,
 	type DisplayTextScale,
+	PROFILE_DEFAULTS,
 	TB1_DISPLAY_PROFILES,
 	type Tb1DisplayProfile,
 } from "@sepetarasi/shared";
 
 interface Tb1CompatProfilePreset {
-	layoutPreference: "stack" | "split";
+	layoutPreference: DisplayLayoutPreference;
 	maxVisiblePerColumn: number;
 	pageSeconds: number;
 	textScale: DisplayTextScale;
@@ -15,27 +17,9 @@ interface Tb1CompatProfilePreset {
 }
 
 export const TB1_COMPAT_PROFILE_PRESETS: Record<Tb1DisplayProfile, Tb1CompatProfilePreset> = {
-	led_256x512: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 4,
-		pageSeconds: 6,
-		textScale: "s",
-		listColumns: 2,
-	},
-	led_344_square: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 4,
-		pageSeconds: 5,
-		textScale: "s",
-		listColumns: 2,
-	},
-	led_512_square: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 6,
-		pageSeconds: 6,
-		textScale: "m",
-		listColumns: 2,
-	},
+	led_256x512: { ...PROFILE_DEFAULTS.led_256x512, textScale: "s", listColumns: 2 },
+	led_344_square: { ...PROFILE_DEFAULTS.led_344_square, textScale: "s", listColumns: 2 },
+	led_512_square: { ...PROFILE_DEFAULTS.led_512_square, textScale: "m", listColumns: 2 },
 };
 
 const LEGACY_PROFILE_ALIASES: Partial<Record<DisplayProfile, Tb1DisplayProfile>> = {
@@ -565,7 +549,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         }
 
         function normalizeTextScale(value) {
-          if (value === "xs" || value === "s" || value === "l") return value;
+          if (value === "xs" || value === "s" || value === "m" || value === "l") return value;
           return "m";
         }
 

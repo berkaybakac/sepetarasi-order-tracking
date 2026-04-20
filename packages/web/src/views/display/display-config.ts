@@ -1,9 +1,10 @@
-import type {
-	DisplayConfig,
-	DisplayLayoutPreference,
-	DisplayProfile,
-	DisplayTextScale,
-	DisplayTheme,
+import {
+	type DisplayConfig,
+	type DisplayLayoutPreference,
+	type DisplayProfile,
+	type DisplayTextScale,
+	type DisplayTheme,
+	PROFILE_DEFAULTS,
 } from "@sepetarasi/shared";
 export { DEFAULT_DISPLAY_CONFIG, parseDisplaySettings } from "@sepetarasi/shared";
 export type { DisplayConfig } from "@sepetarasi/shared";
@@ -199,42 +200,12 @@ interface DisplayProfilePreset {
 }
 
 const DISPLAY_PROFILE_PRESETS: Record<Exclude<DisplayProfile, "auto">, DisplayProfilePreset> = {
-	led_256x512: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 4,
-		pageSeconds: 6,
-		textScale: "s",
-	},
-	led_344_square: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 4,
-		pageSeconds: 5,
-		textScale: "s",
-	},
-	led_512_square: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 6,
-		pageSeconds: 6,
-		textScale: "m",
-	},
-	tiny_landscape: {
-		layoutPreference: "split",
-		maxVisiblePerColumn: 2,
-		pageSeconds: 5,
-		textScale: "xs",
-	},
-	portrait_compact: {
-		layoutPreference: "stack",
-		maxVisiblePerColumn: 5,
-		pageSeconds: 6,
-		textScale: "s",
-	},
-	tv_1080p: {
-		layoutPreference: "split",
-		maxVisiblePerColumn: 24,
-		pageSeconds: 8,
-		textScale: "m",
-	},
+	led_256x512: { ...PROFILE_DEFAULTS.led_256x512, textScale: "s" },
+	led_344_square: { ...PROFILE_DEFAULTS.led_344_square, textScale: "s" },
+	led_512_square: { ...PROFILE_DEFAULTS.led_512_square, textScale: "m" },
+	tiny_landscape: { ...PROFILE_DEFAULTS.tiny_landscape, textScale: "xs" },
+	portrait_compact: { ...PROFILE_DEFAULTS.portrait_compact, textScale: "s" },
+	tv_1080p: { ...PROFILE_DEFAULTS.tv_1080p, textScale: "m" },
 };
 
 export function isCompactLandscapeViewport(width: number, height: number): boolean {
@@ -304,6 +275,8 @@ export function resolveLayoutMode(
 	}
 	if (config.profile === "tiny_landscape" || config.profile === "tv_1080p") return "split";
 	if (isCompactLandscapeViewport(width, height)) return "split";
+	// "auto" profile: portrait → stack, landscape/square → split.
+	// The old width < 840 threshold is gone; named profiles now own their layout explicitly.
 	return height > width ? "stack" : "split";
 }
 

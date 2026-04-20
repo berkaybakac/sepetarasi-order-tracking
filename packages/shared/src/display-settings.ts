@@ -43,7 +43,7 @@ const DISPLAY_LAYOUT_SET = new Set<DisplayLayoutPreference>(DISPLAY_LAYOUT_PREFE
 const DISPLAY_TEXT_SCALE_SET = new Set<DisplayTextScale>(DISPLAY_TEXT_SCALES);
 const DISPLAY_THEME_SET = new Set<DisplayTheme>(DISPLAY_THEMES);
 
-const PROFILE_DEFAULTS: Record<
+export const PROFILE_DEFAULTS: Record<
 	DisplayProfile,
 	Omit<DisplayConfig, "profile" | "restaurantName" | "readyDisplayMinutes" | "textScale" | "theme">
 > = {
@@ -70,10 +70,6 @@ function parsePositiveInt(raw: string | undefined): number | null {
 	const n = Number(raw);
 	if (!Number.isInteger(n) || n <= 0) return null;
 	return n;
-}
-
-function formatAllowed(values: readonly string[]): string {
-	return values.join(", ");
 }
 
 export function isDisplaySettingKey(key: string): key is DisplaySettingKey {
