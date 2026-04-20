@@ -142,7 +142,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(16, 185, 129, 0.12);
         --ready-item-border: rgba(16, 185, 129, 0.3);
         --ready-item-text: #065f46;
-        --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        --surface-highlight: inset 0 1px 0 rgba(0, 0, 0, 0.06);
       }
 
       .shell.theme-vivid {

@@ -289,7 +289,7 @@ export function DisplaySettingsCard() {
 					</div>
 
 					<details className="rounded-[1.35rem] border border-border-subtle bg-surface-1/45 p-4">
-						<summary className="cursor-pointer list-none text-sm font-semibold text-text-strong">
+						<summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-semibold text-text-strong">
 							{UI_LABELS.DISPLAY_SETTINGS.ADVANCED_TITLE}
 						</summary>
 						<p className="mt-2 text-xs leading-5 text-text-subtle">
