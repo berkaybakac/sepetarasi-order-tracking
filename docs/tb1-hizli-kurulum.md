@@ -18,7 +18,7 @@ http://sepetarasi.local:3000/admin
 
 1. `Restoran Adı` doğru mu
 2. `Tema` `Karanlık` mı
-3. `Hazır Gösterim Süresi` `5 dk` mı
+3. `Hazır Gösterim Süresi` `30 dk` mı
 4. Değişiklik yaptıysan `Kaydet`
 
 ## 3. Panel URL'lerini Gir
@@ -68,7 +68,17 @@ Sonra:
 3. Sipariş oluşturunca ekran `1-2 saniye` içinde güncelleniyor mu
 4. Çok sipariş varsa sayfa değişimi oluyor mu
 
-## 6. Son Kontrol
+## 6. READY Davranışı
+
+`READY` olduğunda TB1 ekranında beklenen davranış:
+
+1. Yeni hazır sipariş varsa ekran ilgili `Hazır` sayfasına gider
+2. İlgili sipariş yaklaşık `4 saniye` farklı renkle vurgulanır
+3. Aynı anda peş peşe gelen yeni hazır siparişler varsa sistem en fazla `5` tanesini sırayla gösterir
+4. Bu sırada sayfa geçişi kısa süre durur
+5. Sıra bitince normal sayfa akışı devam eder
+
+## 7. Son Kontrol
 
 Kurulum bitince sahada kullanılacak ekranlar sadece bunlar:
 
@@ -78,7 +88,7 @@ Kurulum bitince sahada kullanılacak ekranlar sadece bunlar:
 
 Admin'deki `Web Önizleme` sadece test içindir.
 
-## 7. Sorun Olursa
+## 8. Sorun Olursa
 
 Daha detaylı runbook:
 

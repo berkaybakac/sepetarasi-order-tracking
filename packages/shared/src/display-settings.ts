@@ -60,7 +60,7 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
 	profile: "led_256x512",
 	...PROFILE_DEFAULTS.led_256x512,
 	restaurantName: "SEPET ARASI",
-	readyDisplayMinutes: 5,
+	readyDisplayMinutes: 30,
 	textScale: "s",
 	theme: "dark",
 };

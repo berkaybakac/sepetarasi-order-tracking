@@ -19,7 +19,7 @@ describe("display-settings (happy path)", () => {
 			maxVisiblePerColumn: 4,
 			pageSeconds: 6,
 			restaurantName: "SEPET ARASI",
-			readyDisplayMinutes: 5,
+			readyDisplayMinutes: 30,
 			textScale: "s",
 			theme: "dark",
 		});

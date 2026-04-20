@@ -49,8 +49,18 @@ describe("TB1 compatibility presets", () => {
 
 		expect(html).toContain('data-tb1-forced-profile="led_344_square"');
 		expect(html).toContain('var FORCED_PROFILE = "led_344_square"');
+		expect(html).toContain("var READY_HIGHLIGHT_MS = 4000;");
+		expect(html).toContain("var READY_HIGHLIGHT_QUEUE_LIMIT = 5;");
 		expect(html).toContain("var PROFILE_PRESETS = ");
 		expect(html).toContain("var LEGACY_PROFILE_ALIASES = ");
+		expect(html).toContain(".panel.ready .item.highlighted");
+		expect(html).toContain(".footer.visible");
+		expect(html).toContain('id="prep-pager"');
+		expect(html).toContain('id="ready-pager"');
+		expect(html).toContain("function renderFooter(preparingPageCount, readyPageCount)");
+		expect(html).toContain("function enqueueReadyHighlights(candidates, readyOrders)");
+		expect(html).toContain("function startNextReadyHighlight(readyOrders)");
+		expect(html).toContain("captureReadyHighlight(getReadyOrders());");
 		expect(html).toContain("grid-template-columns: repeat(var(--list-columns), minmax(0, 1fr));");
 		expect(html).not.toContain("grid-template-columns: repeat(1, minmax(0, 1fr));");
 	});

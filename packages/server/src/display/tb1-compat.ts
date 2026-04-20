@@ -45,6 +45,8 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
 	const serializedForcedProfile = forcedProfile ? JSON.stringify(forcedProfile) : "null";
 	const serializedPresets = JSON.stringify(TB1_COMPAT_PROFILE_PRESETS);
 	const serializedAliases = JSON.stringify(LEGACY_PROFILE_ALIASES);
+	const readyHighlightMs = 4000;
+	const readyHighlightQueueLimit = 5;
 
 	return `<!DOCTYPE html>
 <html lang="tr">
@@ -89,6 +91,9 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(74, 222, 128, 0.1);
         --ready-item-border: rgba(74, 222, 128, 0.28);
         --ready-item-text: #dcfce7;
+        --ready-highlight-bg: rgba(74, 222, 128, 0.85);
+        --ready-highlight-border: rgba(187, 247, 208, 0.95);
+        --ready-highlight-text: #052e16;
         --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         --title-size: 24px;
         --clock-size: 22px;
@@ -97,6 +102,11 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --item-size: 36px;
         --empty-size: 22px;
         --footer-size: 14px;
+        --pager-height: 12px;
+        --pager-gap: 5px;
+        --pager-dot-width: 12px;
+        --pager-dot-height: 4px;
+        --pager-active-ring: rgba(255, 255, 255, 0.18);
         --item-min-height: 76px;
         --header-padding-y: 12px;
         --header-padding-x: 14px;
@@ -142,6 +152,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(16, 185, 129, 0.12);
         --ready-item-border: rgba(16, 185, 129, 0.3);
         --ready-item-text: #065f46;
+        --ready-highlight-bg: rgba(16, 185, 129, 0.22);
+        --ready-highlight-border: rgba(5, 150, 105, 0.42);
+        --ready-highlight-text: #064e3b;
+        --pager-active-ring: rgba(15, 23, 42, 0.16);
         --surface-highlight: inset 0 1px 0 rgba(0, 0, 0, 0.06);
       }
 
@@ -170,6 +184,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(20, 184, 166, 0.14);
         --ready-item-border: rgba(94, 234, 212, 0.34);
         --ready-item-text: #ccfbf1;
+        --ready-highlight-bg: rgba(94, 234, 212, 0.9);
+        --ready-highlight-border: rgba(204, 251, 241, 0.95);
+        --ready-highlight-text: #042f2e;
+        --pager-active-ring: rgba(255, 255, 255, 0.22);
         --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
       }
 
@@ -198,6 +216,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --ready-item-bg: rgba(34, 197, 94, 0.14);
         --ready-item-border: rgba(74, 222, 128, 0.34);
         --ready-item-text: #bbf7d0;
+        --ready-highlight-bg: rgba(134, 239, 172, 0.28);
+        --ready-highlight-border: rgba(187, 247, 208, 0.72);
+        --ready-highlight-text: #f0fdf4;
+        --pager-active-ring: rgba(134, 239, 172, 0.28);
         --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.02);
       }
 
@@ -224,6 +246,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --item-radius: 12px;
         --empty-padding-y: 12px;
         --empty-padding-x: 10px;
+        --pager-height: 10px;
+        --pager-gap: 4px;
+        --pager-dot-width: 10px;
+        --pager-dot-height: 3px;
       }
 
       .shell.profile-led_512_square {
@@ -234,6 +260,10 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         --list-columns: 2;
         --list-gap: 10px;
         --count-min-width: 46px;
+        --pager-height: 14px;
+        --pager-gap: 6px;
+        --pager-dot-width: 14px;
+        --pager-dot-height: 5px;
       }
 
       .shell.scale-xs {
@@ -408,6 +438,12 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         color: var(--ready-item-text);
       }
 
+      .panel.ready .item.highlighted {
+        background: var(--ready-highlight-bg);
+        border-color: var(--ready-highlight-border);
+        color: var(--ready-highlight-text);
+      }
+
       .item.empty {
         grid-column: 1 / -1;
         justify-content: center;
@@ -421,12 +457,58 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
 
       .footer {
         display: none;
-        padding: 10px 14px;
+        min-height: var(--pager-height);
+        padding: 1px 10px 3px;
         border-top: 1px solid var(--panel-divider);
         font-size: var(--footer-size);
         font-weight: 700;
         color: var(--muted);
         background: var(--surface);
+        box-sizing: border-box;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .footer.visible {
+        display: flex;
+      }
+
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .pager {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--pager-gap);
+      }
+
+      .pager.hidden {
+        display: none;
+      }
+
+      .pager-dot {
+        width: var(--pager-dot-width);
+        height: var(--pager-dot-height);
+        border-radius: 999px;
+        opacity: 0.28;
+      }
+
+      .pager.preparing .pager-dot {
+        background: var(--preparing-title);
+      }
+
+      .pager.ready .pager-dot {
+        background: var(--ready-title);
+      }
+
+      .pager-dot.active {
+        opacity: 0.92;
+        box-shadow: 0 0 0 1px var(--pager-active-ring);
       }
     </style>
   </head>
@@ -456,7 +538,12 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           </div>
         </div>
       </div>
-      <div class="footer" id="footer-status"></div>
+      <div class="footer" id="footer-status">
+        <div class="footer-inner">
+          <div class="pager preparing hidden" id="prep-pager"></div>
+          <div class="pager ready hidden" id="ready-pager"></div>
+        </div>
+      </div>
     </div>
     <script>
       (function () {
@@ -466,6 +553,8 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         var PROFILE_PRESETS = ${serializedPresets};
         var LEGACY_PROFILE_ALIASES = ${serializedAliases};
         var FORCED_PROFILE = ${serializedForcedProfile};
+        var READY_HIGHLIGHT_MS = ${readyHighlightMs};
+        var READY_HIGHLIGHT_QUEUE_LIMIT = ${readyHighlightQueueLimit};
         var state = {
           orders: [],
           config: {
@@ -474,13 +563,18 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
             layoutPreference: "stack",
             maxVisiblePerColumn: 4,
             pageSeconds: 6,
-            readyDisplayMinutes: 5,
+            readyDisplayMinutes: 30,
             textScale: "s",
             theme: "dark"
           },
           preparingPage: 0,
           readyPage: 0,
-          nextPageSwitchAt: 0
+          nextPageSwitchAt: 0,
+          highlightedReadyOrderId: null,
+          highlightUntil: 0,
+          readyHighlightQueue: [],
+          hasReadySnapshot: false,
+          readySnapshotIds: {}
         };
 
         var screen = document.getElementById("screen");
@@ -490,6 +584,8 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         var prepCount = document.getElementById("prep-count");
         var readyCount = document.getElementById("ready-count");
         var footerStatus = document.getElementById("footer-status");
+        var prepPager = document.getElementById("prep-pager");
+        var readyPager = document.getElementById("ready-pager");
         var restaurantName = document.getElementById("restaurant-name");
         var clock = document.getElementById("clock");
 
@@ -660,11 +756,14 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           state.config.maxVisiblePerColumn =
             queryOverrides.maxVisiblePerColumn || preset.maxVisiblePerColumn;
           state.config.pageSeconds = queryOverrides.pageSeconds || preset.pageSeconds;
-          state.config.readyDisplayMinutes = parsePositiveInt(settings.display_ready_minutes, 5);
+          state.config.readyDisplayMinutes = parsePositiveInt(settings.display_ready_minutes, 30);
           state.config.textScale = queryOverrides.textScale || preset.textScale;
           state.config.theme = normalizeTheme(safeString(settings.display_theme || "dark"));
           restaurantName.textContent = state.config.restaurantName || "SEPET ARASI";
-          state.nextPageSwitchAt = Date.now() + state.config.pageSeconds * 1000;
+          state.nextPageSwitchAt = Math.max(
+            Date.now() + state.config.pageSeconds * 1000,
+            state.highlightUntil + state.config.pageSeconds * 1000,
+          );
           applyShellAppearance();
         }
 
@@ -710,7 +809,198 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           return items.slice(start, start + safePageSize);
         }
 
-        function renderItems(container, items, emptyText) {
+        function buildOrderIdMap(orders) {
+          var result = {};
+          var index;
+          var order;
+
+          for (index = 0; index < orders.length; index += 1) {
+            order = orders[index];
+            if (!order || !order.id) continue;
+            result[order.id] = true;
+          }
+
+          return result;
+        }
+
+        function parseTimestamp(value) {
+          var parsed = new Date(value || "").getTime();
+          return isFinite(parsed) ? parsed : 0;
+        }
+
+        function compareReadyHighlightCandidate(left, right) {
+          var leftTimestamp = parseTimestamp(left.ready_at || left.updated_at || left.created_at);
+          var rightTimestamp = parseTimestamp(right.ready_at || right.updated_at || right.created_at);
+
+          if (leftTimestamp !== rightTimestamp) {
+            return leftTimestamp - rightTimestamp;
+          }
+
+          return Number(left.display_no || 0) - Number(right.display_no || 0);
+        }
+
+        function findNewReadyCandidates(readyOrders, previousReadyIds) {
+          var candidates = [];
+          var index;
+          var order;
+
+          for (index = 0; index < readyOrders.length; index += 1) {
+            order = readyOrders[index];
+            if (!order || previousReadyIds[order.id]) continue;
+            candidates.push(order);
+          }
+
+          candidates.sort(compareReadyHighlightCandidate);
+          return candidates;
+        }
+
+        function findOrderPage(items, orderId, pageSize) {
+          var safePageSize = Math.max(1, pageSize);
+          var index;
+
+          for (index = 0; index < items.length; index += 1) {
+            if (items[index] && items[index].id === orderId) {
+              return Math.floor(index / safePageSize);
+            }
+          }
+
+          return null;
+        }
+
+        function clearReadyHighlight(resetPageTimer) {
+          var hadHighlight = !!state.highlightedReadyOrderId;
+
+          state.highlightedReadyOrderId = null;
+          state.highlightUntil = 0;
+
+          if (hadHighlight && resetPageTimer) {
+            state.nextPageSwitchAt = Date.now() + state.config.pageSeconds * 1000;
+          }
+
+          return hadHighlight;
+        }
+
+        function syncReadyHighlightQueue(readyOrders) {
+          var readyIds = buildOrderIdMap(readyOrders);
+          var nextQueue = [];
+          var seenIds = {};
+          var index;
+          var queuedOrderId;
+
+          for (index = 0; index < state.readyHighlightQueue.length; index += 1) {
+            queuedOrderId = state.readyHighlightQueue[index];
+            if (!queuedOrderId || seenIds[queuedOrderId] || !readyIds[queuedOrderId]) continue;
+            if (queuedOrderId === state.highlightedReadyOrderId) continue;
+            seenIds[queuedOrderId] = true;
+            nextQueue.push(queuedOrderId);
+          }
+
+          state.readyHighlightQueue = nextQueue;
+        }
+
+        function getActiveReadyHighlightId(readyOrders) {
+          var now = Date.now();
+          var index;
+
+          if (!state.highlightedReadyOrderId) return null;
+          if (now >= state.highlightUntil) return null;
+
+          for (index = 0; index < readyOrders.length; index += 1) {
+            if (readyOrders[index] && readyOrders[index].id === state.highlightedReadyOrderId) {
+              return state.highlightedReadyOrderId;
+            }
+          }
+
+          return null;
+        }
+
+        function enqueueReadyHighlights(candidates, readyOrders) {
+          var reservedIds = {};
+          var totalReserved;
+          var index;
+          var candidate;
+
+          syncReadyHighlightQueue(readyOrders);
+
+          if (state.highlightedReadyOrderId) {
+            reservedIds[state.highlightedReadyOrderId] = true;
+          }
+
+          for (index = 0; index < state.readyHighlightQueue.length; index += 1) {
+            reservedIds[state.readyHighlightQueue[index]] = true;
+          }
+
+          totalReserved = state.readyHighlightQueue.length + (state.highlightedReadyOrderId ? 1 : 0);
+          for (index = 0; index < candidates.length; index += 1) {
+            candidate = candidates[index];
+            if (!candidate || !candidate.id || reservedIds[candidate.id]) continue;
+            if (totalReserved >= READY_HIGHLIGHT_QUEUE_LIMIT) break;
+            state.readyHighlightQueue.push(candidate.id);
+            reservedIds[candidate.id] = true;
+            totalReserved += 1;
+          }
+        }
+
+        function startNextReadyHighlight(readyOrders) {
+          var nextOrderId;
+          var targetPage;
+
+          syncReadyHighlightQueue(readyOrders);
+
+          while (state.readyHighlightQueue.length > 0) {
+            nextOrderId = state.readyHighlightQueue.shift();
+            targetPage = findOrderPage(
+              readyOrders,
+              nextOrderId,
+              state.config.maxVisiblePerColumn,
+            );
+
+            if (targetPage === null) continue;
+
+            state.highlightedReadyOrderId = nextOrderId;
+            state.highlightUntil = Date.now() + READY_HIGHLIGHT_MS;
+            state.readyPage = targetPage;
+            state.nextPageSwitchAt = state.highlightUntil + state.config.pageSeconds * 1000;
+            return nextOrderId;
+          }
+
+          return null;
+        }
+
+        function captureReadyHighlight(readyOrders) {
+          var nextReadyIds = buildOrderIdMap(readyOrders);
+          var candidates = [];
+          var activeReadyHighlightId = getActiveReadyHighlightId(readyOrders);
+
+          if (state.hasReadySnapshot) {
+            candidates = findNewReadyCandidates(readyOrders, state.readySnapshotIds);
+          }
+
+          if (!activeReadyHighlightId && state.highlightedReadyOrderId) {
+            clearReadyHighlight(false);
+          }
+
+          syncReadyHighlightQueue(readyOrders);
+
+          state.readySnapshotIds = nextReadyIds;
+          state.hasReadySnapshot = true;
+
+          if (
+            state.highlightedReadyOrderId &&
+            !nextReadyIds[state.highlightedReadyOrderId]
+          ) {
+            clearReadyHighlight(false);
+          }
+
+          if (!candidates.length) {
+            return !!state.highlightedReadyOrderId || state.readyHighlightQueue.length > 0;
+          }
+
+          enqueueReadyHighlights(candidates, readyOrders);
+          return true;
+        }
+
+        function renderItems(container, items, emptyText, highlightedOrderId) {
           var fragment = document.createDocumentFragment();
           var item;
           var node;
@@ -729,12 +1019,51 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           for (index = 0; index < items.length; index += 1) {
             item = items[index];
             node = document.createElement("div");
-            node.className = "item";
+            node.className =
+              highlightedOrderId && item.id === highlightedOrderId ? "item highlighted" : "item";
             node.appendChild(document.createTextNode(safeString(item.display_no)));
             fragment.appendChild(node);
           }
 
           container.appendChild(fragment);
+        }
+
+        function renderPager(container, pageCount, activePage) {
+          var fragment;
+          var dot;
+          var index;
+
+          if (!container) return;
+
+          if (pageCount <= 1) {
+            container.className = container.className.replace(/ hidden/g, "") + " hidden";
+            container.innerHTML = "";
+            return;
+          }
+
+          container.className = container.className.replace(/ hidden/g, "");
+          container.innerHTML = "";
+          fragment = document.createDocumentFragment();
+
+          for (index = 0; index < pageCount; index += 1) {
+            dot = document.createElement("span");
+            dot.className = index === activePage ? "pager-dot active" : "pager-dot";
+            fragment.appendChild(dot);
+          }
+
+          container.appendChild(fragment);
+        }
+
+        function renderFooter(preparingPageCount, readyPageCount) {
+          var hasPreparingPages = preparingPageCount > 1;
+          var hasReadyPages = readyPageCount > 1;
+
+          if (!footerStatus) return;
+
+          renderPager(prepPager, preparingPageCount, state.preparingPage);
+          renderPager(readyPager, readyPageCount, state.readyPage);
+          footerStatus.className =
+            hasPreparingPages || hasReadyPages ? "footer visible" : "footer";
         }
 
         function renderClock() {
@@ -748,9 +1077,20 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
         function render() {
           var preparingOrders = getPreparingOrders();
           var readyOrders = getReadyOrders();
+          var activeReadyHighlightId = getActiveReadyHighlightId(readyOrders);
           var pageSize = Math.max(1, state.config.maxVisiblePerColumn);
           var preparingPageCount = getPageCount(preparingOrders.length, pageSize);
           var readyPageCount = getPageCount(readyOrders.length, pageSize);
+
+          syncReadyHighlightQueue(readyOrders);
+
+          if (!activeReadyHighlightId && state.highlightedReadyOrderId) {
+            clearReadyHighlight(false);
+          }
+
+          if (!activeReadyHighlightId && state.readyHighlightQueue.length > 0) {
+            activeReadyHighlightId = startNextReadyHighlight(readyOrders);
+          }
 
           if (state.preparingPage >= preparingPageCount) state.preparingPage = 0;
           if (state.readyPage >= readyPageCount) state.readyPage = 0;
@@ -758,23 +1098,44 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
           prepCount.textContent = safeString(preparingOrders.length);
           readyCount.textContent = safeString(readyOrders.length);
           screen.className = "screen " + state.config.layoutPreference;
+          shell.setAttribute("data-tb1-highlight-order-id", activeReadyHighlightId || "");
 
           renderItems(
             prepList,
             getPageSlice(preparingOrders, pageSize, state.preparingPage),
             "Bekleyen sipariş yok",
+            null,
           );
           renderItems(
             readyList,
             getPageSlice(readyOrders, pageSize, state.readyPage),
             "Hazır sipariş yok",
+            activeReadyHighlightId,
           );
+          renderFooter(preparingPageCount, readyPageCount);
         }
 
         function maybeAdvancePages() {
           var now = Date.now();
           var preparingPageCount = getPageCount(getPreparingOrders().length, state.config.maxVisiblePerColumn);
-          var readyPageCount = getPageCount(getReadyOrders().length, state.config.maxVisiblePerColumn);
+          var readyOrders = getReadyOrders();
+          var readyPageCount = getPageCount(readyOrders.length, state.config.maxVisiblePerColumn);
+          var activeReadyHighlightId = getActiveReadyHighlightId(readyOrders);
+
+          syncReadyHighlightQueue(readyOrders);
+
+          if (activeReadyHighlightId) return;
+
+          if (state.highlightedReadyOrderId) {
+            clearReadyHighlight(false);
+            render();
+            return;
+          }
+
+          if (state.readyHighlightQueue.length > 0) {
+            render();
+            return;
+          }
 
           if (now < state.nextPageSwitchAt) return;
 
@@ -803,6 +1164,7 @@ export function buildTb1CompatDisplayHtml(forcedProfile: Tb1DisplayProfile | nul
             ORDERS_URL,
             function (data) {
               state.orders = data || [];
+              captureReadyHighlight(getReadyOrders());
               render();
               sendDiagnostic("tb1-compat-orders-ok", String(state.orders.length));
             },
