@@ -1,6 +1,7 @@
 {
 	"name": "@sepetarasi/web",
 	"version": "0.1.0",
+	"license": "SEE LICENSE IN LICENSE",
 	"description": "Sepetarasi Order Tracking Admin UI",
 	"author": "Berkay Bakac",
 	"private": true,

@@ -325,7 +325,10 @@ fi
 echo ""
 echo "=== Deploy tamamlandi! ==="
 echo "Yonetim Paneli: http://$HOST:3000/admin"
-echo "Musteri Ekrani: http://$HOST:3000/display"
+echo "TB1 256x512: http://$HOST:3000/display/index-256x512.html"
+echo "TB1 344x344: http://$HOST:3000/display/index-344x344.html"
+echo "TB1 512x512: http://$HOST:3000/display/index-512x512.html"
+echo "Web Onizleme: http://$HOST:3000/display"
 
 if [ "$INIT" = "--init" ]; then
     echo ""

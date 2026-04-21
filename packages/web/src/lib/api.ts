@@ -1,4 +1,4 @@
-// ADR: intentionally separate from kasa/api.ts — see docs/dev-notes.md "Intentional Separations"
+// ADR: intentionally separate from kasa/api.ts — see docs/engineering-guardrails.md
 import { API_ROUTES, formatRateLimitMessage, parseRetryAfterSeconds } from "@sepetarasi/shared";
 import type {
 	DayStats,

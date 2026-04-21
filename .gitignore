@@ -11,6 +11,7 @@ release/
 .env.*.local
 .pi4
 docs/novastar-field-checklist.local.md
+docs/dev-runbook.local.md
 .DS_Store
 data/
 coverage/

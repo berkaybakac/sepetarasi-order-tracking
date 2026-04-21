@@ -1,6 +1,7 @@
 {
 	"name": "@sepetarasi/kasa",
 	"version": "0.1.0",
+	"license": "SEE LICENSE IN LICENSE",
 	"description": "SEPET ARASI Order Tracking Kasa Application",
 	"author": "Berkay Bakac",
 	"private": true,

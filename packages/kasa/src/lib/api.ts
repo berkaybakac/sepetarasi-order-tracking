@@ -1,4 +1,4 @@
-// ADR: intentionally separate from web/api.ts — see docs/dev-notes.md "Intentional Separations"
+// ADR: intentionally separate from web/api.ts — see docs/engineering-guardrails.md
 import { API_ROUTES } from "@sepetarasi/shared";
 import type { CreateOrderInput, Order, UpdateStatusInput } from "@sepetarasi/shared";
 import {

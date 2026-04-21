@@ -78,12 +78,12 @@ cd packages/kasa && npm run dev
 - Customer display: `http://localhost:5173/display`
 - API: `http://localhost:3000`
 
-Local admin login starts with `admin123` if no password hash exists yet. Change before any real deployment.
+Default admin credentials are set in the seed file. Change before any real deployment.
 
 ## Configuration Notes
 
 - `WS_AUTH_KEY` on the server must match `VITE_WS_AUTH_KEY` in both client apps. If they drift, authenticated WebSocket channels will fail silently.
-- `CASHIER_TOKEN` is the cashier app credential. Local dev defaults to `http://localhost:3000`.
+- `CASHIER_TOKEN` is the cashier app credential. The default dev value is set in `.env.example`; the cashier app reads this to authenticate against the server.
 - `STORE_TIMEZONE` affects business-date logic and stats aggregation. Defaults to `Europe/Istanbul`.
 - Production requires strong `JWT_SECRET`, `COOKIE_SECRET`, and `CASHIER_TOKEN` values.
 
@@ -94,7 +94,7 @@ npm run ci
 npm run test:coverage
 ```
 
-Test coverage spans `server`, `web`, `kasa`, and `shared`, including route, UI, reconnection, printer, and audio test suites.
+`npm run ci` runs lint, typecheck, and the full test suite across all packages. `npm run test:coverage` reports coverage for the server package, which includes route, WebSocket, printer, and audio test suites.
 
 ## License
 
