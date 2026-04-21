@@ -1,377 +1,103 @@
-# SEPET ARASI Order Tracking
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![Electron](https://img.shields.io/badge/Electron-191970?style=flat&logo=Electron&logoColor=white)
+![Fastify](https://img.shields.io/badge/Fastify-000000?style=flat&logo=fastify&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=flat&logo=sqlite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-C51A4A?style=flat&logo=Raspberry-Pi&logoColor=white)
+[![License](https://img.shields.io/badge/License-Source%20Available-orange?style=flat)](LICENSE)
 
-LAN tabanlı restoran sipariş takip sistemi — Kasa (Electron), Yönetim Paneli ve Sipariş Takip Ekranı.
+# SEPET ARASI: Order Tracking
 
----
+Full-stack restaurant order tracking system, live in production.
 
-## Geliştirme (Mac'te)
+A multi surface system built for a single restaurant location: a desktop cashier app, a customer facing order status display, an admin panel, and a backend, all synchronized in real time over WebSocket. Designed, built, and deployed by a single developer. The system is live and actively used in the field.
 
-İki mod var — hangisini kullanacağın o anki işe göre seçilir:
+<!-- TODO: add screenshot or demo GIF here (admin panel + cashier app + customer display side by side) -->
 
-**Mod 1 — Tamamen lokal (UI geliştirme, birim testler):**
-Pi4 gerekmez. Mac'te local server + local DB ile çalışır.
+## Key Engineering Highlights
 
-```bash
-# Terminal 1 — Server
-npm run dev:server
+- **Hardware compatibility under embedded browser constraints:** The TB1 LED display panel could not reliably boot a React SPA due to its limited embedded browser runtime. Diagnosed the failure, then built a single file, polling based compatibility display that works reliably within the device's actual capabilities. Validated in the field.
 
-# Terminal 2 — Web (Yönetim Paneli + Sipariş Takip Ekranı)
-npm run dev:web
+- **Audio ducking system:** Announcement audio smoothly fades out background music, then restores it after the announcement ends. The fade curve and timing were validated through on-site listening tests. Entirely custom logic, no library.
 
-# Terminal 3 — Kasa (Electron)
-cd packages/kasa && npm run dev
-```
+- **LAN first Pi4 production deployment:** The Fastify backend, built web assets, and WebSocket server all run on a Raspberry Pi 4 on the store's local network. No cloud dependency. The deploy pipeline targets ARM64 and accounts for ALSA audio configuration and systemd service management.
 
-http://localhost:3000
-http://sepetarasi.local:3000
+## What's Inside
 
-**Mod 2 — Pi4 verisiyle geliştirme (gerçek sipariş akışı, entegrasyon):**
-Pi4 çalışıyor olmalı. Hot reload Mac'te, data Pi4'ten gelir. Lokal server açma.
+| Package | Role |
+| --- | --- |
+| `packages/server` | Fastify API, WebSocket server, auth, stats, settings, audio, storage |
+| `packages/web` | React/Vite admin panel and customer display |
+| `packages/kasa` | Electron cashier client for macOS/Windows |
+| `packages/shared` | Single source of truth for types, routes, constants, display settings, helpers |
 
-```bash
-# Terminal 1 — Web UI (Yönetim Paneli, Sipariş Takip Ekranı)
-npm run dev:web:pi4
+## Tech Stack
 
-# Terminal 2 — Kasa Electron
-cd packages/kasa && npm run dev
-```
+Fastify · WebSocket · Drizzle ORM · SQLite · React 19 · Vite · Zustand · Electron · TypeScript
 
-> Kasa ilk açılışta config ekranında server URL'yi bağlanacağın ortama göre ayarla ve kaydet. `http://localhost:3000` seçilirse kasiyer token'ı otomatik kullanılır; `http://sepetarasi.local:3000` seçilirse prod token akışı `Gelişmiş > Token Değiştir` üzerinden ilerler.
-> **İstisna:** `packages/server` kodunu değiştirdiysen hot reload olmaz — değişiklik Pi4'e ancak `bash scripts/deploy.sh` ile gider. O durumda Mod 1'e geç.
+## Quick Local Setup
 
-Pi4 verisiyle geliştirme modunda web adresleri local ile aynıdır; fark, `npm run dev:web:pi4` ile web'in API isteklerini Pi4'e yönlendirmesidir.
-
-### Local
-
-- Yönetim Paneli: `http://localhost:5173/admin`
-- Sipariş takip ekranı: `http://localhost:5173/display`
-- API: `http://localhost:3000`
-- Kasa (terminal):
-
-```bash
-cd packages/kasa && npm run dev
-```
-
-### Prod
-
-- Yönetim Paneli: `http://sepetarasi.local:3000/admin`
-- Sipariş takip ekranı: `http://sepetarasi.local:3000/display`
-- API: `http://sepetarasi.local:3000`
-- Kasa (terminal, macOS build):
-
-```bash
-cd packages/kasa && npm run build
-open "$PWD/release/mac-arm64/SEPET ARASI KASA.app"
-```
-
-Kasa sunucu adresini değiştirmek için header'daki bağlantı noktasına tıkla. Prod bağlantısında kasiyer token'ı normal ayarlarda görünmez; `Gelişmiş > Token Değiştir` ile açılır.
-
-### Lokal Production Simülasyonu
-
-Mac'te production benzeri davranışı görmek istiyorsan:
-
-```bash
-npm run build   # shared + web + kasa + server production çıktısını üretir
-npm run start   # built Fastify server'ı 3000 portunda production modda açar
-```
-
-Bu akış özellikle `/display`, `/ping` ve static shell davranışını dev server yerine gerçek production zincirinde doğrulamak için kullanılır.
-
-### Kasa Bağlantı Bilgileri
-
-| Ortam | Sunucu Adresi | Kasiyer Token |
-| --- | --- | --- |
-| Mac (lokal dev) | `http://localhost:3000` | `local-dev-cashier-token` |
-| Pi4 (production) | `http://sepetarasi.local:3000` | `grep CASHIER_TOKEN /opt/sepetarasi/.env` |
-
-Kasa Electron uygulaması URL ve doğrulanmış kasiyer token'ını `config.json`'a kaydeder.
-
-- Mac lokal dev: `http://localhost:3000` için `local-dev-cashier-token` otomatik kullanılır ve UI'da token alanı gizlenir.
-- Pi4 production: token normal ayarlarda görünmez; `Gelişmiş > Token Değiştir` ile açılır. Kasa her sunucu adresi için token'ı ayrı hatırlar. Alan boş bırakılırsa o adres için kayıtlı doğrulanmış token korunur, yeni token girilirse kaydetmeden önce doğrulanır.
-
-> Yazıcı fişinde Türkçe karakterler bozuk görünürse kasa config ekranındaki `Code Page` ve `Encoding` alanlarını kontrol et. Varsayılan `cp857` + `61`; sorun devam ederse `cp1254` + `24` deneyin.
-
-### Commit Öncesi
-
-```bash
-npm run ci              # lint + typecheck + test
-npm run lint:fix        # Biome otomatik düzeltme
-npm run test:coverage   # coverage raporu — dosya bazında % gösterir
-```
-
-Müşteriye gitmeden önce Pi4 üzerinde smoke test:
-
-```bash
-bash scripts/pi4-smoke-test.sh   # API + WS + ses
-```
-
----
-
-## Deploy & Release Sırası
-
-```bash
-# 1. CI geç
-npm run ci
-
-# 2. Pi4'e deploy et (server güncellenir)
-bash scripts/deploy.sh
-
-# 3. macOS kasa build (çıktı: packages/kasa/release/mac-arm64/*.app)
-cd packages/kasa && npm run build:mac
-
-# 3b. macOS dağıtım DMG'si gerekiyorsa
-cd packages/kasa && npm run build:mac:dmg
-
-# 4. Windows kasa build — Mac'ten cross-compile (çıktı: packages/kasa/release/*.exe)
-cd packages/kasa && npm run build:win
-```
-
-> Kasa build'leri Pi4 deploy'undan sonra yapılır — server güncellenmeden kasa dağıtılırsa API uyumsuzluğu olabilir.
-> Windows cross-compile için Mac'te `wine` gerekebilir: `brew install --cask wine-stable`
-
----
-
-## Pi4'e Deploy
-
-```bash
-# Bir kez: SSH key kur + .pi4 dosyası oluştur
-ssh-keygen -t ed25519
-ssh-copy-id admin@<PI4-IP>
-echo 'admin@<PI4-IP>' > .pi4   # gitignored, sonraki deploylar için
-
-# Yeni Pi4 — ilk kurulum
-bash scripts/deploy.sh --init
-
-# Kod güncellemesi gönder
-bash scripts/deploy.sh
-
-# Token'ı unut/gerekirsen: ssh ile bak
-ssh admin@sepetarasi.local "grep CASHIER /opt/sepetarasi/.env"
-```
-
-`deploy.sh` sırasıyla: Mac'te build → rsync ile Pi4'e gönder → migration → servis restart → `/health` kontrolü.
-`deploy.sh --init` bunlara ek olarak audit log path'ini hazırlar ve Pi4 observability kurulumunu otomatik tetikler.
-Deploy, Pi4 uzerindeki runtime muzik kutuphanesini (`packages/server/assets/music`) korur; yuklenen MP3'ler yeni release yayinlarken silinmez.
-
-`--init` Pi4 hostname'ini `sepetarasi` yapar → `sepetarasi.local:3000` ile erişim, IP değişse de çalışır.
-
-> **Windows 10/11:** `.local` hostname için Bonjour gerekebilir — iTunes ile gelir veya [Apple'dan](https://support.apple.com/downloads/bonjour-for-windows) ayrıca kurulur.
-
-**`--init` ne zaman tekrar gerekir?**
-
-- Yeni Pi4 / yeni SD kart / OS reimage
-- `sepetarasi.service` silindiyse veya `mpg123` eksikse
-- Hostname veya audio route ayarları bozulduysa
-
----
-
-## Pi4 Servis Yönetimi
-
-```bash
-# Pi4 üzerinde
-sudo systemctl status sepetarasi
-sudo systemctl restart sepetarasi
-journalctl -u sepetarasi -f
-
-# Mac'ten uzaktan
-ssh admin@sepetarasi.local "sudo journalctl -u sepetarasi -f"
-```
-
-## Pi4 Gozlemlenebilirlik (CPU/RAM/Isi)
-
-`bash scripts/deploy.sh --init` bunu otomatik kurar. Eski kurulmus Pi4'lerde veya yeniden kurmak istiyorsan manuel de calistirabilirsin:
-
-```bash
-bash scripts/pi4-enable-observability.sh
-# veya hedefi elle ver
-bash scripts/pi4-enable-observability.sh admin@sepetarasi.local
-```
-
-Kurulumun yaptigi seyler:
-
-- `journald` kalici moda alinir (`Storage=persistent`)
-- Her 1 dakikada bir JSON satir metrik logu yazilir:
-  `/var/log/sepetarasi/system-metrics.log`
-- Audit log dosyasi proje klasoru disina alinip korunur:
-  `/var/log/sepetarasi/audit.log`
-- Boot baslangic/bitis marker'i eklenir (`boot_start`, `boot_stop`)
-- Log boyutu icin logrotate kurulur
-
-Gece analizi ornekleri:
-
-```bash
-# Boot listesi
-ssh admin@sepetarasi.local "journalctl --list-boots --no-pager"
-
-# Kernel tarafinda isi/throttle/oom taramasi
-ssh admin@sepetarasi.local \
-  "journalctl -k --since '2026-04-15 20:00' --until '2026-04-16 08:00' --no-pager \
-   | egrep -i 'thermal|thrott|under-voltage|oom|out of memory|killed process'"
-
-# Uygulama + sistem metrik JSON logu (cpu_temp_c, throttled_raw, mem_available_kb, server_rss_kb)
-ssh admin@sepetarasi.local \
-  "awk '\$0 ~ /\"ts\":\"2026-04-15|\"ts\":\"2026-04-16/ {print}' /var/log/sepetarasi/system-metrics.log"
-
-# Audit logu (login/order/status vb.)
-ssh admin@sepetarasi.local "tail -n 20 /var/log/sepetarasi/audit.log"
-```
-
----
-
-## Sorun Giderme
-
-**Siparişler karışıyor / lokal ve Pi4 verisi çakışıyor:**
-Lokal `dev:server` açıkken aynı anda Pi4'e de bağlanırsan iki ayrı DB olur — siparişler birbirinde görünmez, numara sayacı çakışır.
-Kural: **Ya lokal server çalışır ya Pi4.** Pi4 verisiyle geliştirmek için `dev:web:pi4` kullan, lokal server açma.
-
-**Port çakışması** — Server başlamıyor, Vite 5174/5175'e kaydı:
-
-```bash
-kill -9 $(lsof -t -i :3000) 2>/dev/null; true
-```
-
-Neden olur: Terminal kapatılırken Node.js tam sonlanmamış → port 3000 zombie'de kalmış. Ctrl+C ile durdurursan olmaz.
-
-**shared build eksik** — Ortak tipler bulunamıyor:
-
-```bash
-npm run build -w packages/shared
-```
-
-Neden olur: `npm install` sonrası ilk `npm run build` atlandıysa veya `packages/shared` değiştirilip build edilmediyse.
-
----
-
-## Kasa (Electron) — Build
-
-```bash
-# macOS .app
-cd packages/kasa && npm run build
-open "$PWD/release/mac-arm64/SEPET ARASI KASA.app"
-
-# macOS dağıtım DMG'si
-cd packages/kasa && npm run build:mac:dmg
-
-# Windows .exe (Mac üzerinde cross-compile)
-cd packages/kasa && npm run build:win
-```
-
-> İkon değiştirmek için `packages/kasa/build/icon.png` güncelle (1024x1024 PNG) → `bash scripts/generate-icons.sh packages/kasa/build/icon.png packages/kasa/build` çalıştır.
-
----
-
-## İlk Kurulum
+### 1. Install dependencies
 
 ```bash
 npm install
-npm run build        # shared → web → kasa (.app) → server sırasıyla derler
-npm run db:migrate
-npm run db:seed
+```
+
+### 2. Create local env files
+
+```bash
 cp packages/server/.env.example packages/server/.env
+cp packages/web/.env.example packages/web/.env
 cp packages/kasa/.env.example packages/kasa/.env
 ```
 
----
-
-## Özellik Eklerken Dikkat
-
-- **`packages/shared` değişince** → `npm run build -w packages/shared` çalıştır, diğer paketler build'i görür
-- **Yeni DB alanı eklenince** → migration oluştur ve `npm run db:migrate` çalıştır; atlanırsa prod crash eder
-- **Kasa renderer'ında Node API yok** → Electron'a sadece `window.electronAPI` (preload) üzerinden eriş
-- **Ses kodu iki yol** → Pi4'te `mpg123`/ALSA, Mac'te `afplay`; her ikisini de test et
-- **Stats sorguları timezone'a bağlı** → `STORE_TIMEZONE` olmadan testler yanlış sonuç verir
-- **WebSocket auth** → `WS_AUTH_KEY` ↔ `VITE_WS_AUTH_KEY` eşleşmezse WS bağlanır ama "Unauthorized" alır
-
----
-
-## API & WebSocket
-
-| Method | Endpoint | Açıklama |
-| --- | --- | --- |
-| POST | `/api/v1/orders` | Sipariş oluştur |
-| GET | `/api/v1/orders` | Günün siparişleri (opsiyonel: `?business_date=&status=`) |
-| GET | `/api/v1/orders/:id` | Tekil sipariş |
-| PATCH | `/api/v1/orders/:id/status` | Durum değiştir |
-| DELETE | `/api/v1/orders/:id` | Sipariş sil (admin) |
-| GET | `/api/v1/stats/today` | Bugünün istatistikleri |
-| GET | `/api/v1/stats` | Dönem istatistikleri (`?period=daily\|weekly\|monthly`) |
-| GET | `/api/v1/settings` | Tüm ayarlar (admin) |
-| PATCH | `/api/v1/settings/:key` | Ayar güncelle |
-| POST | `/api/v1/auth/logout` | Çıkış |
-| GET | `/api/v1/auth/me` | Oturum bilgisi |
-| GET | `/api/v1/auth/verify-cashier-token` | Kasiyer token doğrulama |
-| GET | `/health` | Sunucu sağlık kontrolü |
-| WS | `/ws?channel=orders` | Canlı sipariş güncellemeleri |
-| WS | `/ws?channel=display` | Anons olayları |
-
----
-
-## Ortam Değişkenleri (.env)
-
-`packages/server/.env` ve `packages/kasa/.env` — örnek dosyalar `.env.example` olarak repo'da mevcut.
-
-`WS_AUTH_KEY` (server) ile `VITE_WS_AUTH_KEY` (kasa) her zaman aynı değer olmalı.
-
----
-
-## Mimari (SSOT)
-
-Bu proje bir **Monorepo** yapısındadır. Tüm paketler `packages/shared` üzerinden ortak tipleri, bileşenleri ve Tailwind temasını paylaşır.
-
-| Paket | Açıklama |
-| --- | --- |
-| `packages/kasa` | Electron tabanlı kasiyer arayüzü (Windows/macOS) |
-| `packages/web` | Yönetim Paneli ve Müşteri takip ekranı (Vite/React) |
-| `packages/server` | Fastify tabanlı API ve WebSocket sunucusu |
-| `packages/shared` | **Single Source of Truth:** Ortak mantık ve tipler (React bağımlılığı yok) |
-
----
-
-## Sesli Anons (Pi4)
-
-Pre-recorded MP3 zorunlu (`1.mp3` … `400.mp3`), TTS fallback varsayılan kapalı.
+### 3. Initialize the database
 
 ```bash
-npm run audio:generate   # 400 MP3 üret (macOS, say + ffmpeg gerekli)
+npm run db:migrate
+npm run db:seed
 ```
 
-Ses cihazı: `AUDIO_ALSA_DEVICE=hw:2,0` → 3.5mm jack. Cihaz indexi için: `aplay -l`
-
-Ses çıkışını 3.5mm jack'e zorlamak: `sudo raspi-config nonint do_audio 1`
-
-Deploy, `sepetarasi.service` her başladığında seçili ALSA kartının mixer seviyesini tekrar `100%` yapar. Ani elektrik kesintisi sonrası boot'ta eski düşük ALSA state'i geri yüklense bile servis açılışında seviye yeniden normalize edilir.
-
----
-
-## Teslim Öncesi Kontrol Listesi (`--init` sonrası)
-
-`bash scripts/deploy.sh --init`, Pi4 üzerindeki `.env` dosyasını yeniden oluşturur. Bu işlem yeni `CASHIER_TOKEN`, `JWT_SECRET` ve `COOKIE_SECRET` üretir. Bunlardan kasa tarafını doğrudan etkileyen kritik değer `CASHIER_TOKEN`'dır; eski token geçersiz olur. Kasa uygulaması kendi ayarlarını `config.json` içinde tuttuğu için aynı kasa cihazı ve aynı URL kullanılacaksa çoğu durumda sadece token güncellemek yeterlidir.
-
-Teslim öncesi eksiksiz kontrol:
-
-1. Pi4 üzerindeki yeni kasiyer token'ını al:
+### 4. Start the app surfaces
 
 ```bash
-ssh admin@sepetarasi.local "grep CASHIER_TOKEN /opt/sepetarasi/.env"
+# Terminal 1
+npm run dev:server
+
+# Terminal 2
+npm run dev:web
+
+# Terminal 3
+cd packages/kasa && npm run dev
 ```
 
-2. Kasa config ekranında `serverUrl` değerini doğrula:
+### 5. Open the local URLs
 
-```text
-http://sepetarasi.local:3000
-```
+- Admin UI: `http://localhost:5173/admin`
+- Customer display: `http://localhost:5173/display`
+- API: `http://localhost:3000`
 
-3. Kasa config ekranında `Gelişmiş > Token Değiştir` bölümünü aç.
-4. Gerekliyse yeni `cashierToken` değerini gir ve kaydet. Alan boş bırakılırsa mevcut doğrulanmış token korunur. Yeni token girilirse uygulama kaydetmeden önce doğrular; doğrulama başarısızsa ayar kaydolmaz.
-5. Yazıcı kullanılacaksa `printerIp` girildiğini doğrula. Boş bırakılırsa fiş yazdırma devre dışı kalır.
-6. Yeni veya temiz DB ile kurulum yapıldıysa admin şifresini kontrol et. İlk varsayılan şifre `admin123` olur; müşteriye teslim etmeden değiştirmen önerilir.
-7. Son doğrulama olarak Pi4 smoke test çalıştır:
+Local admin login starts with `admin123` if no password hash exists yet. Change before any real deployment.
+
+## Configuration Notes
+
+- `WS_AUTH_KEY` on the server must match `VITE_WS_AUTH_KEY` in both client apps. If they drift, authenticated WebSocket channels will fail silently.
+- `CASHIER_TOKEN` is the cashier app credential. Local dev defaults to `http://localhost:3000`.
+- `STORE_TIMEZONE` affects business-date logic and stats aggregation. Defaults to `Europe/Istanbul`.
+- Production requires strong `JWT_SECRET`, `COOKIE_SECRET`, and `CASHIER_TOKEN` values.
+
+## Quality Signals
 
 ```bash
-bash scripts/pi4-smoke-test.sh
+npm run ci
+npm run test:coverage
 ```
 
-Kısa özet:
+Test coverage spans `server`, `web`, `kasa`, and `shared`, including route, UI, reconnection, printer, and audio test suites.
 
-- Aynı kasa cihazı ve aynı URL kullanılıyorsa çoğu durumda o adres için kayıtlı token korunur; yalnızca gerektiğinde `Gelişmiş > Token Değiştir` üzerinden yenisini girmek yeterlidir.
-- Müşteriye teslim standardı: `cashierToken` doğrulaması, admin şifre kontrolü, gerekiyorsa `printerIp`, ardından smoke test.
+## License
+
+This repository is source-available. You may view, clone, run, and privately modify it for personal evaluation, portfolio review, and other non-commercial reference purposes only.
+
+Production use, commercial use, redistribution, and reuse of substantial portions require prior written permission. See [LICENSE](LICENSE).
