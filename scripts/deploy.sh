@@ -215,6 +215,7 @@ After=alsa-restore.service sound.target
 Wants=sound.target
 
 [Service]
+Environment=SEPETARASI_AUDIO_BASELINE_PCT=90
 ExecStartPre=/bin/bash $APP_DIR/scripts/pi4-ensure-audio.sh
 SVCDROP
     sudo systemctl daemon-reload
@@ -315,6 +316,10 @@ fi
 if [ "$INIT" = "--init" ]; then
     echo ""
     echo "[init] Pi4 observability kuruluyor..."
+    bash "$SCRIPT_DIR/pi4-enable-observability.sh" "$TARGET"
+elif remote "systemctl is-enabled sepetarasi-metrics.timer >/dev/null 2>&1"; then
+    echo ""
+    echo "[obs] Pi4 observability mevcut, health/metrik/audio scriptleri guncelleniyor..."
     bash "$SCRIPT_DIR/pi4-enable-observability.sh" "$TARGET"
 elif ! remote "systemctl is-enabled sepetarasi-metrics.timer >/dev/null 2>&1"; then
     echo ""

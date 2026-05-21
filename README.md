@@ -87,6 +87,10 @@ Default admin credentials are set in the seed file. Change before any real deplo
 - `STORE_TIMEZONE` affects business-date logic and stats aggregation. Defaults to `Europe/Istanbul`.
 - Production requires strong `JWT_SECRET`, `COOKIE_SECRET`, and `CASHIER_TOKEN` values.
 
+## Field Operations
+
+- Pi4 field stabilization and health-check runbook: [`docs/pi4-field-stabilization-runbook.md`](docs/pi4-field-stabilization-runbook.md)
+
 ## Quality Signals
 
 ```bash
