@@ -3,7 +3,7 @@
 Bu dosya Pi4 saha kontrolu icin tek kaynak dokumandir. Uzaktan ilk bakilacak komut:
 
 ```bash
-ssh admin@192.168.1.101 sepetarasi-health
+ssh <ssh-user>@<tailscale-ip> sepetarasi-health
 ```
 
 ## Cihaz
@@ -11,23 +11,40 @@ ssh admin@192.168.1.101 sepetarasi-health
 | Alan | Deger |
 | --- | --- |
 | Hostname | `sepetarasi` |
-| SSH | `admin@192.168.1.101` |
-| Web | `http://192.168.1.101:3000` |
+| SSH (Tailscale) | `<ssh-user>@<tailscale-ip>` |
+| SSH (musteri LAN) | `<ssh-user>@<reserved-lan-ip>` |
+| Web (musteri LAN) | `http://<reserved-lan-ip>:3000` |
 | Model | Raspberry Pi 4 |
-| MAC | `88:A2:9E:93:A0:D1` |
-| IP | `192.168.1.101` |
-| Alpemix | `sepetarasi` alt kullanicisiyla bagli |
-| Alpemix dosyasi | `/home/admin/Desktop/Alpemix` |
-| Alpemix autostart | `/home/admin/.config/autostart/alpemix.desktop` |
+| MAC | `<pi-mac>` |
+| LAN IP | `<reserved-lan-ip>` |
+| Tailscale IP | `<tailscale-ip>` |
+| Tailscale hostname | `<tailscale-hostname>` |
+| Tailscale key expiry | Disabled |
+| Remote support tool | Degerleri local/private runbook'ta tutulur |
 
-Sifreyi repoya yazma.
+Sifre, gercek IP, MAC, Tailscale hesabi ve musteriye ozel cihaz bilgilerini public repoya yazma.
+
+## Saha Agi
+
+Kalici ag modeli:
+
+```text
+Pi MAC: <pi-mac>
+Router DHCP reservation: <pi-mac> -> <reserved-lan-ip>
+Pi NetworkManager: ipv4.method auto
+Tailscale IP: <tailscale-ip>
+Tailscale service: enabled, active
+Tailscale key expiry: disabled
+```
+
+Pi icine statik IP yazma. Pi DHCP'de kalir; sabit LAN IP router reservation ile verilir. Onceki/degerlendirme IP'leri baska cihazlara gidebilir; gercek degerleri local/private runbook'ta tut.
 
 ## Saglik Kriteri
 
 `sepetarasi-health` ciktisinda beklenen kritik degerler:
 
 ```text
-eth0 ip: 192.168.1.101/24
+eth0 ip: <reserved-lan-ip>/24
 gateway ping: OK
 dns resolve: OK
 internet http: OK
@@ -41,7 +58,7 @@ duplicate_ip_recent: 0
 LAN'dan hizli app kontrolu:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' http://192.168.1.101:3000/health
+curl -s -o /dev/null -w '%{http_code}\n' http://<reserved-lan-ip>:3000/health
 ```
 
 Beklenen: `200`.
@@ -54,13 +71,7 @@ Beklenen: `200`.
 - Router'da DHCP reservation yap:
 
 ```text
-88:A2:9E:93:A0:D1 -> 192.168.1.101
-```
-
-- `.101` ile cakisan eski MAC router'da bu IP'den alinmali:
-
-```text
-54:B5:6C:22:4D:11
+<pi-mac> -> <reserved-lan-ip>
 ```
 
 Pi icine statik IP yazma; ana cozum router reservation.
@@ -79,13 +90,14 @@ Pi icine statik IP yazma; ana cozum router reservation.
 
 | Log | Komut |
 | --- | --- |
-| Son health | `ssh admin@192.168.1.101 sepetarasi-health` |
-| Metrikler | `ssh admin@192.168.1.101 "tail -n 100 /var/log/sepetarasi/system-metrics.log"` |
-| Ses normalize | `ssh admin@192.168.1.101 "tail -n 100 /var/log/sepetarasi/audio-normalize.log"` |
-| Audit | `ssh admin@192.168.1.101 "tail -n 100 /var/log/sepetarasi/audit.log"` |
-| Boot listesi | `ssh admin@192.168.1.101 "journalctl --list-boots --no-pager"` |
-| IP cakismasi | `ssh admin@192.168.1.101 "journalctl -u NetworkManager --since '7 days ago' -g 'already in use' --no-pager"` |
-| Guc/voltaj | `ssh admin@192.168.1.101 "vcgencmd get_throttled"` |
+| Son health | `ssh <ssh-user>@<tailscale-ip> sepetarasi-health` |
+| Metrikler | `ssh <ssh-user>@<tailscale-ip> "tail -n 100 /var/log/sepetarasi/system-metrics.log"` |
+| Ses normalize | `ssh <ssh-user>@<tailscale-ip> "tail -n 100 /var/log/sepetarasi/audio-normalize.log"` |
+| Audit | `ssh <ssh-user>@<tailscale-ip> "tail -n 100 /var/log/sepetarasi/audit.log"` |
+| Boot listesi | `ssh <ssh-user>@<tailscale-ip> "journalctl --list-boots --no-pager"` |
+| IP cakismasi | `ssh <ssh-user>@<tailscale-ip> "journalctl -u NetworkManager --since '7 days ago' -g 'already in use' --no-pager"` |
+| Guc/voltaj | `ssh <ssh-user>@<tailscale-ip> "vcgencmd get_throttled"` |
+| Tailscale servis | `ssh <ssh-user>@<tailscale-ip> "systemctl is-enabled tailscaled && systemctl is-active tailscaled && tailscale status"` |
 
 Log retention: `/var/log/sepetarasi/*.log*` icin 14 gun. Journal persistent, limit `300M`.
 
@@ -123,6 +135,7 @@ Teknik ekibe verilecek kisa not:
 ```text
 Pi4 sahaya hazir.
 Eski repo'dan deploy yapmayin.
-Router DHCP reservation: 88:A2:9E:93:A0:D1 -> 192.168.1.101
-Kontrol: ssh admin@192.168.1.101 sepetarasi-health
+Router DHCP reservation: <pi-mac> -> <reserved-lan-ip>
+Tailscale: <tailscale-hostname> / <tailscale-ip> / key expiry disabled
+Kontrol: ssh <ssh-user>@<tailscale-ip> sepetarasi-health
 ```

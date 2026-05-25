@@ -12,6 +12,7 @@ release/
 .pi4
 docs/novastar-field-checklist.local.md
 docs/dev-runbook.local.md
+docs/pi4-field-stabilization-runbook.local.md
 .DS_Store
 data/
 coverage/
