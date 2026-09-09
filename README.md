@@ -1,3 +1,13 @@
+# SepetArası — Restaurant Order Tracking
+
+**Restaurant ordering, cashier applications and customer displays connected over a local network.**
+
+Live at **1 restaurant**, confirmed 8 September 2026. I built and maintain the system as the sole software developer at Statek Stabil Teknoloji, from requirements and implementation through deployment and field support.
+
+The product connects an Electron cashier application, a React administration panel and customer displays through a TypeScript/Fastify backend. WebSocket updates keep supported clients synchronized; a dedicated HTML renderer supports constrained display hardware.
+
+[Engineering highlights](#key-engineering-highlights) · [Local setup](#quick-local-setup) · [Testing](#quality-signals) · [Field operations](#field-operations)
+
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![Electron](https://img.shields.io/badge/Electron-191970?style=flat&logo=Electron&logoColor=white)
@@ -7,19 +17,15 @@
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-C51A4A?style=flat&logo=Raspberry-Pi&logoColor=white)
 [![License](https://img.shields.io/badge/License-Source%20Available-orange?style=flat)](LICENSE)
 
-# SEPET ARASI: Order Tracking
-
-Full-stack restaurant order tracking system, live in production.
-
-A multi surface system built for a single restaurant location: a desktop cashier app, a customer facing order status display, an admin panel, and a backend, all synchronized in real time over WebSocket. Designed, built, and deployed by a single developer. The system is live and actively used in the field.
-
-<!-- TODO: add screenshot or demo GIF here (admin panel + cashier app + customer display side by side) -->
-
 ## Key Engineering Highlights
 
 - **Hardware compatibility under embedded browser constraints:** The TB1 LED display panel could not reliably boot a React SPA due to its limited embedded browser runtime. Diagnosed the failure, then built a single file, polling based compatibility display that works reliably within the device's actual capabilities. Validated in the field.
 
-- **Audio ducking system:** Announcement audio smoothly fades out background music, then restores it after the announcement ends. The fade curve and timing were validated through on-site listening tests. Entirely custom logic, no library.
+- **Recovery after connection loss:** Reconnect/snapshot recovery tests cover clients catching up on order state after missed events.
+
+- **Database query design:** Order-item loading uses a batched query instead of querying separately for every order.
+
+- **Audio ducking system:** Announcement audio lowers background music, then restores it after the announcement ends.
 
 - **LAN first Pi4 production deployment:** The Fastify backend, built web assets, and WebSocket server all run on a Raspberry Pi 4 on the store's local network. No cloud dependency. The deploy pipeline targets ARM64 and accounts for ALSA audio configuration and systemd service management.
 
